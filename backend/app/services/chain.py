@@ -288,3 +288,6 @@ async def run_sql_chain(
 
     logger.warning("[LCEL Chain] 최대 iteration 도달: %d", MAX_ITERATIONS)
     return None, False
+
+
+normalize_sql_for_execution = _normalize_sql_for_execution
