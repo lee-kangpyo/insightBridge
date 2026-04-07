@@ -1,0 +1,290 @@
+import logging
+import re
+from typing import Any, Optional
+
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage
+from langchain_core.messages import ToolMessage
+from langchain_core.tools import BaseTool
+
+from .chat_models import create_chat_model
+from .tools import execute_sql, get_full_schema, get_columns_batch
+
+logger = logging.getLogger(__name__)
+
+SQL_TOOL_SYSTEM_PROMPT = """You are a PostgreSQL expert helping users query their database.
+
+Below this message, the **현재 DB 스키마** section lists all public tables with columns, types, and comments. Use it as the primary reference.
+
+Workflow:
+1. Prefer calling **execute_sql once** with a valid PostgreSQL SELECT (JOIN/WHERE/GROUP BY as needed) that answers the user, using the schema already shown.
+2. If the schema block is missing or clearly outdated, call **get_full_schema** for a fresh JSON snapshot, or **get_columns_batch** with comma-separated table names (e.g. `t1,t2`) for a subset.
+3. Do not call get_tables/get_columns unless you inject them as extra tools; the default path assumes schema is already in context.
+
+Critical:
+- The application executes ONLY the SQL string passed to execute_sql. Do not end with a markdown table, prose-only answer, or Final Answer without calling execute_sql.
+- Never invent row counts or data; use schema context then submit real SQL via execute_sql.
+- Minimize execute_sql calls: avoid throwaway DISTINCT/catalog probes; prefer one final SELECT that answers the question.
+- Pass SQL to execute_sql **without leading SQL comments** (no `--` or `/* */` before the statement); start directly with SELECT/WITH.
+- Use PostgreSQL syntax only."""
+
+MAX_ITERATIONS = 12
+
+
+def _normalize_sql_for_execution(s: str) -> str:
+    """DB에 넘기기 직전 정규화(선행 주석 제거)."""
+    t = s.strip()
+    while t:
+        if t.startswith("--"):
+            i = t.find("\n")
+            if i == -1:
+                return ""
+            t = t[i + 1 :].lstrip()
+            continue
+        if t.startswith("/*"):
+            i = t.find("*/")
+            if i == -1:
+                return t
+            t = t[i + 2 :].lstrip()
+            continue
+        break
+    return t
+
+
+def is_valid_sql_candidate(s: str) -> bool:
+    """말 그대로 'SELECT'만 잡히는 오탐을 걸러낸다."""
+    t = _normalize_sql_for_execution(s)
+    if len(t) < 15:
+        return False
+    u = t.lstrip().upper()
+    if u.startswith("SELECT") or u.startswith("WITH"):
+        return "FROM" in u
+    if u.startswith(("INSERT", "UPDATE", "DELETE")):
+        return True
+    if u.startswith(("EXPLAIN", "SHOW")):
+        return len(t) >= 10
+    return False
+
+
+def _parse_tool_call(tc: dict) -> tuple[Optional[str], Optional[dict], Optional[str]]:
+    """tool_call dict에서 tool_name, arguments, tool_call_id를 추출.
+
+    MiniMax/OAI 호환: {'name': ..., 'args': ...} 또는 {'function': {'name': ..., 'arguments': ...}}
+
+    Returns:
+        (tool_name, arguments, tool_call_id)
+    """
+    if "function" in tc:
+        func = tc["function"]
+        name = func.get("name", "") if isinstance(func, dict) else ""
+        args = func.get("arguments", "{}") if isinstance(func, dict) else "{}"
+    else:
+        name = tc.get("name", "")
+        args = tc.get("args", "{}")
+
+    tool_call_id = tc.get("id", "")
+
+    if isinstance(args, str):
+        import json
+
+        try:
+            args = json.loads(args)
+        except json.JSONDecodeError:
+            args = {}
+
+    return name, args, tool_call_id
+
+
+def extract_sql_from_tool_calls(response: AIMessage) -> Optional[str]:
+    """tool_calls에서 SQL을 추출한다. execute_sql 도구의 인자를 반환."""
+    if not hasattr(response, "tool_calls") or not response.tool_calls:
+        return None
+    for tc in response.tool_calls:
+        tool_name, args, _ = _parse_tool_call(tc)
+        if tool_name == "execute_sql" and isinstance(args, dict):
+            sql = args.get("sql")
+            if isinstance(sql, str) and sql.strip():
+                return sql.strip()
+    return None
+
+
+def extract_sql_from_content(content: str) -> Optional[str]:
+    """content에서 SQL 패턴을 추출한다 (fallback)."""
+    if not content or not isinstance(content, str):
+        return None
+    for pattern in (
+        r"(SELECT\b[\s\S]+?\bFROM\b[\s\S]*?)(?:;|\Z)",
+        r"(WITH\b[\s\S]+?\bSELECT\b[\s\S]+?\bFROM\b[\s\S]*?)(?:;|\Z)",
+        r"(\bINSERT\b[\s\S]+?)(?:;|\Z)",
+        r"(\bUPDATE\b[\s\S]+?)(?:;|\Z)",
+        r"(\bDELETE\b[\s\S]+?)(?:;|\Z)",
+    ):
+        match = re.search(pattern, content, re.IGNORECASE | re.DOTALL)
+        if match:
+            cand = match.group(1).strip()
+            if is_valid_sql_candidate(cand):
+                return _normalize_sql_for_execution(cand)
+    return None
+
+
+def _get_tool_by_name(name: str, tools: list[BaseTool]) -> Optional[BaseTool]:
+    for t in tools:
+        if t.name == name:
+            return t
+    return None
+
+
+async def create_sql_chain(schema_appendix: str = "") -> dict[str, Any]:
+    """LCEL Chain을 생성한다. bind_tools + 수동 도구 실행 루프.
+
+    Returns:
+        dict with keys: llm, tools, prompt, system_message
+    """
+    llm = create_chat_model()
+    tools = [get_full_schema, get_columns_batch, execute_sql]
+    llm_with_tools = llm.bind_tools(tools)
+
+    system_content = (
+        f"{SQL_TOOL_SYSTEM_PROMPT}\n\n## 현재 DB 스키마 (public)\n\n{schema_appendix}"
+    )
+    system_message = SystemMessage(content=system_content)
+
+    return {
+        "llm": llm_with_tools,
+        "llm_raw": llm,
+        "tools": tools,
+        "prompt": system_message,
+        "system_content": system_content,
+    }
+
+
+async def run_sql_chain(
+    question: str, chain_info: dict[str, Any]
+) -> tuple[Optional[str], bool]:
+    """LCEL Chain을 실행한다.
+
+    Args:
+        question: 사용자 질문
+        chain_info: create_sql_chain()가 반환한 체인 정보
+
+    Returns:
+        (sql, tool_calls_detected) - sql이 None이면 실패
+    """
+    llm_with_tools = chain_info["llm"]
+    tools = chain_info["tools"]
+    system_message = chain_info["prompt"]
+
+    messages = [system_message, HumanMessage(content=question)]
+    iteration = 0
+
+    logger.info("[LCEL Chain] 시작: question=%r", question)
+
+    while iteration < MAX_ITERATIONS:
+        iteration += 1
+        logger.info("[LCEL Chain] iteration=%d, 메시지 수=%d", iteration, len(messages))
+
+        response = await llm_with_tools.ainvoke(messages)
+        response_msg = (
+            response
+            if isinstance(response, AIMessage)
+            else AIMessage(content=str(response))
+        )
+
+        has_tool_calls = hasattr(response_msg, "tool_calls") and response_msg.tool_calls
+        logger.info(
+            "[LCEL Chain] iteration=%d has_tool_calls=%s content_preview=%r",
+            iteration,
+            has_tool_calls,
+            (response_msg.content[:200] if response_msg.content else "")[:100],
+        )
+
+        if has_tool_calls:
+            for tc in response_msg.tool_calls:
+                tool_name, arguments, tool_call_id = _parse_tool_call(tc)
+
+                logger.info(
+                    "[LCEL Chain] iteration=%d tool_call name=%r tool_call_id=%r arguments_preview=%r",
+                    iteration,
+                    tool_name,
+                    tool_call_id,
+                    str(arguments)[:200],
+                )
+
+                if tool_name == "execute_sql":
+                    sql = extract_sql_from_tool_calls(response_msg)
+                    if sql:
+                        logger.info(
+                            "[LCEL Chain] execute_sql SQL 추출 성공: %s", sql[:100]
+                        )
+                        return sql, True
+
+                tool = _get_tool_by_name(tool_name, tools)
+                if tool:
+                    try:
+                        tool_result = await tool.ainvoke(arguments)
+                        logger.info(
+                            "[LCEL Chain] iteration=%d 도구=%r 결과 미리보기=%r",
+                            iteration,
+                            tool_name,
+                            str(tool_result)[:200],
+                        )
+                        messages.append(response_msg)
+                        messages.append(
+                            ToolMessage(
+                                content=str(tool_result), tool_call_id=tool_call_id
+                            )
+                        )
+                    except Exception as e:
+                        logger.error(
+                            "[LCEL Chain] iteration=%d 도구 실행 오류: %s", iteration, e
+                        )
+                        messages.append(response_msg)
+                        messages.append(
+                            ToolMessage(
+                                content=f"Error: {e}", tool_call_id=tool_call_id
+                            )
+                        )
+                else:
+                    logger.warning(
+                        "[LCEL Chain] iteration=%d 알 수 없는 도구: %s",
+                        iteration,
+                        tool_name,
+                    )
+                    messages.append(response_msg)
+                    messages.append(
+                        ToolMessage(
+                            content=f"Unknown tool: {tool_name}",
+                            tool_call_id=tool_call_id,
+                        )
+                    )
+        else:
+            logger.info(
+                "[LCEL Chain] iteration=%d tool_calls 없음, content에서 SQL 추출 시도",
+                iteration,
+            )
+            messages.append(response_msg)
+
+            sql = extract_sql_from_content(response_msg.content or "")
+            if sql:
+                logger.info("[LCEL Chain] content에서 SQL 추출 성공: %s", sql[:100])
+                return sql, False
+
+            if response_msg.content:
+                lc = response_msg.content.lower()
+                if "final" in lc or "answer" in lc or "완료" in lc:
+                    logger.warning(
+                        "[LCEL Chain] iteration=%d LLM이 텍스트로만 응답 (SQL 없음): %s",
+                        iteration,
+                        response_msg.content[:300],
+                    )
+                    return None, False
+
+            logger.info(
+                "[LCEL Chain] iteration=%d tool_calls도 SQL도 없음, 계속 iteration=%d/%d",
+                iteration,
+                iteration,
+                MAX_ITERATIONS,
+            )
+
+    logger.warning("[LCEL Chain] 최대 iteration 도달: %d", MAX_ITERATIONS)
+    return None, False

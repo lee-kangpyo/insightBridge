@@ -1,0 +1,62 @@
+# InsightBridge
+
+LLM을 활용하여 자연어를 SQL로 변환하고, 차트로 시각화하는 대시보드 프로젝트
+
+## Tech Stack
+
+| 계층 | 기술 |
+|------|------|
+| Backend | FastAPI + uv |
+| Frontend | React + ECharts |
+| Database | PostgreSQL |
+| LLM | OpenAI API (Function Calling) |
+
+## Project Structure
+
+```
+insightBridge/
+├── backend/              # FastAPI 백엔드
+│   ├── app/
+│   │   ├── main.py       # 앱 진입점
+│   │   ├── config.py     # 환경변수 로드
+│   │   ├── database.py   # DB 연결
+│   │   ├── schemas.py    # Pydantic 모델
+│   │   ├── routes/       # API 라우트
+│   │   └── services/     # LLM 서비스 등
+│   ├── pyproject.toml
+│   └── .env
+├── frontend/             # React 프론트엔드
+│   ├── src/
+│   │   ├── App.jsx
+│   │   ├── components/   # UI 컴포넌트
+│   │   └── services/     # API 호출
+│   └── .env
+└── docs/                 # 문서
+```
+
+## Flow
+
+```
+[사용자 질문]
+       ↓
+[LLM: SQL 생성 (Function Calling)]
+       ↓
+[백엔드: SQL 실행 → pandas DataFrame]
+       ↓
+[프론트: ECharts로 차트 렌더링]
+```
+
+## Environment Variables
+
+### Backend (.env)
+```
+DATABASE_URL=postgresql://user:password@host:port/database
+OPENAI_API_KEY=sk-...
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_MODEL=gpt-4
+```
+
+### Frontend (.env)
+```
+VITE_API_URL=http://localhost:8000
+```
