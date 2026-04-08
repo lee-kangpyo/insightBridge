@@ -8,7 +8,7 @@ from langchain_core.messages import ToolMessage
 from langchain_core.tools import BaseTool
 
 from .chat_models import create_chat_model
-from .tools import execute_sql, get_full_schema, get_columns_batch
+from .tools import execute_sql, get_full_schema, get_columns_batch, done
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +19,11 @@ Below this message, the **현재 DB 스키마** section lists all public tables 
 Workflow:
 1. Prefer calling **execute_sql once** with a valid PostgreSQL SELECT (JOIN/WHERE/GROUP BY as needed) that answers the user, using the schema already shown.
 2. If the schema block is missing or clearly outdated, call **get_full_schema** for a fresh JSON snapshot, or **get_columns_batch** with comma-separated table names (e.g. `t1,t2`) for a subset.
-3. Do not call get_tables/get_columns unless you inject them as extra tools; the default path assumes schema is already in context.
+3. If you conclusively determine the requested data does not exist in the schema, call **done** with a clear explanation for the user.
+4. Do not call get_tables/get_columns unless you inject them as extra tools; the default path assumes schema is already in context.
 
 Critical:
-- The application executes ONLY the SQL string passed to execute_sql. Do not end with a markdown table, prose-only answer, or Final Answer without calling execute_sql.
+- The application executes ONLY the SQL string passed to execute_sql. If data is not found, use the done tool instead. Do not end with a markdown table, prose-only answer, or Final Answer without calling execute_sql or done.
 - Never invent row counts or data; use schema context then submit real SQL via execute_sql.
 - Minimize execute_sql calls: avoid throwaway DISTINCT/catalog probes; prefer one final SELECT that answers the question.
 - Pass SQL to execute_sql **without leading SQL comments** (no `--` or `/* */` before the statement); start directly with SELECT/WITH.
@@ -141,7 +142,7 @@ async def create_sql_chain(schema_appendix: str = "") -> dict[str, Any]:
         dict with keys: llm, tools, prompt, system_message
     """
     llm = create_chat_model()
-    tools = [get_full_schema, get_columns_batch, execute_sql]
+    tools = [get_full_schema, get_columns_batch, execute_sql, done]
     llm_with_tools = llm.bind_tools(tools)
 
     system_content = (
@@ -160,7 +161,7 @@ async def create_sql_chain(schema_appendix: str = "") -> dict[str, Any]:
 
 async def run_sql_chain(
     question: str, chain_info: dict[str, Any]
-) -> tuple[Optional[str], bool]:
+) -> tuple[Optional[str], bool, Optional[str]]:
     """LCEL Chain을 실행한다.
 
     Args:
@@ -176,6 +177,7 @@ async def run_sql_chain(
 
     messages = [system_message, HumanMessage(content=question)]
     iteration = 0
+    iteration_contents = []
 
     logger.info("[LCEL Chain] 시작: question=%r", question)
 
@@ -216,7 +218,12 @@ async def run_sql_chain(
                         logger.info(
                             "[LCEL Chain] execute_sql SQL 추출 성공: %s", sql[:100]
                         )
-                        return sql, True
+                        return sql, True, None
+
+                if tool_name == "done":
+                    reason = arguments.get("reason", "No reason provided") if isinstance(arguments, dict) else str(arguments)
+                    logger.info("[LCEL Chain] done 도구 호출 감지, early exit. reason=%r", reason)
+                    return None, True, reason
 
                 tool = _get_tool_by_name(tool_name, tools)
                 if tool:
@@ -267,7 +274,13 @@ async def run_sql_chain(
             sql = extract_sql_from_content(response_msg.content or "")
             if sql:
                 logger.info("[LCEL Chain] content에서 SQL 추출 성공: %s", sql[:100])
-                return sql, False
+                return sql, False, None
+            
+            if response_msg.content:
+                iteration_contents.append(response_msg.content)
+                if len(iteration_contents) >= 3 and iteration_contents[-1] == iteration_contents[-2] == iteration_contents[-3]:
+                    logger.warning("[LCEL Chain] 동일한 응답 3회 반복 감지, early exit.")
+                    return None, False, response_msg.content
 
             if response_msg.content:
                 lc = response_msg.content.lower()
@@ -277,7 +290,7 @@ async def run_sql_chain(
                         iteration,
                         response_msg.content[:300],
                     )
-                    return None, False
+                    return None, False, response_msg.content
 
             logger.info(
                 "[LCEL Chain] iteration=%d tool_calls도 SQL도 없음, 계속 iteration=%d/%d",
@@ -287,7 +300,7 @@ async def run_sql_chain(
             )
 
     logger.warning("[LCEL Chain] 최대 iteration 도달: %d", MAX_ITERATIONS)
-    return None, False
+    return None, False, "최대 탐색 횟수를 초과했습니다."
 
 
 normalize_sql_for_execution = _normalize_sql_for_execution

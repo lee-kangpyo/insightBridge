@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Any
+from typing import Any, Optional
 
 
 class QueryRequest(BaseModel):
@@ -7,5 +7,6 @@ class QueryRequest(BaseModel):
 
 
 class QueryResponse(BaseModel):
-    data: list[dict[str, Any]]
-    sql: str
+    data: Optional[list[dict[str, Any]]] = None
+    sql: Optional[str] = None
+    message: Optional[str] = None

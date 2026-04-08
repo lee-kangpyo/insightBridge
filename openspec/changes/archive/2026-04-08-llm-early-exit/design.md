@@ -56,7 +56,8 @@ LLM이 tool call 없이 텍스트만 응답 시, 이전 content와 유사도 체
 - **[Risk]** LLM이 `done()`을 항상 호출하지 않을 수 있음
   - **→ Mitigation:** iterations 반복 fallback으로 보완
 - **[Risk]** "iterations content 유사도" 판단이 부정확할 수 있음
-  - **→ Mitigation:** 단순 문자열 일치 대신, "데이터 없음" 관련 키워드 조합으로 판단
+  - **→ Mitigation:** 정확한 문자열 일치(==)로 3회 연속 동일 content 감지. 단순하지만 LLM이 루프에 빠질 때 실제로 동일 content를 반복하는 패턴에 충분히 효과적.
+  - **→ Decision:** 키워드 기반 유사도는 복잡도 대비 이득이 불명확하여 채택 안 함. 필요 시 향후 개선 가능.
 - **[Risk]** early exit이 잘못 작동하면 정상 SQL 생성도 중간에 끊길 수 있음
   - **→ Mitigation:** `done()`과 반복 fallback 모두 tool call이 있을 때만 작동 (text-only 응답 대상)
 
@@ -69,7 +70,7 @@ LLM이 tool call 없이 텍스트만 응답 시, 이전 content와 유사도 체
 5. `/api/query` handler에서 200 + message形式対応
 6. System prompt에 `done()` 호출 지침 추가
 
-## Open Questions
+## Decisions Made on Open Questions
 
-- `done(reason)`의 reason을 frontend에 그대로 전달할지, 아니면 별도 포맷팅할지
-- iterations 반복 fallback의 "유사도" 판단 기준 — 키워드 조합 or 단순 반복 횟수?
+- `done(reason)`의 reason은 frontend에 **그대로 전달**. 별도 포맷팅 없음. LLM이 이미 사용자에게 적합한 언어로 작성함.
+- iterations 반복 fallback의 유사도 판단은 **정확한 문자열 일치(==)**로 결정. 반복 fallback 메시지도 하드코딩 없이 **LLM 실제 content를 동적으로 반환**하여 더 정보가 있는 응답 제공.

@@ -1,0 +1,292 @@
+-- public.tstt_ind definition
+
+-- Drop table
+
+-- DROP TABLE public.tstt_ind;
+
+CREATE TABLE public.tstt_ind (
+	"year" int4 NOT NULL, -- 연도
+	year_rank int4 NULL, -- 연도 순위
+	school_code varchar(20) NOT NULL, -- 학교코드임시
+	school_code_rank int4 NULL, -- 학교코드임시 순위
+	school_name varchar(200) NOT NULL, -- 학교명
+	school_name_rank int4 NULL, -- 학교명 순위
+	establishment_type varchar(20) NOT NULL, -- 설립구분
+	establishment_type_rank int4 NULL, -- 설립구분 순위
+	region varchar(20) NOT NULL, -- 지역
+	region_rank int4 NULL, -- 지역 순위
+	ugrad_inquota_students int4 NULL, -- 학부 정원내 재학생수
+	ugrad_inquota_students_rank int4 NULL, -- 학부 정원내 재학생수 순위
+	ugrad_total_students int4 NULL, -- 학부 정원내외 재학생수
+	ugrad_total_students_rank int4 NULL, -- 학부 정원내외 재학생수 순위
+	total_students int4 NULL, -- 학부 및 대학원 재학생수
+	total_students_rank int4 NULL, -- 학부 및 대학원 재학생수 순위
+	tuition_won numeric(20) NULL, -- 등록금(원)
+	tuition_won_rank int4 NULL, -- 등록금(원) 순위
+	op_income_total_won_for_tuition numeric(20) NULL, -- 운영수입(세입총액)(원)
+	op_income_total_won_for_tuition_rank int4 NULL, -- 운영수입(세입총액)(원) 순위
+	tuition_income_ratio numeric(20, 5) NULL, -- [1.4] 세입 중 등록금 비율
+	tuition_income_ratio_rank int4 NULL, -- [1.4] 세입 중 등록금 비율 순위
+	donation_won numeric(20) NULL, -- 기부금(원)
+	donation_won_rank int4 NULL, -- 기부금(원) 순위
+	op_income_total_won_for_donation numeric(20) NULL, -- 운영수입(세입총액)(원)
+	op_income_total_won_for_donation_rank int4 NULL, -- 운영수입(세입총액)(원) 순위
+	donation_income_ratio numeric(20, 5) NULL, -- [1.4] 세입 중 기부금 비율
+	donation_income_ratio_rank int4 NULL, -- [1.4] 세입 중 기부금 비율 순위
+	corp_transfer_won numeric(20) NULL, -- 법인전입금(원)
+	corp_transfer_won_rank int4 NULL, -- 법인전입금(원) 순위
+	op_income_won_for_corp_transfer numeric(20) NULL, -- 운영수입(원)
+	op_income_won_for_corp_transfer_rank int4 NULL, -- 운영수입(원) 순위
+	corp_transfer_income_ratio_private numeric(20, 5) NULL, -- [1.4] 세입 중 법인전입금 비율(사립대)
+	corp_transfer_income_ratio_private_rank int4 NULL, -- [1.4] 세입 중 법인전입금 비율(사립대) 순위
+	total_education_cost_won numeric(20) NULL, -- 총교육비(원)
+	total_education_cost_won_rank int4 NULL, -- 총교육비(원) 순위
+	tuition_won_for_education_return numeric(20) NULL, -- 등록금(원)
+	tuition_won_for_education_return_rank int4 NULL, -- 등록금(원) 순위
+	education_cost_return_ratio numeric(20, 5) NULL, -- [1.5] 교육비 환원율
+	education_cost_return_ratio_rank int4 NULL, -- [1.5] 교육비 환원율 순위
+	ft_faculty_cnt int4 NULL, -- 전임교원수(명)
+	ft_faculty_cnt_rank int4 NULL, -- 전임교원수(명) 순위
+	faculty_legal_quota_cnt int4 NULL, -- 교원법정정원(명)
+	faculty_legal_quota_cnt_rank int4 NULL, -- 교원법정정원(명) 순위
+	ft_faculty_securement_ratio numeric(20, 5) NULL, -- [3.1] 전임교원 확보율
+	ft_faculty_securement_ratio_rank int4 NULL, -- [3.1] 전임교원 확보율 순위
+	lecturer_fee_total_won numeric(20) NULL, -- 강사료 계(원)
+	lecturer_fee_total_won_rank int4 NULL, -- 강사료 계(원) 순위
+	lecture_hours_total numeric(20, 5) NULL, -- 강의시간수 계(시간)
+	lecture_hours_total_rank int4 NULL, -- 강의시간수 계(시간) 순위
+	lecturer_fee_per_hour numeric(20, 5) NULL, -- [3.3] 강사 강의료
+	lecturer_fee_per_hour_rank int4 NULL, -- [3.3] 강사 강의료 순위
+	internal_research_fund_k_won numeric(20) NULL, -- 교내연구비(천원)
+	internal_research_fund_k_won_rank int4 NULL, -- 교내연구비(천원) 순위
+	ft_faculty_cnt_for_internal_research int4 NULL, -- 전임교원수(명)
+	ft_faculty_cnt_for_internal_research_rank int4 NULL, -- 전임교원수(명) 순위
+	internal_research_fund_per_ft_faculty numeric(20, 5) NULL, -- [3.4] 전임교원 1인당 교내연구비
+	internal_research_fund_per_ft_faculty_rank int4 NULL, -- [3.4] 전임교원 1인당 교내연구비 순위
+	total_students_for_staff int4 NULL, -- 학부 및 대학원 재학생수
+	total_students_for_staff_rank int4 NULL, -- 학부 및 대학원 재학생수 순위
+	staff_cnt int4 NULL, -- 직원수(명)
+	staff_cnt_rank int4 NULL, -- 직원수(명) 순위
+	students_per_staff numeric(20, 5) NULL, -- [3.5] 직원 1인당 학생수
+	students_per_staff_rank int4 NULL, -- [3.5] 직원 1인당 학생수 순위
+	scholarship_won numeric(20) NULL, -- 장학금(원)
+	scholarship_won_rank int4 NULL, -- 장학금(원) 순위
+	tuition_won_for_scholarship numeric(20) NULL, -- 등록금(원)
+	tuition_won_for_scholarship_rank int4 NULL, -- 등록금(원) 순위
+	scholarship_ratio numeric(20, 5) NULL, -- [4.1] 장학금 비율
+	scholarship_ratio_rank int4 NULL, -- [4.1] 장학금 비율 순위
+	facility_area_sqm int4 NULL, -- 시설면적(㎡)
+	facility_area_sqm_rank int4 NULL, -- 시설면적(㎡) 순위
+	standard_area_sqm int4 NULL, -- 기준면적(㎡)
+	standard_area_sqm_rank int4 NULL, -- 기준면적(㎡) 순위
+	building_securement_ratio numeric(20, 5) NULL, -- [4.4] 교사 확보율
+	building_securement_ratio_rank int4 NULL, -- [4.4] 교사 확보율 순위
+	dorm_capacity_cnt int4 NULL, -- 수용인원(명)
+	dorm_capacity_cnt_rank int4 NULL, -- 수용인원(명) 순위
+	enrolled_students_for_dorm int4 NULL, -- 재학생수(명)
+	enrolled_students_for_dorm_rank int4 NULL, -- 재학생수(명) 순위
+	dormitory_capacity_ratio numeric(20, 5) NULL, -- [4.5] 기숙사 수용률
+	dormitory_capacity_ratio_rank int4 NULL, -- [4.5] 기숙사 수용률 순위
+	library_material_cost_won numeric(20) NULL, -- 자료구입비(원)
+	library_material_cost_won_rank int4 NULL, -- 자료구입비(원) 순위
+	student_cnt_for_library int4 NULL, -- 학생수(명)
+	student_cnt_for_library_rank int4 NULL, -- 학생수(명) 순위
+	library_material_cost_per_student numeric(20, 5) NULL, -- [4.6] 재학생 1인당 연간 자료구입비(결산)
+	library_material_cost_per_student_rank int4 NULL, -- [4.6] 재학생 1인당 연간 자료구입비(결산) 순위
+	library_staff_cnt numeric(20, 5) NULL, -- 도서관직원수(명)
+	library_staff_cnt_rank int4 NULL, -- 도서관직원수(명) 순위
+	total_students_for_library_staff int4 NULL, -- 학부 및 대학원 재학생수
+	total_students_for_library_staff_rank int4 NULL, -- 학부 및 대학원 재학생수 순위
+	library_staff_per_1000_students numeric(20, 5) NULL, -- [4.6] 재학생 1,000명당 도서관 직원수
+	library_staff_per_1000_students_rank int4 NULL, -- [4.6] 재학생 1,000명당 도서관 직원수 순위
+	inquota_admissions_cnt int4 NULL, -- 정원내 입학자수(명)
+	inquota_admissions_cnt_rank int4 NULL, -- 정원내 입학자수(명) 순위
+	inquota_recruitment_quota_cnt int4 NULL, -- 정원내 모집인원(명)
+	inquota_recruitment_quota_cnt_rank int4 NULL, -- 정원내 모집인원(명) 순위
+	inquota_freshman_fill_ratio numeric(20, 5) NULL, -- [5.2] 정원내 신입생 충원율
+	inquota_freshman_fill_ratio_rank int4 NULL, -- [5.2] 정원내 신입생 충원율 순위
+	inquota_enrolled_students_cnt int4 NULL, -- 정원내 재학생수(명)
+	inquota_enrolled_students_cnt_rank int4 NULL, -- 정원내 재학생수(명) 순위
+	student_quota_minus_suspend_cnt int4 NULL, -- 학생정원-학생모집정지인원(명)
+	student_quota_minus_suspend_cnt_rank int4 NULL, -- 학생정원-학생모집정지인원(명) 순위
+	inquota_enrolled_fill_ratio numeric(20, 5) NULL, -- [5.2] 정원내 재학생 충원율
+	inquota_enrolled_fill_ratio_rank int4 NULL, -- [5.2] 정원내 재학생 충원율 순위
+	reg_candidate_paper_cnt numeric(20, 5) NULL, -- 등재(후보)지 논문 건수(건)
+	reg_candidate_paper_cnt_rank int4 NULL, -- 등재(후보)지 논문 건수(건) 순위
+	ft_faculty_cnt_for_reg_paper int4 NULL, -- 전임교원수(명)
+	ft_faculty_cnt_for_reg_paper_rank int4 NULL, -- 전임교원수(명) 순위
+	reg_candidate_paper_per_ft_faculty numeric(20, 5) NULL, -- [5.3] 전임교원 1인당 등재(후보)지 논문 실적
+	reg_candidate_paper_per_ft_faculty_rank int4 NULL, -- [5.3] 전임교원 1인당 등재(후보)지 논문 실적 순위
+	sci_paper_cnt numeric(20, 5) NULL, -- SCI급 논문 건수(건)
+	sci_paper_cnt_rank int4 NULL, -- SCI급 논문 건수(건) 순위
+	ft_faculty_cnt_for_sci_paper int4 NULL, -- 전임교원수(명)
+	ft_faculty_cnt_for_sci_paper_rank int4 NULL, -- 전임교원수(명) 순위
+	sci_paper_per_ft_faculty numeric(20, 5) NULL, -- [5.3] 전임교원 1인당 SCI급 논문 실적
+	sci_paper_per_ft_faculty_rank int4 NULL, -- [5.3] 전임교원 1인당 SCI급 논문 실적 순위
+	books_translation_cnt numeric(20, 5) NULL, -- 저역서수(건)
+	books_translation_cnt_rank int4 NULL, -- 저역서수(건) 순위
+	ft_faculty_cnt_for_books_translation int4 NULL, -- 전임교원수(명)
+	ft_faculty_cnt_for_books_translation_rank int4 NULL, -- 전임교원수(명) 순위
+	books_translation_per_ft_faculty numeric(20, 5) NULL, -- [5.3] 전임교원 1인당 저역서 실적
+	books_translation_per_ft_faculty_rank int4 NULL, -- [5.3] 전임교원 1인당 저역서 실적 순위
+	external_research_fund_k_won numeric(20) NULL, -- 교외연구비(천원)
+	external_research_fund_k_won_rank int4 NULL, -- 교외연구비(천원) 순위
+	ft_faculty_cnt_for_external_research int4 NULL, -- 전임교원수(명)
+	ft_faculty_cnt_for_external_research_rank int4 NULL, -- 전임교원수(명) 순위
+	external_research_fund_per_ft_faculty numeric(20, 5) NULL, -- [5.3] 전임교원 1인당 교외연구비
+	external_research_fund_per_ft_faculty_rank int4 NULL, -- [5.3] 전임교원 1인당 교외연구비 순위
+	research_perf_vs_standard numeric(20, 5) NULL, -- [5.3] 연구성과 기준값 대비 실적
+	research_perf_vs_standard_rank int4 NULL, -- [5.3] 연구성과 기준값 대비 실적 순위
+	employed_cnt int4 NULL, -- 취업자(명)
+	employed_cnt_rank int4 NULL, -- 취업자(명) 순위
+	graduates_cnt int4 NULL, -- 졸업자(명)
+	graduates_cnt_rank int4 NULL, -- 졸업자(명) 순위
+	employment_rate numeric(20, 5) NULL, -- [5.4] 졸업생의 취업률
+	employment_rate_rank int4 NULL, -- [5.4] 졸업생의 취업률 순위
+	CONSTRAINT pk_tb_stt_ind PRIMARY KEY (year, school_code)
+);
+CREATE INDEX idx_tb_stt_ind_establishment_type ON public.tstt_ind USING btree (establishment_type);
+CREATE INDEX idx_tb_stt_ind_region ON public.tstt_ind USING btree (region);
+CREATE INDEX idx_tb_stt_ind_school_name ON public.tstt_ind USING btree (school_name);
+COMMENT ON TABLE public.tstt_ind IS '3주기 연도별 대학현황지표';
+
+-- Column comments
+
+COMMENT ON COLUMN public.tstt_ind."year" IS '연도';
+COMMENT ON COLUMN public.tstt_ind.year_rank IS '연도 순위';
+COMMENT ON COLUMN public.tstt_ind.school_code IS '학교코드임시';
+COMMENT ON COLUMN public.tstt_ind.school_code_rank IS '학교코드임시 순위';
+COMMENT ON COLUMN public.tstt_ind.school_name IS '학교명';
+COMMENT ON COLUMN public.tstt_ind.school_name_rank IS '학교명 순위';
+COMMENT ON COLUMN public.tstt_ind.establishment_type IS '설립구분';
+COMMENT ON COLUMN public.tstt_ind.establishment_type_rank IS '설립구분 순위';
+COMMENT ON COLUMN public.tstt_ind.region IS '지역';
+COMMENT ON COLUMN public.tstt_ind.region_rank IS '지역 순위';
+COMMENT ON COLUMN public.tstt_ind.ugrad_inquota_students IS '학부 정원내 재학생수';
+COMMENT ON COLUMN public.tstt_ind.ugrad_inquota_students_rank IS '학부 정원내 재학생수 순위';
+COMMENT ON COLUMN public.tstt_ind.ugrad_total_students IS '학부 정원내외 재학생수';
+COMMENT ON COLUMN public.tstt_ind.ugrad_total_students_rank IS '학부 정원내외 재학생수 순위';
+COMMENT ON COLUMN public.tstt_ind.total_students IS '학부 및 대학원 재학생수';
+COMMENT ON COLUMN public.tstt_ind.total_students_rank IS '학부 및 대학원 재학생수 순위';
+COMMENT ON COLUMN public.tstt_ind.tuition_won IS '등록금(원)';
+COMMENT ON COLUMN public.tstt_ind.tuition_won_rank IS '등록금(원) 순위';
+COMMENT ON COLUMN public.tstt_ind.op_income_total_won_for_tuition IS '운영수입(세입총액)(원)';
+COMMENT ON COLUMN public.tstt_ind.op_income_total_won_for_tuition_rank IS '운영수입(세입총액)(원) 순위';
+COMMENT ON COLUMN public.tstt_ind.tuition_income_ratio IS '[1.4] 세입 중 등록금 비율';
+COMMENT ON COLUMN public.tstt_ind.tuition_income_ratio_rank IS '[1.4] 세입 중 등록금 비율 순위';
+COMMENT ON COLUMN public.tstt_ind.donation_won IS '기부금(원)';
+COMMENT ON COLUMN public.tstt_ind.donation_won_rank IS '기부금(원) 순위';
+COMMENT ON COLUMN public.tstt_ind.op_income_total_won_for_donation IS '운영수입(세입총액)(원)';
+COMMENT ON COLUMN public.tstt_ind.op_income_total_won_for_donation_rank IS '운영수입(세입총액)(원) 순위';
+COMMENT ON COLUMN public.tstt_ind.donation_income_ratio IS '[1.4] 세입 중 기부금 비율';
+COMMENT ON COLUMN public.tstt_ind.donation_income_ratio_rank IS '[1.4] 세입 중 기부금 비율 순위';
+COMMENT ON COLUMN public.tstt_ind.corp_transfer_won IS '법인전입금(원)';
+COMMENT ON COLUMN public.tstt_ind.corp_transfer_won_rank IS '법인전입금(원) 순위';
+COMMENT ON COLUMN public.tstt_ind.op_income_won_for_corp_transfer IS '운영수입(원)';
+COMMENT ON COLUMN public.tstt_ind.op_income_won_for_corp_transfer_rank IS '운영수입(원) 순위';
+COMMENT ON COLUMN public.tstt_ind.corp_transfer_income_ratio_private IS '[1.4] 세입 중 법인전입금 비율(사립대)';
+COMMENT ON COLUMN public.tstt_ind.corp_transfer_income_ratio_private_rank IS '[1.4] 세입 중 법인전입금 비율(사립대) 순위';
+COMMENT ON COLUMN public.tstt_ind.total_education_cost_won IS '총교육비(원)';
+COMMENT ON COLUMN public.tstt_ind.total_education_cost_won_rank IS '총교육비(원) 순위';
+COMMENT ON COLUMN public.tstt_ind.tuition_won_for_education_return IS '등록금(원)';
+COMMENT ON COLUMN public.tstt_ind.tuition_won_for_education_return_rank IS '등록금(원) 순위';
+COMMENT ON COLUMN public.tstt_ind.education_cost_return_ratio IS '[1.5] 교육비 환원율';
+COMMENT ON COLUMN public.tstt_ind.education_cost_return_ratio_rank IS '[1.5] 교육비 환원율 순위';
+COMMENT ON COLUMN public.tstt_ind.ft_faculty_cnt IS '전임교원수(명)';
+COMMENT ON COLUMN public.tstt_ind.ft_faculty_cnt_rank IS '전임교원수(명) 순위';
+COMMENT ON COLUMN public.tstt_ind.faculty_legal_quota_cnt IS '교원법정정원(명)';
+COMMENT ON COLUMN public.tstt_ind.faculty_legal_quota_cnt_rank IS '교원법정정원(명) 순위';
+COMMENT ON COLUMN public.tstt_ind.ft_faculty_securement_ratio IS '[3.1] 전임교원 확보율';
+COMMENT ON COLUMN public.tstt_ind.ft_faculty_securement_ratio_rank IS '[3.1] 전임교원 확보율 순위';
+COMMENT ON COLUMN public.tstt_ind.lecturer_fee_total_won IS '강사료 계(원)';
+COMMENT ON COLUMN public.tstt_ind.lecturer_fee_total_won_rank IS '강사료 계(원) 순위';
+COMMENT ON COLUMN public.tstt_ind.lecture_hours_total IS '강의시간수 계(시간)';
+COMMENT ON COLUMN public.tstt_ind.lecture_hours_total_rank IS '강의시간수 계(시간) 순위';
+COMMENT ON COLUMN public.tstt_ind.lecturer_fee_per_hour IS '[3.3] 강사 강의료';
+COMMENT ON COLUMN public.tstt_ind.lecturer_fee_per_hour_rank IS '[3.3] 강사 강의료 순위';
+COMMENT ON COLUMN public.tstt_ind.internal_research_fund_k_won IS '교내연구비(천원)';
+COMMENT ON COLUMN public.tstt_ind.internal_research_fund_k_won_rank IS '교내연구비(천원) 순위';
+COMMENT ON COLUMN public.tstt_ind.ft_faculty_cnt_for_internal_research IS '전임교원수(명)';
+COMMENT ON COLUMN public.tstt_ind.ft_faculty_cnt_for_internal_research_rank IS '전임교원수(명) 순위';
+COMMENT ON COLUMN public.tstt_ind.internal_research_fund_per_ft_faculty IS '[3.4] 전임교원 1인당 교내연구비';
+COMMENT ON COLUMN public.tstt_ind.internal_research_fund_per_ft_faculty_rank IS '[3.4] 전임교원 1인당 교내연구비 순위';
+COMMENT ON COLUMN public.tstt_ind.total_students_for_staff IS '학부 및 대학원 재학생수';
+COMMENT ON COLUMN public.tstt_ind.total_students_for_staff_rank IS '학부 및 대학원 재학생수 순위';
+COMMENT ON COLUMN public.tstt_ind.staff_cnt IS '직원수(명)';
+COMMENT ON COLUMN public.tstt_ind.staff_cnt_rank IS '직원수(명) 순위';
+COMMENT ON COLUMN public.tstt_ind.students_per_staff IS '[3.5] 직원 1인당 학생수';
+COMMENT ON COLUMN public.tstt_ind.students_per_staff_rank IS '[3.5] 직원 1인당 학생수 순위';
+COMMENT ON COLUMN public.tstt_ind.scholarship_won IS '장학금(원)';
+COMMENT ON COLUMN public.tstt_ind.scholarship_won_rank IS '장학금(원) 순위';
+COMMENT ON COLUMN public.tstt_ind.tuition_won_for_scholarship IS '등록금(원)';
+COMMENT ON COLUMN public.tstt_ind.tuition_won_for_scholarship_rank IS '등록금(원) 순위';
+COMMENT ON COLUMN public.tstt_ind.scholarship_ratio IS '[4.1] 장학금 비율';
+COMMENT ON COLUMN public.tstt_ind.scholarship_ratio_rank IS '[4.1] 장학금 비율 순위';
+COMMENT ON COLUMN public.tstt_ind.facility_area_sqm IS '시설면적(㎡)';
+COMMENT ON COLUMN public.tstt_ind.facility_area_sqm_rank IS '시설면적(㎡) 순위';
+COMMENT ON COLUMN public.tstt_ind.standard_area_sqm IS '기준면적(㎡)';
+COMMENT ON COLUMN public.tstt_ind.standard_area_sqm_rank IS '기준면적(㎡) 순위';
+COMMENT ON COLUMN public.tstt_ind.building_securement_ratio IS '[4.4] 교사 확보율';
+COMMENT ON COLUMN public.tstt_ind.building_securement_ratio_rank IS '[4.4] 교사 확보율 순위';
+COMMENT ON COLUMN public.tstt_ind.dorm_capacity_cnt IS '수용인원(명)';
+COMMENT ON COLUMN public.tstt_ind.dorm_capacity_cnt_rank IS '수용인원(명) 순위';
+COMMENT ON COLUMN public.tstt_ind.enrolled_students_for_dorm IS '재학생수(명)';
+COMMENT ON COLUMN public.tstt_ind.enrolled_students_for_dorm_rank IS '재학생수(명) 순위';
+COMMENT ON COLUMN public.tstt_ind.dormitory_capacity_ratio IS '[4.5] 기숙사 수용률';
+COMMENT ON COLUMN public.tstt_ind.dormitory_capacity_ratio_rank IS '[4.5] 기숙사 수용률 순위';
+COMMENT ON COLUMN public.tstt_ind.library_material_cost_won IS '자료구입비(원)';
+COMMENT ON COLUMN public.tstt_ind.library_material_cost_won_rank IS '자료구입비(원) 순위';
+COMMENT ON COLUMN public.tstt_ind.student_cnt_for_library IS '학생수(명)';
+COMMENT ON COLUMN public.tstt_ind.student_cnt_for_library_rank IS '학생수(명) 순위';
+COMMENT ON COLUMN public.tstt_ind.library_material_cost_per_student IS '[4.6] 재학생 1인당 연간 자료구입비(결산)';
+COMMENT ON COLUMN public.tstt_ind.library_material_cost_per_student_rank IS '[4.6] 재학생 1인당 연간 자료구입비(결산) 순위';
+COMMENT ON COLUMN public.tstt_ind.library_staff_cnt IS '도서관직원수(명)';
+COMMENT ON COLUMN public.tstt_ind.library_staff_cnt_rank IS '도서관직원수(명) 순위';
+COMMENT ON COLUMN public.tstt_ind.total_students_for_library_staff IS '학부 및 대학원 재학생수';
+COMMENT ON COLUMN public.tstt_ind.total_students_for_library_staff_rank IS '학부 및 대학원 재학생수 순위';
+COMMENT ON COLUMN public.tstt_ind.library_staff_per_1000_students IS '[4.6] 재학생 1,000명당 도서관 직원수';
+COMMENT ON COLUMN public.tstt_ind.library_staff_per_1000_students_rank IS '[4.6] 재학생 1,000명당 도서관 직원수 순위';
+COMMENT ON COLUMN public.tstt_ind.inquota_admissions_cnt IS '정원내 입학자수(명)';
+COMMENT ON COLUMN public.tstt_ind.inquota_admissions_cnt_rank IS '정원내 입학자수(명) 순위';
+COMMENT ON COLUMN public.tstt_ind.inquota_recruitment_quota_cnt IS '정원내 모집인원(명)';
+COMMENT ON COLUMN public.tstt_ind.inquota_recruitment_quota_cnt_rank IS '정원내 모집인원(명) 순위';
+COMMENT ON COLUMN public.tstt_ind.inquota_freshman_fill_ratio IS '[5.2] 정원내 신입생 충원율';
+COMMENT ON COLUMN public.tstt_ind.inquota_freshman_fill_ratio_rank IS '[5.2] 정원내 신입생 충원율 순위';
+COMMENT ON COLUMN public.tstt_ind.inquota_enrolled_students_cnt IS '정원내 재학생수(명)';
+COMMENT ON COLUMN public.tstt_ind.inquota_enrolled_students_cnt_rank IS '정원내 재학생수(명) 순위';
+COMMENT ON COLUMN public.tstt_ind.student_quota_minus_suspend_cnt IS '학생정원-학생모집정지인원(명)';
+COMMENT ON COLUMN public.tstt_ind.student_quota_minus_suspend_cnt_rank IS '학생정원-학생모집정지인원(명) 순위';
+COMMENT ON COLUMN public.tstt_ind.inquota_enrolled_fill_ratio IS '[5.2] 정원내 재학생 충원율';
+COMMENT ON COLUMN public.tstt_ind.inquota_enrolled_fill_ratio_rank IS '[5.2] 정원내 재학생 충원율 순위';
+COMMENT ON COLUMN public.tstt_ind.reg_candidate_paper_cnt IS '등재(후보)지 논문 건수(건)';
+COMMENT ON COLUMN public.tstt_ind.reg_candidate_paper_cnt_rank IS '등재(후보)지 논문 건수(건) 순위';
+COMMENT ON COLUMN public.tstt_ind.ft_faculty_cnt_for_reg_paper IS '전임교원수(명)';
+COMMENT ON COLUMN public.tstt_ind.ft_faculty_cnt_for_reg_paper_rank IS '전임교원수(명) 순위';
+COMMENT ON COLUMN public.tstt_ind.reg_candidate_paper_per_ft_faculty IS '[5.3] 전임교원 1인당 등재(후보)지 논문 실적';
+COMMENT ON COLUMN public.tstt_ind.reg_candidate_paper_per_ft_faculty_rank IS '[5.3] 전임교원 1인당 등재(후보)지 논문 실적 순위';
+COMMENT ON COLUMN public.tstt_ind.sci_paper_cnt IS 'SCI급 논문 건수(건)';
+COMMENT ON COLUMN public.tstt_ind.sci_paper_cnt_rank IS 'SCI급 논문 건수(건) 순위';
+COMMENT ON COLUMN public.tstt_ind.ft_faculty_cnt_for_sci_paper IS '전임교원수(명)';
+COMMENT ON COLUMN public.tstt_ind.ft_faculty_cnt_for_sci_paper_rank IS '전임교원수(명) 순위';
+COMMENT ON COLUMN public.tstt_ind.sci_paper_per_ft_faculty IS '[5.3] 전임교원 1인당 SCI급 논문 실적';
+COMMENT ON COLUMN public.tstt_ind.sci_paper_per_ft_faculty_rank IS '[5.3] 전임교원 1인당 SCI급 논문 실적 순위';
+COMMENT ON COLUMN public.tstt_ind.books_translation_cnt IS '저역서수(건)';
+COMMENT ON COLUMN public.tstt_ind.books_translation_cnt_rank IS '저역서수(건) 순위';
+COMMENT ON COLUMN public.tstt_ind.ft_faculty_cnt_for_books_translation IS '전임교원수(명)';
+COMMENT ON COLUMN public.tstt_ind.ft_faculty_cnt_for_books_translation_rank IS '전임교원수(명) 순위';
+COMMENT ON COLUMN public.tstt_ind.books_translation_per_ft_faculty IS '[5.3] 전임교원 1인당 저역서 실적';
+COMMENT ON COLUMN public.tstt_ind.books_translation_per_ft_faculty_rank IS '[5.3] 전임교원 1인당 저역서 실적 순위';
+COMMENT ON COLUMN public.tstt_ind.external_research_fund_k_won IS '교외연구비(천원)';
+COMMENT ON COLUMN public.tstt_ind.external_research_fund_k_won_rank IS '교외연구비(천원) 순위';
+COMMENT ON COLUMN public.tstt_ind.ft_faculty_cnt_for_external_research IS '전임교원수(명)';
+COMMENT ON COLUMN public.tstt_ind.ft_faculty_cnt_for_external_research_rank IS '전임교원수(명) 순위';
+COMMENT ON COLUMN public.tstt_ind.external_research_fund_per_ft_faculty IS '[5.3] 전임교원 1인당 교외연구비';
+COMMENT ON COLUMN public.tstt_ind.external_research_fund_per_ft_faculty_rank IS '[5.3] 전임교원 1인당 교외연구비 순위';
+COMMENT ON COLUMN public.tstt_ind.research_perf_vs_standard IS '[5.3] 연구성과 기준값 대비 실적';
+COMMENT ON COLUMN public.tstt_ind.research_perf_vs_standard_rank IS '[5.3] 연구성과 기준값 대비 실적 순위';
+COMMENT ON COLUMN public.tstt_ind.employed_cnt IS '취업자(명)';
+COMMENT ON COLUMN public.tstt_ind.employed_cnt_rank IS '취업자(명) 순위';
+COMMENT ON COLUMN public.tstt_ind.graduates_cnt IS '졸업자(명)';
+COMMENT ON COLUMN public.tstt_ind.graduates_cnt_rank IS '졸업자(명) 순위';
+COMMENT ON COLUMN public.tstt_ind.employment_rate IS '[5.4] 졸업생의 취업률';
+COMMENT ON COLUMN public.tstt_ind.employment_rate_rank IS '[5.4] 졸업생의 취업률 순위';

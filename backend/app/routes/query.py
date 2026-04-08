@@ -9,8 +9,12 @@ router = APIRouter()
 @router.post("/api/query", response_model=QueryResponse)
 async def query(request: QueryRequest):
     try:
-        sql = await generate_sql(request.question)
+        sql, message = await generate_sql(request.question)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
+        
+    if not sql and message:
+        return QueryResponse(data=None, sql=None, message=message)
+
     df = await fetch_df(sql)
     return QueryResponse(data=df.to_dict(orient="records"), sql=sql)

@@ -101,3 +101,14 @@ def execute_sql(sql: str) -> str:
     """
     logger.info("[tool] execute_sql 호출: SQL 미리보기=%s", _preview(sql.strip()))
     return sql
+
+
+@tool
+def done(reason: str) -> str:
+    """스키마 탐색 결과 요청한 데이터를 찾을 수 없거나, 더 이상의 탐색이 무의미하여 사용자에게 메시지를 전달하고 종료할 때 호출합니다.
+
+    Args:
+        reason: 사용자에게 전달할 종단 메시지 (예: '해당 데이터를 찾을 수 없습니다')
+    """
+    logger.info("[tool] done 호출: reason=%r", reason)
+    return reason

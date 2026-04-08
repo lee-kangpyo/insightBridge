@@ -1,4 +1,10 @@
-## ADDED Requirements
+# Capability: LLM Early Exit
+
+## Purpose
+
+Handles early exit signals from LLM (explicit `done` tool calls or iteration repetition detection) to optimize chain execution, reduce latency, and provide informative feedback when data cannot be found.
+
+## Requirements
 
 ### Requirement: done tool for explicit termination
 
@@ -41,8 +47,9 @@ The system SHALL return early termination results to the frontend with appropria
 - **THEN** API returns HTTP 200 with `{data: null, message: <done_reason>}`
 
 #### Scenario: Chain terminates via iterations fallback
-- **WHEN** chain terminates due to repeated content detection
-- **THEN** API returns HTTP 200 with `{data: null, message: "데이터를 찾을 수 없었습니다."}`
+- **WHEN** chain terminates due to repeated content detection (same LLM response 3+ consecutive times)
+- **THEN** API returns HTTP 200 with `{data: null, message: <last_llm_content>}`
+- **NOTE** The message is the actual LLM-generated content from the last repeated response (dynamic, not hardcoded), providing more informative feedback to the user
 
 #### Scenario: LLM generates valid SQL
 - **WHEN** LLM successfully generates SQL via `execute_sql` tool call
