@@ -1,3 +1,3 @@
 # app/routes/__init__.py
 
-from . import query, rankings, overview, insights  # noqa: F401
+from . import query, rankings, overview, insights, theme  # noqa: F401

@@ -29,6 +29,31 @@ export const getOverviewDetailGrid = async (params) => {
   return response.data;
 };
 
+export const getThemeDetailGrid = async (params) => {
+  const response = await api.get('/api/theme/detail-grid', { params });
+  return response.data;
+};
+
+export const getThemeKpiCards = async (params) => {
+  const response = await api.get('/api/theme/kpi-cards', { params });
+  return response.data;
+};
+
+export const getThemeChartBlocks = async (params) => {
+  const response = await api.get('/api/theme/chart-blocks', { params });
+  return response.data;
+};
+
+export const getThemeTextBlocks = async (params) => {
+  const response = await api.get('/api/theme/text-blocks', { params });
+  return response.data;
+};
+
+export const getThemeSourceRefs = async (params) => {
+  const response = await api.get('/api/theme/source-refs', { params });
+  return response.data;
+};
+
 export const getOverviewProgressMetrics = async (params) => {
   const response = await api.get('/api/overview/progress-metrics', { params });
   return response.data;
