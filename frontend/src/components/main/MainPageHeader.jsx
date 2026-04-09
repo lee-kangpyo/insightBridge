@@ -1,36 +1,43 @@
+import { Link, useLocation } from 'react-router-dom';
+
 const NAV_TABS = [
-  '일반현황',
-  '입시/충원',
-  '학생/취업',
-  '교육/교원',
-  '연구/산학',
-  '재정/장학',
-  '캠퍼스/복지',
-  '거버넌스',
+  { label: '일반현황', path: '/' },
+  { label: '입시/충원', path: '/admission' },
+  { label: '학생/취업', path: '/students' },
+  { label: '교육/교원', path: '/education' },
+  { label: '연구/산학', path: '/research' },
+  { label: '재정/장학', path: '/finance' },
+  { label: '캠퍼스/복지', path: '/campus' },
+  { label: '거버넌스', path: '/governance' },
 ];
 
 export default function MainPageHeader() {
+  const location = useLocation();
+
   return (
     <header className="bg-surface-container-low shadow-[0_8px_32px_rgba(24,28,30,0.04)] top-0 sticky z-40">
       <div className="flex justify-between items-center px-8 h-16 w-full max-w-[1920px] mx-auto">
         <div className="flex items-center gap-8">
-          <span className="text-lg font-bold text-primary font-headline">
+          <Link to="/" className="text-lg font-bold text-primary font-headline">
             Scholar Metric Dashboard
-          </span>
+          </Link>
           <nav className="hidden md:flex gap-6 items-end h-full pt-2">
-            {NAV_TABS.map((tab, index) => (
-              <button
-                key={tab}
-                disabled
-                className={`font-label text-sm tracking-tight pb-2 transition-colors ${
-                  index === 0
-                    ? 'text-secondary border-b-2 border-secondary font-bold'
-                    : 'text-[#5a5f64] hover:text-primary'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
+            {NAV_TABS.map((tab) => {
+              const isActive = location.pathname === tab.path;
+              return (
+                <Link
+                  key={tab.label}
+                  to={tab.path}
+                  className={`font-label text-sm tracking-tight pb-2 transition-colors ${
+                    isActive
+                      ? 'text-secondary border-b-2 border-secondary font-bold'
+                      : 'text-[#5a5f64] hover:text-primary'
+                  }`}
+                >
+                  {tab.label}
+                </Link>
+              );
+            })}
           </nav>
         </div>
         <div className="flex items-center gap-4">
