@@ -18,3 +18,8 @@ export const getOverviewRiskTable = async (params) => {
   const response = await api.get('/api/overview/risk-table', { params });
   return response.data;
 };
+
+export const getOverviewKpis = async (params) => {
+  const response = await api.get('/api/overview/kpis', { params });
+  return response.data;
+};

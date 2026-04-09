@@ -104,3 +104,31 @@ class OverviewRiskTableResponse(BaseModel):
     title: str
     items: list[RiskTableRow]
     legend: list[RiskTableLegendItem]
+
+
+class OverviewKpiComparison(BaseModel):
+    value: str
+    status: str
+
+
+class OverviewLargeKpiItem(BaseModel):
+    id: str
+    label: str
+    value: str
+    year: int
+    accentColor: str
+    regionalComparison: OverviewKpiComparison
+    nationalComparison: OverviewKpiComparison
+
+
+class OverviewSmallKpiItem(BaseModel):
+    id: str
+    label: str
+    value: str
+    subLabel: str
+    status: str
+
+
+class OverviewKpisResponse(BaseModel):
+    large: list[OverviewLargeKpiItem]
+    small: list[OverviewSmallKpiItem]

@@ -7,12 +7,32 @@ import RiskStrengthTable from '../components/main/RiskStrengthTable';
 import ProgressMetricGrid from '../components/main/ProgressMetricGrid';
 import sampleData from '../data/main_page_samples.json';
 import { useEffect, useState } from 'react';
-import { getOverviewMatrixPoints, getOverviewRiskTable } from '../services/api';
+import { getOverviewKpis, getOverviewMatrixPoints, getOverviewRiskTable } from '../services/api';
 
 export default function MainPage() {
+  const [largeKpis, setLargeKpis] = useState(sampleData.kpis.large);
+  const [smallKpis, setSmallKpis] = useState(sampleData.kpis.small);
   const [matrix, setMatrix] = useState(sampleData.matrix);
   const [riskTable, setRiskTable] = useState(sampleData.riskTable);
   const [riskLegend, setRiskLegend] = useState(sampleData.riskLegend || []);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await getOverviewKpis({
+          screen_code: 'overview',
+          screen_ver: 'v0.1',
+          screen_base_year: 2025,
+          schl_nm: '충남대학교',
+        });
+        if (data?.large?.length) setLargeKpis(data.large);
+        if (data?.small?.length) setSmallKpis(data.small);
+      } catch {
+        // fallback: keep sample kpis
+      }
+    };
+    load();
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -56,8 +76,8 @@ export default function MainPage() {
     <MainLayout>
       <PageTitleSection meta={sampleData.meta} />
       <KpiBentoGrid
-        largeKpis={sampleData.kpis.large}
-        smallKpis={sampleData.kpis.small}
+        largeKpis={largeKpis}
+        smallKpis={smallKpis}
       />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         <StrengthWeaknessMatrix matrix={matrix} />
