@@ -104,3 +104,216 @@ class OverviewRiskTableResponse(BaseModel):
     title: str
     items: list[RiskTableRow]
     legend: list[RiskTableLegendItem]
+
+
+class OverviewKpiComparison(BaseModel):
+    value: str
+    status: str
+
+
+class OverviewLargeKpiItem(BaseModel):
+    id: str
+    label: str
+    value: str
+    year: int
+    accentColor: str
+    regionalComparison: OverviewKpiComparison
+    nationalComparison: OverviewKpiComparison
+
+
+class OverviewSmallKpiItem(BaseModel):
+    id: str
+    label: str
+    value: str
+    subLabel: str
+    status: str
+
+
+class OverviewKpisResponse(BaseModel):
+    large: list[OverviewLargeKpiItem]
+    small: list[OverviewSmallKpiItem]
+
+
+class OverviewDetailGridItem(BaseModel):
+    metricCode: str
+    metricName: str
+    metricYear: int
+    displayOrder: int
+    metricUnitCode: str
+    metricUnitName: str
+
+    myValueNum: float
+    myValueDisplay: str
+
+    regionAvgNum: float
+    regionAvgDisplay: str
+
+    nationalAvgNum: float
+    nationalAvgDisplay: str
+
+    sourceTableName: str
+    sourceColumnExpr: str
+
+
+class OverviewDetailGridResponse(BaseModel):
+    title: str
+    items: list[OverviewDetailGridItem]
+
+
+class OverviewProgressMetricItem(BaseModel):
+    label: str
+    current: str
+    target: str
+    percentage: int
+    color: str
+
+
+class OverviewProgressMetricsResponse(BaseModel):
+    title: str
+    items: list[OverviewProgressMetricItem]
+
+
+class OverviewInsightsResponse(BaseModel):
+    title: str
+    strengths: Optional[str] = None
+    risks: Optional[str] = None
+    actions: list[str] = []
+
+
+class InsightLine(BaseModel):
+    no: int
+    role: str
+    text: str
+
+
+class InsightBlock(BaseModel):
+    code: str
+    areaName: str
+    title: str
+    displayOrder: int
+    lines: list[InsightLine] = []
+
+
+class InsightCoreResponse(BaseModel):
+    # 프론트 `InsightsPanel`과 호환되는 필드들
+    title: str
+    strengths: Optional[str] = None
+    risks: Optional[str] = None
+    actions: list[str] = []
+
+    # 화면 레이아웃용 텍스트 (요청 block_code 기반)
+    headerContext: Optional[str] = None
+    summaryJudgment: Optional[str] = None
+
+    # 원본 구조(블록/라인)도 함께 제공
+    blocks: list[InsightBlock] = []
+
+
+class ThemeKpiCardAux(BaseModel):
+    label: Optional[str] = None
+    text: Optional[str] = None
+
+
+class ThemeKpiCardSource(BaseModel):
+    tableName: Optional[str] = None
+    columnExpr: Optional[str] = None
+
+
+class ThemeKpiCardItem(BaseModel):
+    metricCode: str
+    title: str
+    year: int
+    myValue: str
+    regionAvg: str
+    nationalAvg: str
+    comparisonDirectionCode: str
+    aux: ThemeKpiCardAux = ThemeKpiCardAux()
+    accentColorHex: Optional[str] = None
+    source: ThemeKpiCardSource = ThemeKpiCardSource()
+
+
+class ThemeKpiCardsResponse(BaseModel):
+    title: str
+    items: list[ThemeKpiCardItem]
+
+
+class ThemeDetailGridAux(BaseModel):
+    label: Optional[str] = None
+    text: Optional[str] = None
+
+
+class ThemeDetailGridSource(BaseModel):
+    tableName: Optional[str] = None
+    columnExpr: Optional[str] = None
+
+
+class ThemeDetailGridItem(BaseModel):
+    metricCode: str
+    metricName: str
+    metricYear: int
+    displayOrder: int
+
+    myValueDisplay: str
+    regionAvgDisplay: str
+    nationalAvgDisplay: str
+
+    comparisonDirectionCode: str
+    aux: ThemeDetailGridAux = ThemeDetailGridAux()
+    accentColorHex: Optional[str] = None
+    source: ThemeDetailGridSource = ThemeDetailGridSource()
+
+
+class ThemeDetailGridResponse(BaseModel):
+    title: str
+    items: list[ThemeDetailGridItem]
+
+
+class ThemeChartItem(BaseModel):
+    order: int
+    label: str
+    valueNum: Optional[float] = None
+    displayText: str
+    noteText: str
+    colorHex: str
+
+
+class ThemeChartBlock(BaseModel):
+    blockCode: str
+    title: str
+    subtitle: str
+    style: str
+    displayOrder: int
+    items: list[ThemeChartItem]
+
+
+class ThemeChartBlocksResponse(BaseModel):
+    blocks: list[ThemeChartBlock]
+
+
+class ThemeTextLine(BaseModel):
+    no: int
+    role: str
+    text: str
+
+
+class ThemeTextBlock(BaseModel):
+    blockCode: str
+    areaName: str
+    title: str
+    displayOrder: int
+    lines: list[ThemeTextLine]
+
+
+class ThemeTextBlocksResponse(BaseModel):
+    blocks: list[ThemeTextBlock]
+
+
+class ThemeSourceRefItem(BaseModel):
+    order: int
+    tableName: str
+    columnExpr: str
+    note: str
+
+
+class ThemeSourceRefsResponse(BaseModel):
+    refs: list[ThemeSourceRefItem]

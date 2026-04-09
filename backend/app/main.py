@@ -2,7 +2,7 @@ import asyncio
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routes import overview, query, rankings
+from .routes import overview, query, rankings, insights, theme
 from .database import close_pool
 
 logging.basicConfig(
@@ -34,6 +34,8 @@ app.add_middleware(
 app.include_router(query.router)
 app.include_router(rankings.router)
 app.include_router(overview.router)
+app.include_router(insights.router)
+app.include_router(theme.router)
 
 
 @app.on_event("shutdown")

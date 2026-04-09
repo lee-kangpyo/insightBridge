@@ -64,6 +64,157 @@
   - `GET /api/overview/progress-metrics`
   - params: `screen_base_year`, `schl_nm`
 
+## 입시/충원 탭(테마탭 공통 스냅샷 기반)
+
+### 목표
+
+- “입시/충원” 탭의 상단 KPI/상세 KPI/차트/설명 텍스트/출처 정보를 **스냅샷 테이블 기반 실데이터**로 렌더링한다.
+- 기존 원칙대로 “위젯 1개 = API 1개 + 프론트 연결 1개”로 반복 구현한다.
+
+### 사용 테이블(입시/충원 탭에서 사용될 스냅샷)
+
+- KPI 카드(상단): `public.tq_screen_metric_card`
+- KPI 상세 그리드: `public.tq_screen_detail_grid`
+- 차트 블록 메타: `public.tq_screen_chart_block`
+- 차트 블록 아이템: `public.tq_screen_chart_item`
+- 텍스트 블록 헤더: `public.tq_screen_text_block`
+- 텍스트 블록 라인: `public.tq_screen_text_line`
+- 출처/원천 참조 프리뷰: `public.tq_screen_source_ref`
+
+### 공통 파라미터(권장)
+
+- `screen_code`, `screen_ver`, `screen_base_year`, `schl_nm`
+- 권장 기본값(문서 표준):
+  - `screen_ver`: `v0.1`
+  - `screen_code`: (예) `admission_fill`  (입시/충원 탭 식별 코드)
+
+### 위젯별 API 설계(입시/충원)
+
+아래는 “입시/충원 탭”에 필요한 데이터 블록을 공통 스냅샷 테이블에서 읽어오는 API 템플릿이다.
+프론트는 화면 코드(`screen_code`)만 바꿔서 동일한 컴포넌트 계약(shape)으로 소비할 수 있게, 백엔드가 정렬/정규화까지 책임진다.
+
+#### 1) 상단 KPI 카드
+
+- **소스 테이블**: `tq_screen_metric_card`
+- **정렬 기준**: `display_order ASC, metric_code ASC`
+- **주요 컬럼(표시/비교/스타일)**:
+  - `metric_name`, `metric_year`
+  - `my_value_display`, `region_avg_display`, `national_avg_display`
+  - `comparison_direction_code`(HIGHER_BETTER/LOWER_BETTER)
+  - `aux_label`, `aux_display_text`
+  - `accent_color_hex`
+  - `source_table_name`, `source_column_expr`(선택 노출: 근거/출처)
+- **API**
+  - `GET /api/theme/kpi-cards`
+  - params: `screen_code`, `screen_ver`, `screen_base_year`, `schl_nm`
+- **백엔드 처리 의사코드(상세)**
+
+```text
+function getThemeKpiCards(screen_code, screen_ver, screen_base_year, schl_nm):
+  rows = SELECT * FROM tq_screen_metric_card
+         WHERE screen_code=? AND screen_ver=? AND screen_base_year=? AND schl_nm=?
+         ORDER BY display_order, metric_code
+
+  if rows is empty:
+    return { title: "", items: [] }  # 항상 동일 shape
+
+  items = []
+  for each row in rows:
+    item = {
+      metricCode: row.metric_code,
+      title: row.metric_name,
+      year: row.metric_year,
+      myValue: row.my_value_display,
+      regionAvg: row.region_avg_display,
+      nationalAvg: row.national_avg_display,
+      comparisonDirectionCode: row.comparison_direction_code,
+      aux: { label: row.aux_label, text: row.aux_display_text },
+      accentColorHex: row.accent_color_hex,
+      source: { table: row.source_table_name, expr: row.source_column_expr }
+    }
+    items.append(item)
+
+  return { title: "입시/충원 핵심 지표", items: items }
+```
+
+#### 2) KPI 상세 그리드
+
+- **소스 테이블**: `tq_screen_detail_grid`
+- **정렬 기준**: `display_order ASC, metric_code ASC`
+- **주요 컬럼(표시/비교/스타일/근거)**:
+  - `metric_name`, `metric_year`
+  - `my_value_display`, `region_avg_display`, `national_avg_display`
+  - `comparison_direction_code`
+  - `aux_label`, `aux_display_text`
+  - `accent_color_hex`
+  - `source_table_name`, `source_column_expr`
+- **API**
+  - `GET /api/theme/detail-grid`
+  - params: `screen_code`, `screen_ver`, `screen_base_year`, `schl_nm`
+
+#### 3) 차트 블록(막대/리스트 등)
+
+- **소스 테이블**
+  - 블록 메타: `tq_screen_chart_block`
+  - 블록 아이템: `tq_screen_chart_item`
+- **블록 정렬 기준**: `chart_block.display_order ASC, block_code ASC`
+- **아이템 정렬 기준**: `chart_item.item_order ASC`
+- **블록 메타 주요 컬럼**
+  - `block_code`, `block_title`, `block_subtitle`, `block_style`(bars/list), `display_order`
+- **아이템 주요 컬럼**
+  - `item_label`, `item_value_num`, `item_display_text`, `item_note_text`, `item_color_hex`
+- **API**
+  - `GET /api/theme/chart-blocks`
+  - params: `screen_code`, `screen_ver`, `screen_base_year`, `schl_nm`
+- **백엔드 처리 의사코드(상세)**
+
+```text
+function getThemeChartBlocks(screen_code, screen_ver, screen_base_year, schl_nm):
+  blocks = SELECT * FROM tq_screen_chart_block
+           WHERE filter...
+           ORDER BY display_order, block_code
+
+  items = SELECT * FROM tq_screen_chart_item
+          WHERE filter...
+          ORDER BY block_code, item_order
+
+  itemsByBlock = group items by block_code
+  result = []
+  for each block in blocks:
+    result.append({
+      blockCode: block.block_code,
+      title: block.block_title,
+      subtitle: block.block_subtitle,
+      style: block.block_style,
+      items: map(itemsByBlock[block.block_code] or [])
+    })
+  return { blocks: result }
+```
+
+#### 4) 설명/인사이트 텍스트 블록
+
+- **소스 테이블**
+  - 헤더: `tq_screen_text_block`
+  - 라인: `tq_screen_text_line`
+- **정렬 기준**
+  - 블록: `display_order ASC, block_code ASC`
+  - 라인: `line_no ASC`
+- **API**
+  - `GET /api/theme/text-blocks`
+  - params: `screen_code`, `screen_ver`, `screen_base_year`, `schl_nm`
+- **권장 응답**
+  - `{ blocks: [{ blockCode, areaName, title, lines: [{ role, text }] }] }`
+
+#### 5) 출처/원천 참조 프리뷰
+
+- **소스 테이블**: `tq_screen_source_ref`
+- **정렬 기준**: `ref_order ASC`
+- **API**
+  - `GET /api/theme/source-refs`
+  - params: `screen_code`, `screen_ver`, `screen_base_year`, `schl_nm`
+- **권장 응답**
+  - `{ refs: [{ tableName, columnExpr, note }] }`
+
 ## 백엔드 표준 아키텍처(추가 기능 공통 골격)
 
 ### 파일 위치 규칙

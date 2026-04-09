@@ -7,15 +7,25 @@ export default function AdmissionKPICards({ kpiCards }) {
         <div
           key={card.id}
           className="bg-surface-container-lowest p-6 rounded-lg shadow-[4px_0_24px_rgba(0,0,0,0.02)] border-b-2 border-transparent hover:border-secondary transition-all"
+          style={
+            card.accentColorHex
+              ? { borderBottomColor: card.accentColorHex }
+              : undefined
+          }
         >
           <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">
             {card.label}
           </p>
           <div className="flex items-baseline gap-1 mb-4">
-            <span className="text-3xl font-extrabold text-primary font-headline tracking-tighter">
+            <span
+              className="text-3xl font-extrabold text-primary font-headline tracking-tighter"
+              style={card.accentColorHex ? { color: card.accentColorHex } : undefined}
+            >
               {card.value}
             </span>
-            <span className="text-sm font-semibold text-slate-400">{card.unit}</span>
+            <span className="text-sm font-semibold text-slate-400">
+              {card.unit}
+            </span>
           </div>
           <div className="space-y-1">
             <div className="flex justify-between text-[10px] font-medium">
