@@ -154,9 +154,6 @@ export default function MainPage() {
             <h3 className="text-lg font-bold text-primary mb-6">
               핵심 지표 성과 추이
             </h3>
-            <div className="mb-4 text-[11px] font-extrabold text-error">
-              (DB: public.tq_overview_detail_grid)
-            </div>
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-surface-container-highest/50 text-[10px] font-bold text-outline uppercase tracking-wider">

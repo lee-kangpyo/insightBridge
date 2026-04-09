@@ -17,12 +17,12 @@ function Legend({ items }) {
   );
 }
 
-function Cell({ cell, align = 'left' }) {
+function Cell({ cell, align = "left" }) {
   if (!cell) return null;
   return (
     <div
       className={`px-3 py-2 rounded-md border border-outline-variant/20 text-[13px] font-semibold text-black ${
-        align === 'right' ? 'text-right' : 'text-left'
+        align === "right" ? "text-right" : "text-left"
       }`}
       style={{ backgroundColor: cell.colorHex }}
       title={`${cell.statusName} (${cell.displayText})`}
@@ -39,9 +39,6 @@ export default function RiskStrengthTable({ data, legend }) {
     <div className="bg-surface-container-lowest p-6 rounded-xl shadow-[0_8px_32px_rgba(24,28,30,0.04)]">
       <h3 className="text-lg font-bold text-primary mb-6 flex items-center gap-2">
         <span>종합 리스크/우위 분석</span>
-        <span className="text-[11px] font-extrabold text-error">
-          (DB: public.tq_overview_risk_analysis)
-        </span>
       </h3>
       <table className="w-full text-left">
         <thead>
@@ -56,7 +53,7 @@ export default function RiskStrengthTable({ data, legend }) {
           {data.map((row, index) => (
             <tr
               key={row.indicator?.code || row.indicator}
-              className={`hover:bg-surface-container-low transition-colors ${index > 0 ? 'border-t border-outline-variant/10' : ''}`}
+              className={`hover:bg-surface-container-low transition-colors ${index > 0 ? "border-t border-outline-variant/10" : ""}`}
             >
               <td className="px-4 py-4 font-semibold text-primary">
                 {row.indicator?.name || row.indicator}
