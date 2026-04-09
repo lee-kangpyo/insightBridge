@@ -4,7 +4,7 @@ from ..config import settings
 
 logger = logging.getLogger(__name__)
 
-_KNOWN_OPENAI_COMPAT_PROVIDERS = frozenset({"openai", "minimax"})
+_KNOWN_OPENAI_COMPAT_PROVIDERS = frozenset({"openai", "minimax", "gemini"})
 
 
 def create_chat_model():
