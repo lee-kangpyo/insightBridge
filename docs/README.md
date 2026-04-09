@@ -60,3 +60,9 @@ OPENAI_MODEL=gpt-4
 ```
 VITE_API_URL=http://localhost:8000
 ```
+
+## Feature Docs
+
+- `PLAN_overview_matrix.md`: `tq_overview_matrix_point` 기반 매트릭스 구현 계획
+- `ARCHITECTURE_overview_matrix.md`: 매트릭스 기능 아키텍처(나중에 AI가 참고)
+- `PLAN_product_mvp.md`: 다른 위젯 확장용 큰 그림 Plan

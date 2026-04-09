@@ -55,7 +55,10 @@ export default function StrengthWeaknessMatrix({ matrix }) {
             className="absolute group cursor-pointer"
             style={{ top: `${point.y}%`, left: `${point.x}%` }}
           >
-            <div className={`w-4 h-4 ${pointColors[point.color]} rounded-full border-2 border-white shadow-lg`}></div>
+            <div
+              className={`w-4 h-4 ${point.colorHex ? '' : pointColors[point.color]} rounded-full border-2 border-white shadow-lg`}
+              style={point.colorHex ? { backgroundColor: point.colorHex } : undefined}
+            ></div>
             <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-on-surface text-white text-[10px] py-1 px-2 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
               {point.name}
             </div>

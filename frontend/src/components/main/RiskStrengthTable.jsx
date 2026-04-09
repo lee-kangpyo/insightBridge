@@ -1,12 +1,38 @@
-import StatusPill from './StatusPill';
+function Legend({ items }) {
+  if (!items?.length) return null;
 
-const comparisonStyles = {
-  '우위': 'text-tertiary font-bold',
-  '열세': 'text-error font-bold',
-  '보통': 'text-on-surface-variant',
-};
+  return (
+    <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[11px] text-on-surface-variant">
+      {items.map((it) => (
+        <div key={it.statusCode} className="flex items-center gap-2">
+          <span
+            className="inline-block w-3 h-3 rounded-sm border border-outline-variant/30"
+            style={{ backgroundColor: it.colorHex }}
+            aria-hidden
+          />
+          <span className="font-medium text-on-surface">{it.statusName}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-export default function RiskStrengthTable({ data }) {
+function Cell({ cell, align = 'left' }) {
+  if (!cell) return null;
+  return (
+    <div
+      className={`px-3 py-2 rounded-md border border-outline-variant/20 text-[13px] font-semibold text-black ${
+        align === 'right' ? 'text-right' : 'text-left'
+      }`}
+      style={{ backgroundColor: cell.colorHex }}
+      title={`${cell.statusName} (${cell.displayText})`}
+    >
+      {cell.displayText}
+    </div>
+  );
+}
+
+export default function RiskStrengthTable({ data, legend }) {
   if (!data?.length) return null;
 
   return (
@@ -24,23 +50,32 @@ export default function RiskStrengthTable({ data }) {
         <tbody className="text-sm">
           {data.map((row, index) => (
             <tr
-              key={row.indicator}
+              key={row.indicator?.code || row.indicator}
               className={`hover:bg-surface-container-low transition-colors ${index > 0 ? 'border-t border-outline-variant/10' : ''}`}
             >
-              <td className="px-4 py-4 font-semibold text-primary">{row.indicator}</td>
-              <td className={`px-4 py-4 ${comparisonStyles[row.regionalStatus] || ''}`}>
-                {row.regionalStatus}
-              </td>
-              <td className={`px-4 py-4 ${comparisonStyles[row.nationalStatus] || ''}`}>
-                {row.nationalStatus}
+              <td className="px-4 py-4 font-semibold text-primary">
+                {row.indicator?.name || row.indicator}
               </td>
               <td className="px-4 py-4">
-                <StatusPill status={row.overallStatus} />
+                <Cell cell={row.regional} align="right" />
+              </td>
+              <td className="px-4 py-4">
+                <Cell cell={row.national} align="right" />
+              </td>
+              <td className="px-4 py-4">
+                <div
+                  className="px-3 py-2 rounded-md border border-outline-variant/20 text-[12px] font-bold text-black inline-block"
+                  style={{ backgroundColor: row.overall?.colorHex }}
+                  title={row.overall?.statusName}
+                >
+                  {row.overall?.displayText || row.overallStatus}
+                </div>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      <Legend items={legend} />
     </div>
   );
 }

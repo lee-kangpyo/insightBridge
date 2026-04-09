@@ -112,29 +112,120 @@
   },
   "riskTable": [
     {
-      "indicator": "신입생 충원율",
-      "regionalStatus": "우위",
-      "nationalStatus": "우위",
-      "overallStatus": "최우수"
+      "indicator": { "code": "M01_FRESHMAN_FILL", "name": "신입생 충원율", "year": 2025, "displayOrder": 1 },
+      "regional": {
+        "valueNum": 0.6,
+        "displayText": "+0.6%p",
+        "unitCode": "PERCENT_POINT",
+        "statusCode": "ADVANTAGE",
+        "statusName": "우위",
+        "colorHex": "#d3f9d8",
+        "comparisonDirectionCode": "HIGHER_BETTER"
+      },
+      "national": {
+        "valueNum": 0.52414,
+        "displayText": "+0.5%p",
+        "unitCode": "PERCENT_POINT",
+        "statusCode": "ADVANTAGE",
+        "statusName": "우위",
+        "colorHex": "#d3f9d8",
+        "comparisonDirectionCode": "HIGHER_BETTER"
+      },
+      "overall": {
+        "displayText": "우위",
+        "statusCode": "ADVANTAGE",
+        "statusName": "우위",
+        "colorHex": "#d3f9d8"
+      }
     },
     {
-      "indicator": "취업률",
-      "regionalStatus": "우위",
-      "nationalStatus": "우위",
-      "overallStatus": "최우수"
+      "indicator": { "code": "M02_EMPLOYMENT", "name": "취업률", "year": 2025, "displayOrder": 2 },
+      "regional": {
+        "valueNum": 5.2,
+        "displayText": "+5.2%p",
+        "unitCode": "PERCENT_POINT",
+        "statusCode": "ADVANTAGE",
+        "statusName": "우위",
+        "colorHex": "#d3f9d8",
+        "comparisonDirectionCode": "HIGHER_BETTER"
+      },
+      "national": {
+        "valueNum": 3.8,
+        "displayText": "+3.8%p",
+        "unitCode": "PERCENT_POINT",
+        "statusCode": "ADVANTAGE",
+        "statusName": "우위",
+        "colorHex": "#d3f9d8",
+        "comparisonDirectionCode": "HIGHER_BETTER"
+      },
+      "overall": {
+        "displayText": "우위",
+        "statusCode": "ADVANTAGE",
+        "statusName": "우위",
+        "colorHex": "#d3f9d8"
+      }
     },
     {
-      "indicator": "중도탈락률",
-      "regionalStatus": "열세",
-      "nationalStatus": "보통",
-      "overallStatus": "집중관리"
+      "indicator": { "code": "M03_DROPOUT", "name": "중도탈락률", "year": 2025, "displayOrder": 3 },
+      "regional": {
+        "valueNum": 0.5,
+        "displayText": "+0.5%p",
+        "unitCode": "PERCENT_POINT",
+        "statusCode": "DISADVANTAGE",
+        "statusName": "열세",
+        "colorHex": "#ffe3e3",
+        "comparisonDirectionCode": "LOWER_BETTER"
+      },
+      "national": {
+        "valueNum": -0.1,
+        "displayText": "-0.1%p",
+        "unitCode": "PERCENT_POINT",
+        "statusCode": "NEUTRAL",
+        "statusName": "보통",
+        "colorHex": "#f1f3f5",
+        "comparisonDirectionCode": "LOWER_BETTER"
+      },
+      "overall": {
+        "displayText": "집중관리",
+        "statusCode": "FOCUS",
+        "statusName": "집중관리",
+        "colorHex": "#ffe3e3"
+      }
     },
     {
-      "indicator": "기숙사 수용률",
-      "regionalStatus": "보통",
-      "nationalStatus": "열세",
-      "overallStatus": "보완필요"
+      "indicator": { "code": "M04_DORM", "name": "기숙사 수용률", "year": 2025, "displayOrder": 4 },
+      "regional": {
+        "valueNum": 0.0,
+        "displayText": "0.0%p",
+        "unitCode": "PERCENT_POINT",
+        "statusCode": "NEUTRAL",
+        "statusName": "보통",
+        "colorHex": "#f1f3f5",
+        "comparisonDirectionCode": "HIGHER_BETTER"
+      },
+      "national": {
+        "valueNum": -0.2,
+        "displayText": "-0.2%p",
+        "unitCode": "PERCENT_POINT",
+        "statusCode": "DISADVANTAGE",
+        "statusName": "열세",
+        "colorHex": "#ffe3e3",
+        "comparisonDirectionCode": "HIGHER_BETTER"
+      },
+      "overall": {
+        "displayText": "보완필요",
+        "statusCode": "NEED_IMPROVEMENT",
+        "statusName": "보완필요",
+        "colorHex": "#fff3bf"
+      }
     }
+  ],
+  "riskLegend": [
+    { "statusCode": "ADVANTAGE", "statusName": "우위", "colorHex": "#d3f9d8" },
+    { "statusCode": "NEUTRAL", "statusName": "보통", "colorHex": "#f1f3f5" },
+    { "statusCode": "DISADVANTAGE", "statusName": "열세", "colorHex": "#ffe3e3" },
+    { "statusCode": "NEED_IMPROVEMENT", "statusName": "보완필요", "colorHex": "#fff3bf" },
+    { "statusCode": "FOCUS", "statusName": "집중관리", "colorHex": "#ffe3e3" }
   ],
   "progressMetrics": [
     {
