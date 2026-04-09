@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 const NAV_TABS = [
   { label: '일반현황', path: '/' },
   { label: '입시/충원', path: '/admission' },
+  { label: '학생/진로', path: '/student-career' },
   { label: '학생/취업', path: '/students' },
   { label: '교육/교원', path: '/education' },
   { label: '연구/산학', path: '/research' },
