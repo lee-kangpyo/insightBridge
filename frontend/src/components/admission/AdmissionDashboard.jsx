@@ -15,6 +15,8 @@ import { getThemeDetailGrid } from "../../services/api";
 export default function AdmissionDashboard() {
   const {
     pageTitle,
+    pageSubtitle,
+    baseYear,
     filters,
     enrollmentRates,
     opportunityBalance,
