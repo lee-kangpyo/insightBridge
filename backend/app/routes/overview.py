@@ -11,6 +11,10 @@ from ..schemas import (
     OverviewSmallKpiItem,
     OverviewUnit,
     OverviewRiskTableResponse,
+    OverviewDetailGridResponse,
+    OverviewDetailGridItem,
+    OverviewProgressMetricsResponse,
+    OverviewProgressMetricItem,
     RiskTableCell,
     RiskTableIndicator,
     RiskTableJudgment,
@@ -356,4 +360,131 @@ async def get_overview_kpis(
         # small.append(...)
 
     return OverviewKpisResponse(large=large, small=small)
+
+
+@router.get("/api/overview/detail-grid", response_model=OverviewDetailGridResponse)
+async def get_overview_detail_grid(
+    screen_base_year: int = Query(..., ge=1900, le=3000),
+    screen_code: str = "overview",
+    screen_ver: str = "v0.1",
+    schl_nm: str = Query(..., min_length=1),
+    metric_year: Optional[int] = Query(None, ge=1900, le=3000),
+    metric_code: Optional[str] = None,
+):
+    where = ["screen_code=$1", "screen_ver=$2", "screen_base_year=$3", "schl_nm=$4"]
+    args: list[object] = [screen_code, screen_ver, screen_base_year, schl_nm]
+    i = 5
+
+    if metric_year is not None:
+        where.append(f"metric_year=${i}")
+        args.append(metric_year)
+        i += 1
+
+    if metric_code:
+        where.append(f"metric_code=${i}")
+        args.append(metric_code)
+        i += 1
+
+    sql = f"""
+    SELECT
+      metric_code,
+      metric_name,
+      metric_year,
+      display_order,
+      metric_unit_code,
+      metric_unit_name,
+      my_value_num,
+      my_value_display,
+      region_avg_num,
+      region_avg_display,
+      national_avg_num,
+      national_avg_display,
+      source_table_name,
+      source_column_expr
+    FROM public.tq_overview_detail_grid
+    WHERE {" AND ".join(where)}
+    ORDER BY display_order, metric_year, metric_code
+    """
+
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(sql, *args)
+
+    items: list[OverviewDetailGridItem] = []
+    for r in rows:
+        items.append(
+            OverviewDetailGridItem(
+                metricCode=r["metric_code"],
+                metricName=r["metric_name"],
+                metricYear=int(r["metric_year"]),
+                displayOrder=int(r["display_order"]),
+                metricUnitCode=r["metric_unit_code"],
+                metricUnitName=r["metric_unit_name"],
+                myValueNum=float(r["my_value_num"]),
+                myValueDisplay=r["my_value_display"],
+                regionAvgNum=float(r["region_avg_num"]),
+                regionAvgDisplay=r["region_avg_display"],
+                nationalAvgNum=float(r["national_avg_num"]),
+                nationalAvgDisplay=r["national_avg_display"],
+                sourceTableName=r["source_table_name"],
+                sourceColumnExpr=r["source_column_expr"],
+            )
+        )
+
+    return OverviewDetailGridResponse(title="핵심 지표 상세 그리드", items=items)
+
+
+@router.get("/api/overview/progress-metrics", response_model=OverviewProgressMetricsResponse)
+async def get_overview_progress_metrics(
+    screen_base_year: int = Query(..., ge=1900, le=3000),
+    screen_code: str = "overview",
+    screen_ver: str = "v0.1",
+    schl_nm: str = Query(..., min_length=1),
+    metric_year: Optional[int] = Query(None, ge=1900, le=3000),
+):
+    # DB를 "완성형 데이터"로 사용한다. (매칭/하드코딩 없음)
+    # tq_overview_detail_grid에 아래 컬럼들이 사전에 적재되어 있어야 한다:
+    # - progress_enabled (bool)
+    # - progress_label (text)
+    # - progress_target_display (text)
+    # - progress_percentage (int2)
+    # - progress_color (text)
+    # - progress_display_order (int2)
+    where = ["screen_code=$1", "screen_ver=$2", "screen_base_year=$3", "schl_nm=$4", "progress_enabled=true"]
+    args: list[object] = [screen_code, screen_ver, screen_base_year, schl_nm]
+    i = 5
+
+    if metric_year is not None:
+        where.append(f"metric_year=${i}")
+        args.append(metric_year)
+        i += 1
+
+    sql = f"""
+    SELECT
+      progress_label AS label,
+      my_value_display AS current,
+      progress_target_display AS target,
+      progress_percentage AS percentage,
+      progress_color AS color
+    FROM public.tq_overview_detail_grid
+    WHERE {" AND ".join(where)}
+    ORDER BY progress_display_order, display_order, metric_code
+    """
+
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(sql, *args)
+
+    items = [
+        OverviewProgressMetricItem(
+            label=r["label"],
+            current=r["current"],
+            target=r["target"],
+            percentage=int(r["percentage"]),
+            color=r["color"],
+        )
+        for r in rows
+    ]
+
+    return OverviewProgressMetricsResponse(title="핵심 지표 성과 추이", items=items)
 

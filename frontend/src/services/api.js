@@ -23,3 +23,13 @@ export const getOverviewKpis = async (params) => {
   const response = await api.get('/api/overview/kpis', { params });
   return response.data;
 };
+
+export const getOverviewDetailGrid = async (params) => {
+  const response = await api.get('/api/overview/detail-grid', { params });
+  return response.data;
+};
+
+export const getOverviewProgressMetrics = async (params) => {
+  const response = await api.get('/api/overview/progress-metrics', { params });
+  return response.data;
+};

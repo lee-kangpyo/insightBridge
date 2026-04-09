@@ -13,7 +13,10 @@ export default function StrengthWeaknessMatrix({ matrix }) {
       <div className="flex justify-between items-center mb-8">
         <h3 className="text-lg font-bold text-primary flex items-center gap-2">
           <span className="material-symbols-outlined text-secondary">scatter_plot</span>
-          {matrix?.title}
+          <span>{matrix?.title}</span>
+          <span className="text-[11px] font-extrabold text-error">
+            (DB: public.tq_overview_matrix_point)
+          </span>
         </h3>
         <div className="flex gap-4 text-[10px] font-bold text-outline">
           <div className="flex items-center gap-1">

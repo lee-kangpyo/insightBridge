@@ -132,3 +132,42 @@ class OverviewSmallKpiItem(BaseModel):
 class OverviewKpisResponse(BaseModel):
     large: list[OverviewLargeKpiItem]
     small: list[OverviewSmallKpiItem]
+
+
+class OverviewDetailGridItem(BaseModel):
+    metricCode: str
+    metricName: str
+    metricYear: int
+    displayOrder: int
+    metricUnitCode: str
+    metricUnitName: str
+
+    myValueNum: float
+    myValueDisplay: str
+
+    regionAvgNum: float
+    regionAvgDisplay: str
+
+    nationalAvgNum: float
+    nationalAvgDisplay: str
+
+    sourceTableName: str
+    sourceColumnExpr: str
+
+
+class OverviewDetailGridResponse(BaseModel):
+    title: str
+    items: list[OverviewDetailGridItem]
+
+
+class OverviewProgressMetricItem(BaseModel):
+    label: str
+    current: str
+    target: str
+    percentage: int
+    color: str
+
+
+class OverviewProgressMetricsResponse(BaseModel):
+    title: str
+    items: list[OverviewProgressMetricItem]
