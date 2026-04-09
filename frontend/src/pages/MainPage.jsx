@@ -8,15 +8,6 @@ import RiskStrengthTable from "../components/main/RiskStrengthTable";
 import ProgressMetricGrid from "../components/main/ProgressMetricGrid";
 import sampleData from "../data/main_page_samples.json";
 import { useEffect, useState } from "react";
-import { getOverviewMatrixPoints, getOverviewRiskTable } from "../services/api";
-import MainLayout from "../layouts/MainLayout";
-import PageTitleSection from "../components/main/PageTitleSection";
-import KpiBentoGrid from "../components/main/KpiBentoGrid";
-import StrengthWeaknessMatrix from "../components/main/StrengthWeaknessMatrix";
-import InsightsPanel from "../components/main/InsightsPanel";
-import RiskStrengthTable from "../components/main/RiskStrengthTable";
-import sampleData from "../data/main_page_samples.json";
-import { useEffect, useState } from "react";
 import {
   getOverviewKpis,
   getOverviewMatrixPoints,
