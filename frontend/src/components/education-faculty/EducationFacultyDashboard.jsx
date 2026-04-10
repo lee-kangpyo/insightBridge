@@ -18,6 +18,7 @@ import {
 } from '../../utils/mapThemeChartItemsToEducationBars';
 import { useThemeTextBlockLines } from '../../hooks/useThemeTextBlockLines';
 import { useThemeHeaderContext } from '../../hooks/useThemeHeaderContext';
+import { useThemePanelSummary } from '../../hooks/useThemePanelSummary';
 
 const EDUCATION_SCREEN_BASE_YEAR = 2025;
 const INSIGHT_BLOCK_CODE = 'SAMPLE_INSIGHT';
@@ -44,6 +45,17 @@ export default function EducationFacultyDashboard() {
     screenBaseYear: themeParams.screen_base_year,
     schlNm: themeParams.schl_nm,
   });
+
+  const { title: panelTitle, subtitle: panelSubtitle } = useThemePanelSummary({
+    screenCode: themeParams.screen_code,
+    screenVer: themeParams.screen_ver,
+    screenBaseYear: themeParams.screen_base_year,
+    schlNm: themeParams.schl_nm,
+  });
+
+  const showSummaryJudgment = Boolean(
+    (panelTitle && panelTitle.trim()) || (panelSubtitle && panelSubtitle.trim()),
+  );
 
   useEffect(() => {
     const load = async () => {
@@ -101,6 +113,9 @@ export default function EducationFacultyDashboard() {
         title={headerTitle}
         subtitle={headerSubtitle}
         baseYear={baseYear}
+        showSummaryJudgment={showSummaryJudgment}
+        summaryJudgmentTitle={panelTitle}
+        summaryJudgmentSubtitle={panelSubtitle}
       />
 
       <StatusChips filters={filters} />

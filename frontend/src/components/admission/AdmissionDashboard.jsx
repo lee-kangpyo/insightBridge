@@ -17,6 +17,7 @@ import {
 import { useThemeSourceRefs } from "../../hooks/useThemeSourceRefs";
 import { useThemeTextBlockLines } from "../../hooks/useThemeTextBlockLines";
 import { useThemeHeaderContext } from "../../hooks/useThemeHeaderContext";
+import { useThemePanelSummary } from "../../hooks/useThemePanelSummary";
 
 const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
 const INSIGHT_LINE_ROLE = "INSIGHT";
@@ -54,6 +55,17 @@ export default function AdmissionDashboard() {
     screenBaseYear: params.screen_base_year,
     schlNm: params.schl_nm,
   });
+
+  const { title: panelTitle, subtitle: panelSubtitle } = useThemePanelSummary({
+    screenCode: params.screen_code,
+    screenVer: params.screen_ver,
+    screenBaseYear: params.screen_base_year,
+    schlNm: params.schl_nm,
+  });
+
+  const showSummaryJudgment = Boolean(
+    (panelTitle && panelTitle.trim()) || (panelSubtitle && panelSubtitle.trim()),
+  );
 
   const { title: insightTitle, items: dbInsights } = useThemeTextBlockLines({
     screenCode: params.screen_code,
@@ -143,6 +155,9 @@ export default function AdmissionDashboard() {
         title={headerTitle}
         subtitle={headerSubtitle}
         baseYear={baseYear}
+        showSummaryJudgment={showSummaryJudgment}
+        summaryJudgmentTitle={panelTitle}
+        summaryJudgmentSubtitle={panelSubtitle}
       />
 
       <StatusChips filters={filters} />

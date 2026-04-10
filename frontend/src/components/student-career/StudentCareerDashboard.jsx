@@ -11,6 +11,7 @@ import {
 import { useThemeSourceRefs } from '../../hooks/useThemeSourceRefs';
 import { useThemeTextBlockLines } from '../../hooks/useThemeTextBlockLines';
 import { useThemeHeaderContext } from '../../hooks/useThemeHeaderContext';
+import { useThemePanelSummary } from '../../hooks/useThemePanelSummary';
 
 const INSIGHT_BLOCK_CODE = 'SAMPLE_INSIGHT';
 const INSIGHT_LINE_ROLE = 'INSIGHT';
@@ -34,6 +35,17 @@ export default function StudentCareerDashboard() {
     screenBaseYear: sourceRefParams.screen_base_year,
     schlNm: sourceRefParams.schl_nm,
   });
+
+  const { title: panelTitle, subtitle: panelSubtitle } = useThemePanelSummary({
+    screenCode: sourceRefParams.screen_code,
+    screenVer: sourceRefParams.screen_ver,
+    screenBaseYear: sourceRefParams.screen_base_year,
+    schlNm: sourceRefParams.schl_nm,
+  });
+
+  const showSummaryJudgment = Boolean(
+    (panelTitle && panelTitle.trim()) || (panelSubtitle && panelSubtitle.trim()),
+  );
 
   const [kpiCards, setKpiCards] = useState([]);
   const [chartLeftItems, setChartLeftItems] = useState([]);
@@ -126,6 +138,9 @@ export default function StudentCareerDashboard() {
         title={headerTitle}
         subtitle={headerSubtitle}
         baseYear={baseYear}
+        showSummaryJudgment={showSummaryJudgment}
+        summaryJudgmentTitle={panelTitle}
+        summaryJudgmentSubtitle={panelSubtitle}
       />
 
       <StatusChips filters={filters} />

@@ -9,6 +9,7 @@ import { useThemeSourceRefs } from '../../hooks/useThemeSourceRefs';
 import { useThemeChartBlockMeta } from '../../hooks/useThemeChartBlockMeta';
 import { useThemeTextBlockLines } from '../../hooks/useThemeTextBlockLines';
 import { useThemeHeaderContext } from '../../hooks/useThemeHeaderContext';
+import { useThemePanelSummary } from '../../hooks/useThemePanelSummary';
 import {
   mapThemeItemsToCampusConfiguration,
   mapThemeItemsToCampusSafetyStatus,
@@ -59,6 +60,17 @@ export default function CampusDashboard() {
     screenBaseYear: themeParams.screen_base_year,
     schlNm: themeParams.schl_nm,
   });
+
+  const { title: panelTitle, subtitle: panelSubtitle } = useThemePanelSummary({
+    screenCode: themeParams.screen_code,
+    screenVer: themeParams.screen_ver,
+    screenBaseYear: themeParams.screen_base_year,
+    schlNm: themeParams.schl_nm,
+  });
+
+  const showSummaryJudgment = Boolean(
+    (panelTitle && panelTitle.trim()) || (panelSubtitle && panelSubtitle.trim()),
+  );
 
   const {
     title: insightTitle,
@@ -139,6 +151,9 @@ export default function CampusDashboard() {
         title={headerTitle}
         subtitle={headerSubtitle}
         baseYear={meta.baseYear}
+        showSummaryJudgment={showSummaryJudgment}
+        summaryJudgmentTitle={panelTitle}
+        summaryJudgmentSubtitle={panelSubtitle}
       />
 
       <StatusChips filters={filters} />
