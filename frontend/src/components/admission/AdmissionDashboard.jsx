@@ -9,7 +9,7 @@ import {
   AdmissionInsights,
   AdmissionTable,
 } from "./index";
-import { getThemeDetailGrid } from "../../services/api";
+import { getThemeDetailGrid, getThemeSourceRefs } from "../../services/api";
 
 export default function AdmissionDashboard() {
   const {
@@ -20,7 +20,6 @@ export default function AdmissionDashboard() {
     enrollmentRates,
     opportunityBalance,
     insights,
-    tablePreview,
   } = admissionData;
 
   // ✅ 최상단 KPI 카드는 DB 값만 사용 (샘플 fallback 제거)
@@ -36,6 +35,7 @@ export default function AdmissionDashboard() {
     subtitle: "",
   });
   const [dbInsights, setDbInsights] = useState([]);
+  const [sourceRefs, setSourceRefs] = useState([]);
 
   const params = useMemo(
     () => ({
@@ -125,6 +125,18 @@ export default function AdmissionDashboard() {
     load();
   }, [params]);
 
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await getThemeSourceRefs(params);
+        setSourceRefs(Array.isArray(data?.refs) ? data.refs : []);
+      } catch {
+        setSourceRefs([]);
+      }
+    };
+    load();
+  }, [params]);
+
   const insightsToRender = dbInsights?.length ? dbInsights : insights;
 
   return (
@@ -153,7 +165,7 @@ export default function AdmissionDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <AdmissionInsights insights={insightsToRender} />
-        <AdmissionTable tablePreview={tablePreview} />
+        <AdmissionTable refs={sourceRefs} />
       </div>
     </div>
   );
