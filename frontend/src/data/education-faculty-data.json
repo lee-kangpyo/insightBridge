@@ -1,0 +1,119 @@
+{
+  "pageTitle": "교육/교원 모니터링",
+  "pageSubtitle": "Education & Faculty",
+  "baseYear": "2024",
+  "filters": {
+    "schoolType": { "label": "학교종류", "value": "대학교" },
+    "establishment": { "label": "설립구분", "value": "국립" },
+    "region": { "label": "지역", "value": "대전" },
+    "status": { "label": "상태", "value": "기준" }
+  },
+  "kpiCards": [
+    {
+      "id": "full-time-ratio",
+      "label": "전임교원 확보율",
+      "value": "87.0",
+      "unit": "%",
+      "trend": "down",
+      "trendValue": "13.0%",
+      "target": "100%",
+      "regionalAvg": "82.4%",
+      "progress": 87,
+      "color": "primary"
+    },
+    {
+      "id": "student-faculty-ratio",
+      "label": "학생/전임교원 수",
+      "value": "23.3",
+      "unit": "",
+      "trend": "up",
+      "trendValue": "94.6% achieved",
+      "nationalAvg": "24.1",
+      "regionalAvg": "22.8",
+      "progress": 94.6,
+      "color": "secondary"
+    },
+    {
+      "id": "full-time-lecture-ratio",
+      "label": "전임 강의담당 비율",
+      "value": "62.0",
+      "unit": "%",
+      "trend": "up",
+      "trendValue": "+24.0% vs target",
+      "target": "38.0%",
+      "nationalAvg": "65.2%",
+      "progress": 62,
+      "color": "tertiary"
+    },
+    {
+      "id": "small-class-ratio",
+      "label": "20명 이하 강좌 비중",
+      "value": "41.5",
+      "unit": "%",
+      "total": "7,295 courses",
+      "nationalAvg": "38.9%",
+      "color": "secondary"
+    },
+    {
+      "id": "internship-insurance",
+      "label": "현장실습 보험가입률",
+      "value": "100.0",
+      "unit": "%",
+      "detail": "349 students insured",
+      "benchmark": "Benchmark achievement",
+      "color": "tertiary"
+    },
+    {
+      "id": "capstone-ratio",
+      "label": "캡스톤 지원수혜 비율",
+      "value": "92.2",
+      "unit": "%",
+      "detail": "2,911 students",
+      "change": "+4.2% from previous term",
+      "color": "primary"
+    }
+  ],
+  "semesterRatios": [
+    { "semester": "1학기", "ratio": 64.5, "courses": 2450 },
+    { "semester": "2학기", "ratio": 59.8, "courses": 2280 }
+  ],
+  "courseDistribution": [
+    { "range": "20명 이하", "count": 1422, "percentage": 90 },
+    { "range": "21~30명", "count": 788, "percentage": 65 },
+    { "range": "31~40명", "count": 554, "percentage": 45 },
+    { "range": "41~50명", "count": 407, "percentage": 35 },
+    { "range": "51~60명", "count": 219, "percentage": 20 },
+    { "range": "61명 이상", "count": 257, "percentage": 25 }
+  ],
+  "insights": [
+    {
+      "bullet": "전임교원 확보율은 지역 평균(82.4%) 대비 4.6%p 높으나, 법정 확보 기준인 100%에는 여전히 미달하는 수준임."
+    },
+    {
+      "bullet": "20명 이하 소규모 강좌 비중이 전년 대비 3% 증가하여 교육의 질적 측면에서 긍정적 지표를 나타냄."
+    },
+    {
+      "bullet": "현장실습 보험가입률 100%를 유지하며 학생 안전 및 관련 규정 준수가 철저히 이행되고 있음."
+    }
+  ],
+  "tablePreview": [
+    {
+      "tableName": "T_PER_FULL_FAC",
+      "columns": ["FAC_ID", "DEPT_CD", "RATIO_VAL"],
+      "lastUpdated": "2024-05-12",
+      "status": "ACTIVE"
+    },
+    {
+      "tableName": "T_FAC_LECT_INSTR",
+      "columns": ["LECT_CD", "FAC_TYPE", "HOURS"],
+      "lastUpdated": "2024-05-11",
+      "status": "ACTIVE"
+    },
+    {
+      "tableName": "T_STUD_PRACTICE",
+      "columns": ["STU_ID", "INS_STAT", "PERIOD"],
+      "lastUpdated": "2024-05-10",
+      "status": "SYNCING"
+    }
+  ]
+}

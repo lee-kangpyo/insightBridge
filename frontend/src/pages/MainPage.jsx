@@ -1,9 +1,11 @@
 import MainLayout from "../layouts/MainLayout";
 import PageTitleSection from "../components/main/PageTitleSection";
+import StatusChips from "../components/main/StatusChips";
 import KpiBentoGrid from "../components/main/KpiBentoGrid";
 import StrengthWeaknessMatrix from "../components/main/StrengthWeaknessMatrix";
 import InsightsPanel from "../components/main/InsightsPanel";
 import RiskStrengthTable from "../components/main/RiskStrengthTable";
+import ProgressMetricGrid from "../components/main/ProgressMetricGrid";
 import sampleData from "../data/main_page_samples.json";
 import { useEffect, useState } from "react";
 import {
@@ -141,61 +143,26 @@ export default function MainPage() {
 
   return (
     <MainLayout>
-      <PageTitleSection meta={sampleData.meta} />
-      <KpiBentoGrid largeKpis={largeKpis} smallKpis={smallKpis} />
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-        <StrengthWeaknessMatrix matrix={matrix} />
-        <InsightsPanel insights={insights} />
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <RiskStrengthTable data={riskTable} legend={riskLegend} />
-        {detailGrid?.length ? (
-          <div className="bg-surface-container-lowest p-6 rounded-xl shadow-[0_8px_32px_rgba(24,28,30,0.04)]">
-            <h3 className="text-lg font-bold text-primary mb-6">
-              핵심 지표 성과 추이
-            </h3>
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-surface-container-highest/50 text-[10px] font-bold text-outline uppercase tracking-wider">
-                  <th className="px-4 py-3 rounded-tl-lg">지표</th>
-                  <th className="px-4 py-3">우리 대학</th>
-                  <th className="px-4 py-3">지역 평균</th>
-                  <th className="px-4 py-3">전국 평균</th>
-                  <th className="px-4 py-3 rounded-tr-lg">원천 테이블</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {detailGrid.map((row, idx) => (
-                  <tr
-                    key={`${row.metricCode}-${row.metricYear}-${idx}`}
-                    className={
-                      idx > 0 ? "border-t border-outline-variant/10" : ""
-                    }
-                  >
-                    <td className="px-4 py-3 font-semibold text-primary">
-                      {row.metricName}{" "}
-                      <span className="text-[11px] text-outline">
-                        ({row.metricYear})
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right font-bold">
-                      {row.myValueDisplay}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {row.regionAvgDisplay}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {row.nationalAvgDisplay}
-                    </td>
-                    <td className="px-4 py-3 text-[11px] text-outline">
-                      {row.sourceTableName}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
+      <div className="max-w-[1600px] mx-auto px-8 py-6 space-y-8">
+        <PageTitleSection
+          title={sampleData.meta?.dashboardTitle}
+          subtitle={sampleData.meta?.institutionalDashboardLabel}
+          baseYear={sampleData.meta?.baseYear}
+          showPdfButton={true}
+        />
+        <StatusChips filters={sampleData.filters} />
+        <KpiBentoGrid
+          largeKpis={sampleData.kpis.large}
+          smallKpis={sampleData.kpis.small}
+        />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <StrengthWeaknessMatrix matrix={matrix} />
+          <InsightsPanel insights={sampleData.insights} />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <RiskStrengthTable data={riskTable} legend={riskLegend} />
+          <ProgressMetricGrid metrics={sampleData.progressMetrics} />
+        </div>
       </div>
     </MainLayout>
   );

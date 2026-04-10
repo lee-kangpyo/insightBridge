@@ -4,6 +4,12 @@
     "dashboardTitle": "대학 종합 현황 대시보드",
     "institutionalDashboardLabel": "Institutional Dashboard"
   },
+  "filters": [
+    { "label": "학교종류", "value": "대학교" },
+    { "label": "설립구분", "value": "국립" },
+    { "label": "지역", "value": "대전" },
+    { "label": "상태", "value": "기준" }
+  ],
   "kpis": {
     "large": [
       {
