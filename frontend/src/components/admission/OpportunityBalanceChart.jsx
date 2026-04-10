@@ -1,10 +1,17 @@
-export default function OpportunityBalanceChart({ opportunityBalance }) {
+export default function OpportunityBalanceChart({ title, subtitle, opportunityBalance }) {
   if (!opportunityBalance?.length) return null;
 
   return (
     <div className="bg-surface-container-low p-8 rounded-lg">
       <div className="flex justify-between items-center mb-10">
-        <h3 className="font-headline text-lg font-bold text-primary">기회균형 선발 구성</h3>
+        <div>
+          <h3 className="font-headline text-lg font-bold text-primary">
+            {title || "기회균형 선발 구성"}
+          </h3>
+          {subtitle ? (
+            <p className="mt-1 text-xs text-on-surface-variant">{subtitle}</p>
+          ) : null}
+        </div>
         <div className="flex bg-white rounded-lg p-1">
           <button className="px-3 py-1 text-[10px] font-bold bg-secondary text-white rounded-md">
             구성비
