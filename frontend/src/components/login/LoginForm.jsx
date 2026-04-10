@@ -1,16 +1,36 @@
 import { useState } from 'react';
+import axios from 'axios';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
-/** MVP: 비밀번호 재설정 등 미구현 — 나중에 true로 켜고 링크 대상만 연결하면 됨 */
-const SHOW_CREDENTIAL_RECOVERY_LINK = false;
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const SHOW_CREDENTIAL_RECOVERY_LINK =
+  (import.meta.env.VITE_SHOW_CREDENTIAL_RECOVERY_LINK ?? 'false') === 'true';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      await login(email, password);
+      navigate('/');
+    } catch (err) {
+      setError(err.response?.data?.detail || '로그인에 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -116,9 +136,14 @@ export default function LoginForm() {
         ) : null}
       </div>
 
+      {error && (
+        <p className="text-red-500 text-sm text-center font-medium">{error}</p>
+      )}
+
       <button
         type="submit"
-        className="w-full h-14 bg-primary-container text-on-primary rounded-full font-login-headline font-bold flex items-center justify-center gap-3 shadow-xl shadow-primary-container/25 hover:bg-[#00366b] active:scale-[0.98] transition-all border-0 cursor-pointer"
+        disabled={loading}
+        className="w-full h-14 bg-primary-container text-on-primary rounded-full font-login-headline font-bold flex items-center justify-center gap-3 shadow-xl shadow-primary-container/25 hover:bg-[#00366b] active:scale-[0.98] transition-all border-0 cursor-pointer disabled:opacity-50"
       >
         로그인
         <span className="material-symbols-outlined text-[20px]">arrow_forward</span>

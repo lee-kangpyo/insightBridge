@@ -1,4 +1,5 @@
 import { Routes, Route } from "react-router-dom";
+import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
 import DashboardPage from "./pages/DashboardPage";
 import MainPage from "./pages/MainPage";
@@ -17,24 +18,101 @@ import LoginPage from "./pages/LoginPage";
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<MainPage />} />
-      <Route path="/admission" element={<AdmissionPage />} />
-      <Route path="/student-career" element={<StudentCareerPage />} />
-      <Route path="/education-faculty" element={<EducationFacultyPage />} />
-      <Route path="/research" element={<ResearchIndustryStartupPage />} />
-      <Route path="/finance" element={<FinancePage />} />
-      <Route path="/governance" element={<GovernancePage />} />
-      <Route path="/campus" element={<CampusPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <MainPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admission"
+        element={
+          <ProtectedRoute>
+            <AdmissionPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/student-career"
+        element={
+          <ProtectedRoute>
+            <StudentCareerPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/education-faculty"
+        element={
+          <ProtectedRoute>
+            <EducationFacultyPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/research"
+        element={
+          <ProtectedRoute>
+            <ResearchIndustryStartupPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/finance"
+        element={
+          <ProtectedRoute>
+            <FinancePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/governance"
+        element={
+          <ProtectedRoute>
+            <GovernancePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/campus"
+        element={
+          <ProtectedRoute>
+            <CampusPage />
+          </ProtectedRoute>
+        }
+      />
       {!import.meta.env.PROD && (
-        <Route path="/dashboard/legacy" element={<DashboardLayout />}>
+        <Route
+          path="/dashboard/legacy"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<DashboardPage />} />
         </Route>
       )}
       {!import.meta.env.PROD && (
-        <Route path="/insights" element={<QueryPage />} />
+        <Route
+          path="/insights"
+          element={
+            <ProtectedRoute>
+              <QueryPage />
+            </ProtectedRoute>
+          }
+        />
       )}
-      <Route path="/support" element={<SupportPage />} />
-      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/support"
+        element={
+          <ProtectedRoute>
+            <SupportPage />
+          </ProtectedRoute>
+        }
+      />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

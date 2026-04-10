@@ -355,6 +355,15 @@ class LoginRequest(BaseModel):
 
 class LoginResponse(BaseModel):
     access_token: str
+    token_type: str = "bearer"
+    univ_nm: Optional[str] = None
+
+
+class OAuth2TokenResponse(BaseModel):
+    """RFC 6749-style token response; `univ_nm` is an extension for this API."""
+
+    access_token: str
+    token_type: str = "bearer"
     univ_nm: Optional[str] = None
 
 
