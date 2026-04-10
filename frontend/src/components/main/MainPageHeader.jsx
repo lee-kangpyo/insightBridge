@@ -1,4 +1,18 @@
-import { Link, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+
+function profileInitials(user) {
+  if (!user) return '?';
+  const name = user.univ_nm?.trim() || '';
+  if (name.length >= 1) {
+    return [...name][0];
+  }
+  const local = user.email?.split('@')[0]?.trim() || '';
+  if (local.length >= 2) return local.slice(0, 2).toUpperCase();
+  if (local.length === 1) return local.toUpperCase();
+  return '?';
+}
 
 const NAV_TABS = [
   { label: '일반현황', path: '/' },
@@ -13,6 +27,19 @@ const NAV_TABS = [
 
 export default function MainPageHeader() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const avatarUrl = user?.avatar_url || user?.photo_url;
+
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [avatarUrl, user?.email]);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <header className="bg-surface-container-low shadow-[0_8px_32px_rgba(24,28,30,0.04)] top-0 sticky z-40">
@@ -47,12 +74,43 @@ export default function MainPageHeader() {
           <button className="material-symbols-outlined text-[#5a5f64] p-2 hover:bg-slate-100/50 rounded-full transition-colors cursor-pointer">
             settings
           </button>
-          <div className="w-8 h-8 rounded-full bg-surface-container overflow-hidden">
-            <img
-              className="w-full h-full object-cover"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuD38XLCAQXtpVoebDySSvznwMKB7WZBZAKTrStq7dmHHgvhvRYVq53KJ-l24TTDjY6PjBrXY6omSdU6PI5qwHci0w7CrizFryLvjWBjTu31QUdqcgCosrECBFJZBVlDXHWdeo7RZMNROpQeud2uubp29oBJmGHn9b2tnffh1yx7EmoZ2ntubrejLzliUeDA4hwL-Q2r4O9ppPkNwg77x2e3D4ZTaYXjDnjqml0rtOFGgm_yWD6vKPeB9NiqD-hlWTJXQnfPpxLn8fc"
-              alt="User profile"
-            />
+          <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+            {user && (
+              <span className="text-sm text-[#5a5f64] font-medium hidden sm:inline">
+                {user.univ_nm}
+              </span>
+            )}
+            <button
+              onClick={handleLogout}
+              className="material-symbols-outlined text-[#5a5f64] p-2 hover:bg-slate-100/50 rounded-full transition-colors cursor-pointer"
+              title="로그아웃"
+            >
+              logout
+            </button>
+            <div
+              className="w-8 h-8 rounded-full bg-surface-container overflow-hidden shrink-0 flex items-center justify-center border border-slate-200/80"
+              title={user?.email || '프로필'}
+              aria-label={
+                avatarUrl && !avatarFailed
+                  ? undefined
+                  : user
+                    ? `프로필, ${user.univ_nm || user.email}`
+                    : '프로필'
+              }
+            >
+              {avatarUrl && !avatarFailed ? (
+                <img
+                  className="w-full h-full object-cover"
+                  src={avatarUrl}
+                  alt={user ? `프로필, ${user.univ_nm || user.email}` : '프로필'}
+                  onError={() => setAvatarFailed(true)}
+                />
+              ) : (
+                <span className="text-[11px] font-semibold text-primary leading-none select-none" aria-hidden>
+                  {profileInitials(user)}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>

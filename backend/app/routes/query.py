@@ -1,13 +1,14 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from ..schemas import QueryRequest, QueryResponse
 from ..services.llm import generate_sql
 from ..database import fetch_df
+from ..dependencies import require_auth
 
 router = APIRouter()
 
 
 @router.post("/api/query", response_model=QueryResponse)
-async def query(request: QueryRequest):
+async def query(request: QueryRequest, _current_user: dict = Depends(require_auth)):
     try:
         sql, message = await generate_sql(request.question)
     except ValueError as e:

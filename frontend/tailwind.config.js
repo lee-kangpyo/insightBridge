@@ -64,6 +64,8 @@ export default {
         headline: ['Manrope', 'sans-serif'],
         body: ['Inter', 'sans-serif'],
         label: ['Inter', 'sans-serif'],
+        'login-headline': ['Noto Sans KR', 'Manrope', 'sans-serif'],
+        'login-body': ['Noto Sans KR', 'Inter', 'sans-serif'],
       },
     },
   },

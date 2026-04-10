@@ -22,11 +22,13 @@ async def close_pool():
         _pool = None
 
 
-async def fetch_df(sql: str) -> pd.DataFrame:
+async def fetch_df(sql: str, params: tuple = ()) -> pd.DataFrame:
     pool = await get_pool()
     async with pool.acquire() as conn:
-        rows = await conn.fetch(sql)
-        columns = list(rows[0].keys()) if rows else []
+        rows = await conn.fetch(sql, *params)
+        if not rows:
+            return pd.DataFrame(columns=[c[0] for c in rows[0].keys()] if rows else [])
+        columns = list(rows[0].keys())
         data = [dict(row) for row in rows]
         return pd.DataFrame(data, columns=columns)
 

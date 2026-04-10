@@ -346,3 +346,28 @@ class AdmissionOpportunityBalanceResponse(BaseModel):
 
 class AdmissionInsightItem(BaseModel):
     text: str
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    univ_nm: Optional[str] = None
+
+
+class OAuth2TokenResponse(BaseModel):
+    """RFC 6749-style token response; `univ_nm` is an extension for this API."""
+
+    access_token: str
+    token_type: str = "bearer"
+    univ_nm: Optional[str] = None
+
+
+class TokenPayload(BaseModel):
+    sub: str
+    univ_nm: str
+    exp: int

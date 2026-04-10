@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4"
     llm_provider: str = "openai"
     llm_temperature: float = 0.0
+    jwt_secret_key: str
+    jwt_algorithm: str = "HS256"
 
     class Config:
         env_file = ".env"
