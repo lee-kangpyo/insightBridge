@@ -1,17 +1,17 @@
-import { Routes, Route } from 'react-router-dom';
-import DashboardLayout from './layouts/DashboardLayout';
-import DashboardPage from './pages/DashboardPage';
-import MainPage from './pages/MainPage';
-import AdmissionPage from './pages/AdmissionPage';
-import StudentCareerPage from './pages/StudentCareerPage';
-import EducationFacultyPage from './pages/EducationFacultyPage';
-import ResearchIndustryStartupPage from './pages/ResearchIndustryStartupPage';
-import FinancePage from './pages/FinancePage';
-import GovernancePage from './pages/GovernancePage';
-import CampusPage from './pages/CampusPage';
-import QueryPage from './pages/QueryPage';
-import NotFoundPage from './pages/NotFoundPage';
-import SupportPage from './pages/SupportPage';
+import { Routes, Route } from "react-router-dom";
+import DashboardLayout from "./layouts/DashboardLayout";
+import DashboardPage from "./pages/DashboardPage";
+import MainPage from "./pages/MainPage";
+import AdmissionPage from "./pages/AdmissionPage";
+import StudentCareerPage from "./pages/StudentCareerPage";
+import EducationFacultyPage from "./pages/EducationFacultyPage";
+import ResearchIndustryStartupPage from "./pages/ResearchIndustryStartupPage";
+import FinancePage from "./pages/FinancePage";
+import GovernancePage from "./pages/GovernancePage";
+import CampusPage from "./pages/CampusPage";
+import QueryPage from "./pages/QueryPage";
+import NotFoundPage from "./pages/NotFoundPage";
+import SupportPage from "./pages/SupportPage";
 
 function App() {
   return (

@@ -63,6 +63,15 @@ VITE_API_URL=http://localhost:8000
 
 ## Feature Docs
 
+### 핵심 아키텍처
+- `DYNAMIC_QUERY_CONFIG.md`: 동적 쿼리 구성 시스템 (tq_screen_*, tq_overview_*)
+- `ARCHITECTURE.md`: 전체 아키텍처 및 LLM 처리 플로우
+- `STACK.md`: 기술 스택 상세
+
+### 기능별 문서
 - `PLAN_overview_matrix.md`: `tq_overview_matrix_point` 기반 매트릭스 구현 계획
 - `ARCHITECTURE_overview_matrix.md`: 매트릭스 기능 아키텍처(나중에 AI가 참고)
 - `PLAN_product_mvp.md`: 다른 위젯 확장용 큰 그림 Plan
+
+### 이슈 및 TODO
+- `OPEN_ISSUES.md`: 해결되지 않은 이슈들
