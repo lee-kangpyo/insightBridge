@@ -6,8 +6,8 @@ const NAV_TABS = [
   { label: '학생/진로', path: '/student-career' },
   { label: '교육/교원', path: '/education-faculty' },
   { label: '연구/산학/창업', path: '/research' },
-  { label: '재정/장학', path: '/finance' },
-  { label: '캠퍼스/복지', path: '/campus' },
+  { label: '재정/등록금/학생지원', path: '/finance' },
+  { label: '캠퍼스/복지/안전', path: '/campus' },
   { label: '거버넌스', path: '/governance' },
 ];
 
