@@ -1,10 +1,17 @@
-export default function EnrollmentRateChart({ enrollmentRates }) {
+export default function EnrollmentRateChart({ title, subtitle, enrollmentRates }) {
   if (!enrollmentRates?.length) return null;
 
   return (
     <div className="bg-surface-container-low p-8 rounded-lg relative overflow-hidden group">
-      <div className="flex justify-between items-center mb-10">
-        <h3 className="font-headline text-lg font-bold text-primary">전형별 최종등록률</h3>
+      <div className="flex justify-between items-start mb-10 gap-4">
+        <div>
+          <h3 className="font-headline text-lg font-bold text-primary">
+            {title || "전형별 최종등록률"}
+          </h3>
+          {subtitle ? (
+            <p className="mt-1 text-xs text-on-surface-variant">{subtitle}</p>
+          ) : null}
+        </div>
         <button className="text-slate-400 hover:text-primary transition-colors">
           <span className="material-symbols-outlined">more_horiz</span>
         </button>

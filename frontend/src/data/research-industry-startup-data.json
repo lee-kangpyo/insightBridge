@@ -80,9 +80,10 @@
       "year": "2024",
       "total": "1,674억원",
       "sources": [
-        { "name": "교내", "percentage": 15 },
+        { "name": "교내 연구비", "percentage": 15 },
         { "name": "중앙정부", "percentage": 55 },
-        { "name": "지자체/민간", "percentage": 25 },
+        { "name": "지자체", "percentage": 10 },
+        { "name": "민간", "percentage": 15 },
         { "name": "외국", "percentage": 5 }
       ]
     },
@@ -90,9 +91,10 @@
       "year": "2023",
       "total": "1,520억원",
       "sources": [
-        { "name": "교내", "percentage": 18 },
+        { "name": "교내 연구비", "percentage": 18 },
         { "name": "중앙정부", "percentage": 52 },
-        { "name": "지자체/민간", "percentage": 22 },
+        { "name": "지자체", "percentage": 9 },
+        { "name": "민간", "percentage": 13 },
         { "name": "외국", "percentage": 8 }
       ]
     },
@@ -100,9 +102,10 @@
       "year": "2022",
       "total": "1,410억원",
       "sources": [
-        { "name": "교내", "percentage": 20 },
+        { "name": "교내 연구비", "percentage": 20 },
         { "name": "중앙정부", "percentage": 50 },
-        { "name": "지자체/민간", "percentage": 20 },
+        { "name": "지자체", "percentage": 8 },
+        { "name": "민간", "percentage": 12 },
         { "name": "외국", "percentage": 10 }
       ]
     }

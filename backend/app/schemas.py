@@ -317,3 +317,32 @@ class ThemeSourceRefItem(BaseModel):
 
 class ThemeSourceRefsResponse(BaseModel):
     refs: list[ThemeSourceRefItem]
+
+
+class AdmissionEnrollmentRateItem(BaseModel):
+    type: str
+    currentYear: float
+    previousYear: Optional[float] = None
+
+
+class AdmissionEnrollmentRatesResponse(BaseModel):
+    title: str
+    subtitle: Optional[str] = None
+    items: list[AdmissionEnrollmentRateItem]
+
+
+class AdmissionOpportunityBalanceItem(BaseModel):
+    category: str
+    ratio: float
+    previousRatio: Optional[float] = None
+    barRatioDisplayText: Optional[str] = None
+
+
+class AdmissionOpportunityBalanceResponse(BaseModel):
+    title: str
+    subtitle: Optional[str] = None
+    items: list[AdmissionOpportunityBalanceItem]
+
+
+class AdmissionInsightItem(BaseModel):
+    text: str
