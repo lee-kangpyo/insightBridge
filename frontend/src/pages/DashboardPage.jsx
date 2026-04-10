@@ -60,7 +60,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 p-4 md:p-8">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 p-6">
       <section className="relative z-20 flex flex-col gap-6">
         <DashboardPageHeader school={selectedSchool} />
         

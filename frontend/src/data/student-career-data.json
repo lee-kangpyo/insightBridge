@@ -1,4 +1,7 @@
 {
+  "pageTitle": "학생/진로 모니터링",
+  "pageSubtitle": "Student Career",
+  "baseYear": "2024",
   "filters": {
     "schoolType": { "label": "학교종류", "value": "대학교" },
     "establishment": { "label": "설립구분", "value": "국립" },

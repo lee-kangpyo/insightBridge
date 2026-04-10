@@ -1,5 +1,7 @@
 {
   "pageTitle": "2025 공시 기준 입학/선발 모니터링",
+  "pageSubtitle": "Admission",
+  "baseYear": "2025",
   "filters": [
     { "label": "학교종류", "value": "대학교" },
     { "label": "설립구분", "value": "국립" },
