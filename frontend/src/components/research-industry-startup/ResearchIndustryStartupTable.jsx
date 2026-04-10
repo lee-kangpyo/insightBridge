@@ -5,6 +5,8 @@ const statusStyles = {
 
 export default function ResearchIndustryStartupTable({ tablePreview }) {
   const rows = Array.isArray(tablePreview) ? tablePreview : [];
+  if (!rows.length) return null;
+
   const isApiShape = Boolean(rows?.[0] && typeof rows[0].columnExpr === 'string');
 
   return (

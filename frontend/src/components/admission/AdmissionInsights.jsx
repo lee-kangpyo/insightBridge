@@ -1,5 +1,7 @@
-export default function AdmissionInsights({ insights }) {
+export default function AdmissionInsights({ title, insights }) {
   if (!insights?.length) return null;
+
+  const resolvedTitle = (title || "인사이트").trim() || "인사이트";
 
   return (
     <div className="lg:col-span-1 bg-surface-container-lowest p-8 rounded-lg shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
@@ -8,7 +10,7 @@ export default function AdmissionInsights({ insights }) {
           tips_and_updates
         </span>
         <h3 className="font-headline text-lg font-bold text-primary">
-          인사이트
+          {resolvedTitle}
         </h3>
       </div>
       <ul className="space-y-4">

@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import educationFacultyData from '../../data/education-faculty-data.json';
 import PageTitleSection from '../main/PageTitleSection';
 import StatusChips from '../main/StatusChips';
@@ -8,71 +9,120 @@ import {
   EducationFacultyInsights,
   EducationFacultyTable,
 } from './index';
-import { useThemeInsights } from '../../hooks/useThemeInsights';
+import { getThemeDetailGrid } from '../../services/api';
 import { useThemeSourceRefs } from '../../hooks/useThemeSourceRefs';
 import { useThemeChartBlockMeta } from '../../hooks/useThemeChartBlockMeta';
 import {
   mapThemeItemsToCourseDistribution,
   mapThemeItemsToSemesterRatios,
 } from '../../utils/mapThemeChartItemsToEducationBars';
+import { useThemeTextBlockLines } from '../../hooks/useThemeTextBlockLines';
+import { useThemeHeaderContext } from '../../hooks/useThemeHeaderContext';
+
+const EDUCATION_SCREEN_BASE_YEAR = 2025;
+const INSIGHT_BLOCK_CODE = 'SAMPLE_INSIGHT';
+const INSIGHT_LINE_ROLE = 'INSIGHT';
 
 export default function EducationFacultyDashboard() {
-  const { pageTitle, pageSubtitle, baseYear, filters, kpiCards, semesterRatios, courseDistribution, insights, tablePreview } =
-    educationFacultyData;
+  const { pageTitle, pageSubtitle, baseYear, filters } = educationFacultyData;
 
-  const { items: dbInsights } = useThemeInsights({
-    screenCode: 'education',
-    screenVer: 'v0.1',
-    screenBaseYear: 2025,
-    schlNm: '충남대학교',
+  const [kpiCards, setKpiCards] = useState([]);
+
+  const themeParams = useMemo(
+    () => ({
+      screen_code: 'education',
+      screen_ver: 'v0.1',
+      screen_base_year: EDUCATION_SCREEN_BASE_YEAR,
+      schl_nm: '충남대학교',
+    }),
+    [],
+  );
+
+  const { title: headerTitle, subtitle: headerSubtitle } = useThemeHeaderContext({
+    screenCode: themeParams.screen_code,
+    screenVer: themeParams.screen_ver,
+    screenBaseYear: themeParams.screen_base_year,
+    schlNm: themeParams.schl_nm,
+  });
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await getThemeDetailGrid(themeParams);
+        const items = Array.isArray(data?.items) ? data.items : [];
+        const mapped = items.map((row) => ({
+          id: row.metricCode,
+          label: row.metricName,
+          value: row.myValueDisplay,
+          unit: '',
+          regionalAvg: row.regionAvgDisplay,
+          nationalAvg: row.nationalAvgDisplay,
+          accentColorHex: row.accentColorHex,
+          auxLabel: row.aux?.label,
+          auxText: row.aux?.text,
+        }));
+        setKpiCards(mapped);
+      } catch {
+        setKpiCards([]);
+      }
+    };
+    load();
+  }, [themeParams]);
+
+  const { title: insightTitle, items: dbInsights } = useThemeTextBlockLines({
+    screenCode: themeParams.screen_code,
+    screenVer: themeParams.screen_ver,
+    screenBaseYear: themeParams.screen_base_year,
+    schlNm: themeParams.schl_nm,
+    blockCode: INSIGHT_BLOCK_CODE,
+    lineRole: INSIGHT_LINE_ROLE,
   });
 
   const { refs: sourceRefs } = useThemeSourceRefs({
-    screenCode: 'education',
-    screenVer: 'v0.1',
-    screenBaseYear: 2025,
-    schlNm: '충남대학교',
+    screenCode: themeParams.screen_code,
+    screenVer: themeParams.screen_ver,
+    screenBaseYear: themeParams.screen_base_year,
+    schlNm: themeParams.schl_nm,
   });
 
   const { chartLeft, chartRight, leftBlockItems, rightBlockItems } = useThemeChartBlockMeta({
-    screenCode: 'education',
-    screenVer: 'v0.1',
-    screenBaseYear: 2025,
-    schlNm: '충남대학교',
+    screenCode: themeParams.screen_code,
+    screenVer: themeParams.screen_ver,
+    screenBaseYear: themeParams.screen_base_year,
+    schlNm: themeParams.schl_nm,
   });
 
   const semesterFromDb = mapThemeItemsToSemesterRatios(leftBlockItems);
   const courseFromDb = mapThemeItemsToCourseDistribution(rightBlockItems);
-  const semesterToRender = semesterFromDb.length > 0 ? semesterFromDb : semesterRatios;
-  const courseToRender = courseFromDb.length > 0 ? courseFromDb : courseDistribution;
-
-  const insightsToRender = dbInsights?.length ? dbInsights : insights;
-  const tableToRender = sourceRefs?.length ? sourceRefs : tablePreview;
 
   return (
     <div className="max-w-[1600px] mx-auto px-8 py-6 space-y-8">
-      <PageTitleSection title={pageTitle} subtitle={pageSubtitle} baseYear={baseYear} />
+      <PageTitleSection
+        title={headerTitle}
+        subtitle={headerSubtitle}
+        baseYear={baseYear}
+      />
 
       <StatusChips filters={filters} />
       <EducationFacultyKPICards kpiCards={kpiCards} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <SemesterFullTimeRatioChart
-          semesterRatios={semesterToRender}
+          semesterRatios={semesterFromDb}
           title={chartLeft.title}
           subtitle={chartLeft.subtitle}
         />
         <CourseSizeDistributionChart
-          courseDistribution={courseToRender}
+          courseDistribution={courseFromDb}
           title={chartRight.title}
           subtitle={chartRight.subtitle}
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <EducationFacultyInsights insights={insightsToRender} />
+        <EducationFacultyInsights title={insightTitle} insights={dbInsights} />
         <div className="lg:col-span-2">
-          <EducationFacultyTable tablePreview={tableToRender} />
+          <EducationFacultyTable tablePreview={sourceRefs} />
         </div>
       </div>
     </div>

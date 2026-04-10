@@ -96,28 +96,5 @@
       "number": "04",
       "text": "학자금 대출 이용률의 감소는 장학금 수혜 확대와 연동된 결과로 보이며, 학생들의 학비 부담 경감 지표로 해석될 수 있습니다."
     }
-  ],
-  "referenceTable": [
-    {
-      "tableId": "FIN-2025-001",
-      "description": "2025학년도 학부 등록금 산정 근거 자료",
-      "status": "확정",
-      "statusColor": "tertiary-fixed",
-      "lastUpdate": "2024.12.15"
-    },
-    {
-      "tableId": "SCH-2024-EX",
-      "description": "2024년 장학금 지급 실적 및 결산 보고서",
-      "status": "확정",
-      "statusColor": "tertiary-fixed",
-      "lastUpdate": "2025.01.10"
-    },
-    {
-      "tableId": "REV-2025-PR",
-      "description": "상 상반기 세입 예산 가용성 검토 분석",
-      "status": "진행중",
-      "statusColor": "secondary-fixed",
-      "lastUpdate": "2025.01.25"
-    }
   ]
 }

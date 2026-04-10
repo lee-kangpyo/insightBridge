@@ -1,83 +1,54 @@
-const cardColors = {
-  primary: { border: 'border-l-4 border-primary', icon: 'text-secondary' },
-  secondary: { border: 'border-l-4 border-secondary', icon: 'text-secondary' },
-  tertiary: { border: 'border-l-4 border-tertiary', icon: 'text-secondary' },
-};
-
-const trendColors = {
-  up: 'text-tertiary',
-  down: 'text-error',
-};
-
-function KPICardType1({ card }) {
-  const { label, value, unit, trend, trendValue, target, regionalAvg, progress, color } =
-    card;
-  const colorClass = cardColors[color] || cardColors.primary;
-
-  return (
-    <div
-      className={`bg-surface-container-low p-6 rounded-lg ${colorClass.border} shadow-sm`}
-    >
-      <p className="text-[0.6875rem] font-label text-slate-400 mb-1">{label}</p>
-      <div className="flex items-baseline gap-2">
-        <h3 className="text-2xl font-headline font-bold text-primary">
-          {value}
-          {unit}
-        </h3>
-        {trend && (
-          <span className={`text-sm font-medium flex items-center ${trendColors[trend]}`}>
-            <span className="material-symbols-outlined text-sm">
-              {trend === 'up' ? 'trending_up' : 'arrow_downward'}
-            </span>
-            {trendValue}
-          </span>
-        )}
-      </div>
-      <div className="mt-4 pt-4 border-t border-surface-container flex flex-col gap-1">
-        <div className="flex justify-between text-[11px] text-slate-500">
-          <span>Target: {target || 'N/A'}</span>
-          <span>Regional Avg: {regionalAvg}</span>
-        </div>
-        <div className="w-full bg-surface-container-high h-1.5 rounded-full mt-1 overflow-hidden">
-          <div className={`bg-${color} h-1.5`} style={{ width: `${progress}%` }}></div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function KPICardType2({ card }) {
-  const { label, value, unit, detail, color } = card;
-  const colorClass = cardColors[color] || cardColors.primary;
-
-  return (
-    <div className={`bg-surface-container-low p-6 rounded-lg ${colorClass.border} shadow-sm`}>
-      <p className="text-[0.6875rem] font-label text-slate-400 mb-1">{label}</p>
-      <h3 className="text-2xl font-headline font-bold text-primary">
-        {value}
-        {unit}
-      </h3>
-      <p className="text-xs text-slate-500 mt-2">
-        {detail || card.nationalAvg ? `Total ${detail}. National avg ${card.nationalAvg}` : ''}
-        {card.benchmark || ''}
-      </p>
-    </div>
-  );
-}
-
+/**
+ * GET /api/theme/detail-grid 의 items를 대시보드에서 매핑한 shape를 표시합니다.
+ * 카드: { id, label, value, unit?, regionalAvg, nationalAvg, accentColorHex?, auxLabel?, auxText? }
+ */
 export default function EducationFacultyKPICards({ kpiCards }) {
+  if (!kpiCards?.length) return null;
+
   return (
-    <>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <KPICardType1 card={kpiCards[0]} />
-        <KPICardType1 card={kpiCards[1]} />
-        <KPICardType1 card={kpiCards[2]} />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <KPICardType2 card={kpiCards[3]} />
-        <KPICardType2 card={kpiCards[4]} />
-        <KPICardType2 card={kpiCards[5]} />
-      </div>
-    </>
+    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6">
+      {kpiCards.map((card) => (
+        <div
+          key={card.id}
+          className="bg-surface-container-low p-6 rounded-lg shadow-sm border-b-2 border-transparent hover:border-secondary transition-all"
+          style={
+            card.accentColorHex
+              ? { borderBottomColor: card.accentColorHex }
+              : undefined
+          }
+        >
+          <p className="text-[0.6875rem] font-label text-secondary mb-2 uppercase tracking-tight">
+            {card.label}
+          </p>
+          <div className="flex items-baseline gap-1 mb-3">
+            <span
+              className="text-3xl font-bold font-headline text-primary tracking-tighter"
+              style={card.accentColorHex ? { color: card.accentColorHex } : undefined}
+            >
+              {card.value}
+            </span>
+            {card.unit ? (
+              <span className="text-xs text-on-surface-variant font-semibold">{card.unit}</span>
+            ) : null}
+          </div>
+          <div className="space-y-1">
+            <div className="flex justify-between text-[10px] font-medium">
+              <span className="text-outline">권역 평균</span>
+              <span className="text-primary">{card.regionalAvg}</span>
+            </div>
+            <div className="flex justify-between text-[10px] font-medium">
+              <span className="text-outline">국가 평균</span>
+              <span className="text-primary">{card.nationalAvg}</span>
+            </div>
+          </div>
+          {card.auxText ? (
+            <p className="text-[10px] text-outline mt-3 leading-snug">
+              {card.auxLabel ? `${card.auxLabel}: ` : ''}
+              {card.auxText}
+            </p>
+          ) : null}
+        </div>
+      ))}
+    </div>
   );
 }

@@ -7,11 +7,38 @@ const accentColors = {
   'primary-container': 'border-primary-container',
 };
 
-export default function LargeKpiCard({ label, value, year, accentColor, regionalComparison, nationalComparison }) {
+export default function LargeKpiCard({
+  label,
+  value,
+  year,
+  accentColor,
+  accentColorHex,
+  regionalComparison,
+  nationalComparison,
+}) {
   if (!label || !value) return null;
 
+  const borderToneClass = accentColorHex
+    ? 'border-l-[4px] border-solid'
+    : `border-l-4 ${accentColors[accentColor] || 'border-secondary'}`;
+  const borderStyle = accentColorHex ? { borderLeftColor: accentColorHex } : undefined;
+
+  const valueToneClass = accentColorHex
+    ? 'text-3xl font-extrabold mb-2'
+    : `text-3xl font-extrabold mb-2 ${
+        accentColor === 'error'
+          ? 'text-error'
+          : accentColor === 'secondary'
+            ? 'text-secondary'
+            : 'text-primary'
+      }`;
+  const valueStyle = accentColorHex ? { color: accentColorHex } : undefined;
+
   return (
-    <div className={`bg-surface-container-lowest p-5 rounded-lg shadow-[0_8px_32px_rgba(24,28,30,0.04)] border-l-4 ${accentColors[accentColor] || 'border-secondary'}`}>
+    <div
+      className={`bg-surface-container-lowest p-5 rounded-lg shadow-[0_8px_32px_rgba(24,28,30,0.04)] ${borderToneClass}`}
+      style={borderStyle}
+    >
       <div className="flex justify-between items-start mb-3">
         <span className="text-[0.6875rem] font-bold text-outline uppercase tracking-wider">
           {label}
@@ -20,7 +47,7 @@ export default function LargeKpiCard({ label, value, year, accentColor, regional
           {year}
         </span>
       </div>
-      <div className={`text-3xl font-extrabold mb-2 ${accentColor === 'error' ? 'text-error' : accentColor === 'secondary' ? 'text-secondary' : 'text-primary'}`}>
+      <div className={valueToneClass} style={valueStyle}>
         {value}
       </div>
       <div className="space-y-1">

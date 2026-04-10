@@ -3,10 +3,11 @@ function isLegacyInsightShape(insights) {
   return Boolean(first && typeof first.highlight === 'string');
 }
 
-export default function StudentCareerInsights({ insights }) {
+export default function StudentCareerInsights({ title, insights }) {
   if (!insights?.length) return null;
 
   const legacy = isLegacyInsightShape(insights);
+  const resolvedTitle = (title || '인사이트').trim() || '인사이트';
 
   return (
     <div className="bg-surface-container-lowest p-6 rounded-lg border border-outline-variant/10">
@@ -14,7 +15,7 @@ export default function StudentCareerInsights({ insights }) {
         <span className="material-symbols-outlined text-secondary text-lg">
           lightbulb
         </span>
-        인사이트
+        {resolvedTitle}
       </h3>
       <ul className="space-y-4">
         {legacy

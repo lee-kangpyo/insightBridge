@@ -1,11 +1,13 @@
-export default function EducationFacultyInsights({ insights }) {
+export default function EducationFacultyInsights({ title, insights }) {
   if (!insights?.length) return null;
+
+  const resolvedTitle = (title || '인사이트').trim() || '인사이트';
 
   return (
     <div className="bg-primary text-white p-8 rounded-lg shadow-lg">
       <h3 className="text-lg font-headline font-bold mb-6 flex items-center gap-2">
         <span className="material-symbols-outlined">lightbulb</span>
-        인사이트
+        {resolvedTitle}
       </h3>
       <ul className="space-y-4 text-sm opacity-90 leading-relaxed">
         {insights.map((item, index) => {

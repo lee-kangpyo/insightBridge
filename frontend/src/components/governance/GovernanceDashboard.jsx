@@ -1,96 +1,134 @@
-import governanceData from '../../data/governance-data.json';
-import PageTitleSection from '../main/PageTitleSection';
-import StatusChips from '../main/StatusChips';
-import { useEffect, useMemo, useState } from 'react';
+import governanceData from "../../data/governance-data.json";
+import PageTitleSection from "../main/PageTitleSection";
+import StatusChips from "../main/StatusChips";
+import AdmissionTable from "../admission/AdmissionTable";
+import { useEffect, useMemo, useState } from "react";
 import {
-  getGovernanceKpis,
-  getGovernanceComplianceTable,
-  getGovernanceInsights,
-} from '../../services/api';
+  getThemeChartBlocks,
+  getThemeDetailGrid,
+  getThemeTextBlocks,
+} from "../../services/api";
+import { useThemeSourceRefs } from "../../hooks/useThemeSourceRefs";
+import { useThemeHeaderContext } from "../../hooks/useThemeHeaderContext";
+import { mapDetailGridRowToGovernanceKpiCard } from "../../utils/mapThemeDetailGridToGovernanceKpiCards";
+import { mapThemeChartItemsToGovernanceCompliance } from "../../utils/mapThemeChartItemsToGovernanceCompliance";
 import {
   GovernanceKPICards,
   GovernanceComplianceTable,
   GovernanceInsights,
-} from './index';
+} from "./index";
 
-function pickKpiCards(data) {
-  if (!data) return null;
-  if (Array.isArray(data.kpiCards) && data.kpiCards.length) return data.kpiCards;
-  if (Array.isArray(data.items) && data.items.length) return data.items;
-  return null;
-}
-
-function pickComplianceItems(data) {
-  if (!data) return null;
-  if (Array.isArray(data.complianceItems) && data.complianceItems.length) {
-    return data.complianceItems;
-  }
-  if (Array.isArray(data.items) && data.items.length) return data.items;
-  return null;
-}
-
-function pickInsights(data) {
-  if (!data) return null;
-  const ins = data.insights && typeof data.insights === 'object' ? data.insights : data;
-  if (
-    ins &&
-    typeof ins === 'object' &&
-    (ins.strengths ||
-      ins.risks ||
-      (Array.isArray(ins.actions) && ins.actions.length))
-  ) {
-    return ins;
-  }
-  return null;
-}
+const COMPLIANCE_BLOCK_CODE = "COMPLIANCE";
+const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
+const INSIGHT_LINE_ROLE = "INSIGHT";
 
 export default function GovernanceDashboard() {
-  const baseYear = governanceData.meta.baseYear;
+  const { meta, filters } = governanceData;
 
-  const [meta] = useState(governanceData.meta);
-  const [filters] = useState(governanceData.filters);
-  const [kpiCards, setKpiCards] = useState(governanceData.kpiCards);
-  const [complianceItems, setComplianceItems] = useState(governanceData.complianceItems);
-  const [insights, setInsights] = useState(governanceData.insights);
+  const [kpiCards, setKpiCards] = useState([]);
+  const [complianceItems, setComplianceItems] = useState([]);
+  const [insightsLoading, setInsightsLoading] = useState(true);
+  const [insightTitle, setInsightTitle] = useState(null);
+  const [insightItems, setInsightItems] = useState([]);
 
   const params = useMemo(
     () => ({
-      screen_code: 'governance',
-      screen_ver: 'v0.1',
-      screen_base_year: baseYear,
-      schl_nm: '충남대학교',
+      screen_code: "governance",
+      screen_ver: "v0.1",
+      screen_base_year: meta.baseYear,
+      schl_nm: "충남대학교",
     }),
-    [baseYear],
+    [meta.baseYear],
   );
+
+  const { title: headerTitle, subtitle: headerSubtitle } =
+    useThemeHeaderContext({
+      screenCode: params.screen_code,
+      screenVer: params.screen_ver,
+      screenBaseYear: params.screen_base_year,
+      schlNm: params.schl_nm,
+    });
+
+  const { refs: sourceRefs } = useThemeSourceRefs({
+    screenCode: params.screen_code,
+    screenVer: params.screen_ver,
+    screenBaseYear: params.screen_base_year,
+    schlNm: params.schl_nm,
+  });
 
   useEffect(() => {
     let cancelled = false;
-
     const load = async () => {
-      const [kpisResult, complianceResult, insightsResult] = await Promise.allSettled([
-        getGovernanceKpis(params),
-        getGovernanceComplianceTable(params),
-        getGovernanceInsights(params),
-      ]);
-
-      if (cancelled) return;
-
-      if (kpisResult.status === 'fulfilled') {
-        const next = pickKpiCards(kpisResult.value);
-        if (next) setKpiCards(next);
-      }
-
-      if (complianceResult.status === 'fulfilled') {
-        const next = pickComplianceItems(complianceResult.value);
-        if (next) setComplianceItems(next);
-      }
-
-      if (insightsResult.status === 'fulfilled') {
-        const next = pickInsights(insightsResult.value);
-        if (next) setInsights(next);
+      try {
+        const data = await getThemeDetailGrid(params);
+        const items = Array.isArray(data?.items) ? data.items : [];
+        if (!cancelled) {
+          setKpiCards(items.map(mapDetailGridRowToGovernanceKpiCard));
+        }
+      } catch {
+        if (!cancelled) setKpiCards([]);
       }
     };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [params]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setInsightsLoading(true);
+      try {
+        const data = await getThemeTextBlocks(params);
+        const blocks = Array.isArray(data?.blocks) ? data.blocks : [];
+        const block = blocks.find((b) => b.blockCode === INSIGHT_BLOCK_CODE);
+
+        const title = (block?.title || "").trim();
+        const lines = Array.isArray(block?.lines) ? block.lines : [];
+        const items = lines
+          .filter((l) => l?.role === INSIGHT_LINE_ROLE)
+          .map((l) => ({ text: l.text }))
+          .filter((x) => (x.text || "").trim() !== "");
+
+        if (!cancelled) {
+          setInsightTitle(title || null);
+          setInsightItems(items);
+        }
+      } catch {
+        if (!cancelled) {
+          setInsightTitle(null);
+          setInsightItems([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setInsightsLoading(false);
+        }
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [params]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const data = await getThemeChartBlocks(params);
+        const blocks = Array.isArray(data?.blocks) ? data.blocks : [];
+        const block = blocks.find((b) => b.blockCode === COMPLIANCE_BLOCK_CODE);
+        const rawItems = Array.isArray(block?.items) ? block.items : [];
+        if (!cancelled) {
+          setComplianceItems(
+            mapThemeChartItemsToGovernanceCompliance(rawItems),
+          );
+        }
+      } catch {
+        if (!cancelled) setComplianceItems([]);
+      }
+    };
     load();
     return () => {
       cancelled = true;
@@ -100,8 +138,8 @@ export default function GovernanceDashboard() {
   return (
     <div className="max-w-[1600px] mx-auto px-8 py-6 space-y-8">
       <PageTitleSection
-        title={meta.pageTitle}
-        subtitle={meta.pageSubtitle}
+        title={headerTitle}
+        subtitle={headerSubtitle}
         baseYear={meta.baseYear}
       />
 
@@ -109,11 +147,17 @@ export default function GovernanceDashboard() {
       <GovernanceKPICards kpiCards={kpiCards} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <GovernanceInsights insights={insights} />
+        <GovernanceInsights
+          title={insightTitle}
+          items={insightItems}
+          loading={insightsLoading}
+        />
         <div className="lg:col-span-2">
           <GovernanceComplianceTable complianceItems={complianceItems} />
         </div>
       </div>
+
+      <AdmissionTable refs={sourceRefs} />
     </div>
   );
 }

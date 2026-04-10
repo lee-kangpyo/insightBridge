@@ -8,12 +8,15 @@ import {
   getAdmissionEnrollmentRates,
   getThemeDetailGrid,
 } from '../../services/api';
-import { useThemeInsights } from '../../hooks/useThemeInsights';
 import { useThemeSourceRefs } from '../../hooks/useThemeSourceRefs';
-import { useThemeChartBlockMeta } from '../../hooks/useThemeChartBlockMeta';
+import { useThemeTextBlockLines } from '../../hooks/useThemeTextBlockLines';
+import { useThemeHeaderContext } from '../../hooks/useThemeHeaderContext';
+
+const INSIGHT_BLOCK_CODE = 'SAMPLE_INSIGHT';
+const INSIGHT_LINE_ROLE = 'INSIGHT';
 
 export default function StudentCareerDashboard() {
-  const { pageTitle, pageSubtitle, baseYear, filters, insights } = studentCareerData;
+  const { pageTitle, pageSubtitle, baseYear, filters } = studentCareerData;
 
   const sourceRefParams = useMemo(
     () => ({
@@ -25,28 +28,29 @@ export default function StudentCareerDashboard() {
     [],
   );
 
+  const { title: headerTitle, subtitle: headerSubtitle } = useThemeHeaderContext({
+    screenCode: sourceRefParams.screen_code,
+    screenVer: sourceRefParams.screen_ver,
+    screenBaseYear: sourceRefParams.screen_base_year,
+    schlNm: sourceRefParams.schl_nm,
+  });
+
   const [kpiCards, setKpiCards] = useState([]);
   const [chartLeftItems, setChartLeftItems] = useState([]);
   const [chartLeftMeta, setChartLeftMeta] = useState({ title: '', subtitle: '' });
   const [chartRightItems, setChartRightItems] = useState([]);
   const [chartRightMeta, setChartRightMeta] = useState({ title: '', subtitle: '' });
 
-  const { items: dbInsights } = useThemeInsights({
+  const { title: insightTitle, items: dbInsights } = useThemeTextBlockLines({
     screenCode: sourceRefParams.screen_code,
     screenVer: sourceRefParams.screen_ver,
     screenBaseYear: sourceRefParams.screen_base_year,
     schlNm: sourceRefParams.schl_nm,
-    lineRole: 'INSIGHT',
+    blockCode: INSIGHT_BLOCK_CODE,
+    lineRole: INSIGHT_LINE_ROLE,
   });
 
   const { refs: sourceRefs } = useThemeSourceRefs({
-    screenCode: sourceRefParams.screen_code,
-    screenVer: sourceRefParams.screen_ver,
-    screenBaseYear: sourceRefParams.screen_base_year,
-    schlNm: sourceRefParams.schl_nm,
-  });
-
-  const { chartLeft: chartBlockLeft, chartRight: chartBlockRight } = useThemeChartBlockMeta({
     screenCode: sourceRefParams.screen_code,
     screenVer: sourceRefParams.screen_ver,
     screenBaseYear: sourceRefParams.screen_base_year,
@@ -116,30 +120,32 @@ export default function StudentCareerDashboard() {
     load();
   }, [sourceRefParams]);
 
-  const insightsToRender = dbInsights?.length ? dbInsights : insights;
-
   return (
     <div className="max-w-[1600px] mx-auto px-8 py-6 space-y-8">
-      <PageTitleSection title={pageTitle} subtitle={pageSubtitle} baseYear={baseYear} />
+      <PageTitleSection
+        title={headerTitle}
+        subtitle={headerSubtitle}
+        baseYear={baseYear}
+      />
 
       <StatusChips filters={filters} />
       <AdmissionKPICards kpiCards={kpiCards} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <EnrollmentRateChart
-          title={chartLeftMeta.title || chartBlockLeft.title}
-          subtitle={chartLeftMeta.subtitle || chartBlockLeft.subtitle}
+          title={chartLeftMeta.title}
+          subtitle={chartLeftMeta.subtitle}
           enrollmentRates={chartLeftItems}
         />
         <EnrollmentRateChart
-          title={chartRightMeta.title || chartBlockRight.title}
-          subtitle={chartRightMeta.subtitle || chartBlockRight.subtitle}
+          title={chartRightMeta.title}
+          subtitle={chartRightMeta.subtitle}
           enrollmentRates={chartRightItems}
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <StudentCareerInsights insights={insightsToRender} />
+        <StudentCareerInsights title={insightTitle} insights={dbInsights} />
         <div className="lg:col-span-2">
           <StudentCareerTable refs={sourceRefs} />
         </div>

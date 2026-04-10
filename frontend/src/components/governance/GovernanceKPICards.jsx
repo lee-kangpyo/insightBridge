@@ -12,6 +12,7 @@ export default function GovernanceKPICards({ kpiCards }) {
           value={card.value}
           year={card.year}
           accentColor={card.accentColor}
+          accentColorHex={card.accentColorHex}
           regionalComparison={card.regionalComparison}
           nationalComparison={card.nationalComparison}
         />

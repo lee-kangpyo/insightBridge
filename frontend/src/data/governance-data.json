@@ -2,110 +2,12 @@
   "meta": {
     "pageTitle": "거버넌스 현황 대시보드",
     "pageSubtitle": "Governance & Compliance Dashboard",
-    "baseYear": 2024
+    "baseYear": 2025
   },
   "filters": [
     { "label": "학교종류", "value": "대학교" },
     { "label": "설립구분", "value": "국립" },
     { "label": "지역", "value": "대전" },
     { "label": "상태", "value": "기준" }
-  ],
-  "kpiCards": [
-    {
-      "id": "board-meetings",
-      "label": "이사회 개최 횟수",
-      "value": "12회",
-      "year": 2024,
-      "accentColor": "secondary",
-      "regionalComparison": { "value": "▲ 2회", "status": "positive" },
-      "nationalComparison": { "value": "▲ 1회", "status": "positive" }
-    },
-    {
-      "id": "policy-compliance-rate",
-      "label": "정책 준수율",
-      "value": "94.2%",
-      "year": 2024,
-      "accentColor": "primary",
-      "regionalComparison": { "value": "▲ 3.1%", "status": "positive" },
-      "nationalComparison": { "value": "▲ 1.8%", "status": "positive" }
-    },
-    {
-      "id": "audit-findings",
-      "label": "감사 지적사항",
-      "value": "3건",
-      "year": 2024,
-      "accentColor": "error",
-      "regionalComparison": { "value": "▼ 2건", "status": "positive" },
-      "nationalComparison": { "value": "▼ 1건", "status": "positive" }
-    },
-    {
-      "id": "auth-cert-rate",
-      "label": "인증 획득률",
-      "value": "88.5%",
-      "year": 2024,
-      "accentColor": "primary-container",
-      "regionalComparison": { "value": "▲ 5.2%", "status": "positive" },
-      "nationalComparison": { "value": "▲ 2.3%", "status": "positive" }
-    }
-  ],
-  "complianceItems": [
-    {
-      "id": "comp-001",
-      "category": "법규 준수",
-      "itemName": "대학 설치 기준 준수",
-      "status": "compliant",
-      "dueDate": "2024-12-31",
-      "responsibleParty": "대학혁신처"
-    },
-    {
-      "id": "comp-002",
-      "category": "법규 준수",
-      "itemName": "학사 운영 규정 적합성",
-      "status": "compliant",
-      "dueDate": "2024-12-31",
-      "responsibleParty": "교무처"
-    },
-    {
-      "id": "comp-003",
-      "category": "재정",
-      "itemName": "회계 투명성 확보",
-      "status": "compliant",
-      "dueDate": "2024-12-31",
-      "responsibleParty": "재무처"
-    },
-    {
-      "id": "comp-004",
-      "category": "안전",
-      "itemName": "시설 안전 점검",
-      "status": "pending",
-      "dueDate": "2024-06-30",
-      "responsibleParty": "시설처"
-    },
-    {
-      "id": "comp-005",
-      "category": "정보보안",
-      "itemName": "개인정보 보호 평가",
-      "status": "pending",
-      "dueDate": "2024-09-30",
-      "responsibleParty": "정보화처"
-    },
-    {
-      "id": "comp-006",
-      "category": "인증",
-      "itemName": "대학 인증 평가 준비",
-      "status": "non-compliant",
-      "dueDate": "2024-03-31",
-      "responsibleParty": "대학혁신처"
-    }
-  ],
-  "insights": {
-    "title": "거버넌스 핵심 인사이트",
-    "strengths": "정책 준수율이 지역 및 전국 평균을 크게 상회하며 대학 운영의 투명성을 증명하고 있습니다. 감사 지적사항이 지속적으로 감소세입니다.",
-    "risks": "대학 인증 평가 준비가 지연되고 있으며, 시설 안전 점검 및 개인정보 보호 평가도 기한 내 완료가 불확실합니다.",
-    "actions": [
-      "대학 인증 평가 준비 현황 점검 및加速 추진",
-      "시설 안전 점검 미완료 항목 해소plan 수립",
-      "개인정보 보호 평가 대비自查 실시"
-    ]
-  }
+  ]
 }
