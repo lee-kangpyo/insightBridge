@@ -1,8 +1,7 @@
-/** 왼쪽 액센트: 스펙 초록 #61c462 = 테마 on-tertiary-container (교지 막대 BAR_FILL.tertiary와 동일) */
 const ACCENT_COLORS = {
   primary: 'bg-primary',
   secondary: 'bg-secondary',
-  tertiary: 'bg-[#61c462]',
+  tertiary: 'bg-tertiary',
   error: 'bg-error',
   'tertiary-container': 'bg-tertiary-container',
   'primary-container': 'bg-primary-container',
