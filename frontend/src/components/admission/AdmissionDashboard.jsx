@@ -6,7 +6,6 @@ import {
   AdmissionFilters,
   AdmissionKPICards,
   EnrollmentRateChart,
-  OpportunityBalanceChart,
   AdmissionInsights,
   AdmissionTable,
 } from "./index";
@@ -26,6 +25,17 @@ export default function AdmissionDashboard() {
 
   // ✅ 최상단 KPI 카드는 DB 값만 사용 (샘플 fallback 제거)
   const [kpiCards, setKpiCards] = useState([]);
+  const [dbEnrollmentRates, setDbEnrollmentRates] = useState([]);
+  const [enrollmentMeta, setEnrollmentMeta] = useState({
+    title: "",
+    subtitle: "",
+  });
+  const [dbRightEnrollmentRates, setDbRightEnrollmentRates] = useState([]);
+  const [rightEnrollmentMeta, setRightEnrollmentMeta] = useState({
+    title: "",
+    subtitle: "",
+  });
+  const [dbInsights, setDbInsights] = useState([]);
 
   const params = useMemo(
     () => ({
@@ -63,6 +73,60 @@ export default function AdmissionDashboard() {
     load();
   }, [params]);
 
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await getAdmissionEnrollmentRates({
+          ...params,
+          block_code: "CHART_LEFT",
+        });
+        setDbEnrollmentRates(Array.isArray(data?.items) ? data.items : []);
+        setEnrollmentMeta({
+          title: typeof data?.title === "string" ? data.title : "",
+          subtitle: typeof data?.subtitle === "string" ? data.subtitle : "",
+        });
+      } catch {
+        setDbEnrollmentRates([]);
+        setEnrollmentMeta({ title: "", subtitle: "" });
+      }
+    };
+    load();
+  }, [params]);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await getAdmissionEnrollmentRates({
+          ...params,
+          block_code: "CHART_RIGHT",
+        });
+        setDbRightEnrollmentRates(Array.isArray(data?.items) ? data.items : []);
+        setRightEnrollmentMeta({
+          title: typeof data?.title === "string" ? data.title : "",
+          subtitle: typeof data?.subtitle === "string" ? data.subtitle : "",
+        });
+      } catch {
+        setDbRightEnrollmentRates([]);
+        setRightEnrollmentMeta({ title: "", subtitle: "" });
+      }
+    };
+    load();
+  }, [params]);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await getAdmissionInsights(params);
+        setDbInsights(Array.isArray(data) ? data : []);
+      } catch {
+        setDbInsights([]);
+      }
+    };
+    load();
+  }, [params]);
+
+  const insightsToRender = dbInsights?.length ? dbInsights : insights;
+
   return (
     <div className="max-w-[1600px] mx-auto px-8 py-6 space-y-8">
       <PageTitleSection
@@ -75,12 +139,20 @@ export default function AdmissionDashboard() {
       <AdmissionKPICards kpiCards={kpiCards} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <EnrollmentRateChart enrollmentRates={enrollmentRates} />
-        <OpportunityBalanceChart opportunityBalance={opportunityBalance} />
+        <EnrollmentRateChart
+          title={enrollmentMeta.title}
+          subtitle={enrollmentMeta.subtitle}
+          enrollmentRates={dbEnrollmentRates}
+        />
+        <EnrollmentRateChart
+          title={rightEnrollmentMeta.title}
+          subtitle={rightEnrollmentMeta.subtitle}
+          enrollmentRates={dbRightEnrollmentRates}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <AdmissionInsights insights={insights} />
+        <AdmissionInsights insights={insightsToRender} />
         <AdmissionTable tablePreview={tablePreview} />
       </div>
     </div>

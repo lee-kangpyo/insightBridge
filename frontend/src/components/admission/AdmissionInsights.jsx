@@ -4,8 +4,12 @@ export default function AdmissionInsights({ insights }) {
   return (
     <div className="lg:col-span-1 bg-surface-container-lowest p-8 rounded-lg shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
       <div className="flex items-center gap-2 mb-6">
-        <span className="material-symbols-outlined text-secondary">tips_and_updates</span>
-        <h3 className="font-headline text-lg font-bold text-primary">샘플 인사이트</h3>
+        <span className="material-symbols-outlined text-secondary">
+          tips_and_updates
+        </span>
+        <h3 className="font-headline text-lg font-bold text-primary">
+          인사이트
+        </h3>
       </div>
       <ul className="space-y-4">
         {insights.map((insight, index) => (
