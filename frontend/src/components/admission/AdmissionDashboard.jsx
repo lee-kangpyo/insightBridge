@@ -18,12 +18,14 @@ import { useThemeSourceRefs } from "../../hooks/useThemeSourceRefs";
 import { useThemeTextBlockLines } from "../../hooks/useThemeTextBlockLines";
 import { useThemeHeaderContext } from "../../hooks/useThemeHeaderContext";
 import { useThemePanelSummary } from "../../hooks/useThemePanelSummary";
+import { useSchlNm } from "../../hooks/useSchlNm";
 
 const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
 const INSIGHT_LINE_ROLE = "INSIGHT";
 
 export default function AdmissionDashboard() {
   const { pageTitle, pageSubtitle, baseYear, filters } = admissionData;
+  const schlNm = useSchlNm();
 
   // ✅ 최상단 KPI 카드는 DB 값만 사용 (샘플 fallback 제거)
   const [kpiCards, setKpiCards] = useState([]);
@@ -44,9 +46,9 @@ export default function AdmissionDashboard() {
       screen_code: "admission",
       screen_ver: "v0.1",
       screen_base_year: 2025,
-      schl_nm: "충남대학교",
+      schl_nm: schlNm,
     }),
-    [],
+    [schlNm],
   );
 
   const { title: headerTitle, subtitle: headerSubtitle } = useThemeHeaderContext({

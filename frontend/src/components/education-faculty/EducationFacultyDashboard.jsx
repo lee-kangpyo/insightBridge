@@ -19,6 +19,7 @@ import {
 import { useThemeTextBlockLines } from '../../hooks/useThemeTextBlockLines';
 import { useThemeHeaderContext } from '../../hooks/useThemeHeaderContext';
 import { useThemePanelSummary } from '../../hooks/useThemePanelSummary';
+import { useSchlNm } from '../../hooks/useSchlNm';
 
 const EDUCATION_SCREEN_BASE_YEAR = 2025;
 const INSIGHT_BLOCK_CODE = 'SAMPLE_INSIGHT';
@@ -26,6 +27,7 @@ const INSIGHT_LINE_ROLE = 'INSIGHT';
 
 export default function EducationFacultyDashboard() {
   const { pageTitle, pageSubtitle, baseYear, filters } = educationFacultyData;
+  const schlNm = useSchlNm();
 
   const [kpiCards, setKpiCards] = useState([]);
 
@@ -34,9 +36,9 @@ export default function EducationFacultyDashboard() {
       screen_code: 'education',
       screen_ver: 'v0.1',
       screen_base_year: EDUCATION_SCREEN_BASE_YEAR,
-      schl_nm: '충남대학교',
+      schl_nm: schlNm,
     }),
-    [],
+    [schlNm],
   );
 
   const { title: headerTitle, subtitle: headerSubtitle } = useThemeHeaderContext({

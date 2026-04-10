@@ -14,6 +14,7 @@ import {
   mapThemeItemsToCampusConfiguration,
   mapThemeItemsToCampusSafetyStatus,
 } from '../../utils/mapThemeItemsToCampusCharts';
+import { useSchlNm } from '../../hooks/useSchlNm';
 
 const BAR_FILL = {
   primary: '#002c5a',
@@ -41,6 +42,7 @@ const INSIGHT_LINE_ROLE = 'INSIGHT';
 
 export default function CampusDashboard() {
   const { meta, filters, campusConfiguration, safetyStatus } = campusData;
+  const schlNm = useSchlNm();
 
   const [kpiCards, setKpiCards] = useState([]);
 
@@ -49,9 +51,9 @@ export default function CampusDashboard() {
       screen_code: 'campus',
       screen_ver: 'v0.1',
       screen_base_year: CAMPUS_SCREEN_BASE_YEAR,
-      schl_nm: '충남대학교',
+      schl_nm: schlNm,
     }),
-    [],
+    [schlNm],
   );
 
   const { title: headerTitle, subtitle: headerSubtitle } = useThemeHeaderContext({

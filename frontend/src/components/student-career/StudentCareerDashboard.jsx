@@ -12,21 +12,23 @@ import { useThemeSourceRefs } from '../../hooks/useThemeSourceRefs';
 import { useThemeTextBlockLines } from '../../hooks/useThemeTextBlockLines';
 import { useThemeHeaderContext } from '../../hooks/useThemeHeaderContext';
 import { useThemePanelSummary } from '../../hooks/useThemePanelSummary';
+import { useSchlNm } from '../../hooks/useSchlNm';
 
 const INSIGHT_BLOCK_CODE = 'SAMPLE_INSIGHT';
 const INSIGHT_LINE_ROLE = 'INSIGHT';
 
 export default function StudentCareerDashboard() {
   const { pageTitle, pageSubtitle, baseYear, filters } = studentCareerData;
+  const schlNm = useSchlNm();
 
   const sourceRefParams = useMemo(
     () => ({
       screen_code: 'student',
       screen_ver: 'v0.1',
       screen_base_year: 2025,
-      schl_nm: '충남대학교',
+      schl_nm: schlNm,
     }),
-    [],
+    [schlNm],
   );
 
   const { title: headerTitle, subtitle: headerSubtitle } = useThemeHeaderContext({

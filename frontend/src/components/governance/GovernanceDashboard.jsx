@@ -13,6 +13,7 @@ import { useThemeHeaderContext } from "../../hooks/useThemeHeaderContext";
 import { useThemePanelSummary } from "../../hooks/useThemePanelSummary";
 import { mapDetailGridRowToGovernanceKpiCard } from "../../utils/mapThemeDetailGridToGovernanceKpiCards";
 import { mapThemeChartItemsToGovernanceCompliance } from "../../utils/mapThemeChartItemsToGovernanceCompliance";
+import { useSchlNm } from "../../hooks/useSchlNm";
 import {
   GovernanceKPICards,
   GovernanceComplianceTable,
@@ -25,6 +26,7 @@ const INSIGHT_LINE_ROLE = "INSIGHT";
 
 export default function GovernanceDashboard() {
   const { meta, filters } = governanceData;
+  const schlNm = useSchlNm();
 
   const [kpiCards, setKpiCards] = useState([]);
   const [complianceItems, setComplianceItems] = useState([]);
@@ -37,9 +39,9 @@ export default function GovernanceDashboard() {
       screen_code: "governance",
       screen_ver: "v0.1",
       screen_base_year: meta.baseYear,
-      schl_nm: "충남대학교",
+      schl_nm: schlNm,
     }),
-    [meta.baseYear],
+    [meta.baseYear, schlNm],
   );
 
   const { title: headerTitle, subtitle: headerSubtitle } =

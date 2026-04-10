@@ -14,6 +14,7 @@ import {
   mapThemeItemsToFinanceRevenueTop,
   mapThemeItemsToFinanceTuitionBars,
 } from "../../utils/mapThemeItemsToFinanceCharts";
+import { useSchlNm } from "../../hooks/useSchlNm";
 
 /** docs/6tap/code.html 계열별 막대(bg-primary, bg-secondary, …)와 동일 — JIT 누락 방지용 hex */
 const BAR_FILL = {
@@ -38,6 +39,7 @@ const INSIGHT_LINE_ROLE = "INSIGHT";
 
 export default function FinanceDashboard() {
   const { meta, filters, tuitionByField, revenueStructure } = financeData;
+  const schlNm = useSchlNm();
 
   const [kpiCards, setKpiCards] = useState([]);
 
@@ -46,9 +48,9 @@ export default function FinanceDashboard() {
       screen_code: "finance",
       screen_ver: "v0.1",
       screen_base_year: FINANCE_SCREEN_BASE_YEAR,
-      schl_nm: "충남대학교",
+      schl_nm: schlNm,
     }),
-    [],
+    [schlNm],
   );
 
   const { title: headerTitle, subtitle: headerSubtitle } = useThemeHeaderContext({
