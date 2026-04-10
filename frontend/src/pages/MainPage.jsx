@@ -17,8 +17,11 @@ import {
 import { useOverviewHeaderContext } from "../hooks/useOverviewHeaderContext";
 import { useOverviewTextBlockLines } from "../hooks/useOverviewTextBlockLines";
 import { useOverviewSummaryJudgmentLabel } from "../hooks/useOverviewPdfReportLabel";
+import { useUniversityContext } from "../hooks/useUniversityContext";
 
 export default function MainPage() {
+  const { schlNm, ready: universityReady } = useUniversityContext();
+
   // ✅ API 기반 KPI (기본: 빈값으로 시작해서 "깨지지 않게" 방어)
   const [largeKpis, setLargeKpis] = useState([]);
   const [smallKpis, setSmallKpis] = useState([]);
@@ -38,7 +41,7 @@ export default function MainPage() {
     screenCode: "overview",
     screenVer: "v0.1",
     screenBaseYear: 2025,
-    schlNm: "충남대학교",
+    schlNm: schlNm,
   };
 
   const { title: headerTitle, subtitle: headerSubtitle } =
@@ -64,13 +67,15 @@ export default function MainPage() {
   // const [riskLegend, setRiskLegend] = useState(sampleData.riskLegend || []);
 
   useEffect(() => {
+    if (!universityReady || !schlNm) return;
+
     const load = async () => {
       try {
         const data = await getOverviewKpis({
           screen_code: "overview",
           screen_ver: "v0.1",
           screen_base_year: 2025,
-          schl_nm: "충남대학교",
+          schl_nm: schlNm,
         });
 
         // 방어: 응답이 비정상이어도 항상 배열로 유지
@@ -84,9 +89,11 @@ export default function MainPage() {
       }
     };
     load();
-  }, []);
+  }, [universityReady, schlNm]);
 
   useEffect(() => {
+    if (!universityReady || !schlNm) return;
+
     const load = async () => {
       try {
         const data = await getOverviewMatrixPoints({
@@ -94,7 +101,7 @@ export default function MainPage() {
           screen_ver: "v0.1",
           screen_base_year: 2025,
           metric_year: 2025,
-          schl_nm: "충남대학교",
+          schl_nm: schlNm,
         });
         setMatrix(data && Array.isArray(data.points) ? data : null);
       } catch {
@@ -102,16 +109,18 @@ export default function MainPage() {
       }
     };
     load();
-  }, []);
+  }, [universityReady, schlNm]);
 
   useEffect(() => {
+    if (!universityReady || !schlNm) return;
+
     const load = async () => {
       try {
         const data = await getOverviewRiskTable({
           screen_code: "overview",
           screen_ver: "v0.1",
           screen_base_year: 2025,
-          schl_nm: "충남대학교",
+          schl_nm: schlNm,
         });
         const nextItems = Array.isArray(data?.items) ? data.items : [];
         const nextLegend = Array.isArray(data?.legend) ? data.legend : [];
@@ -123,16 +132,18 @@ export default function MainPage() {
       }
     };
     load();
-  }, []);
+  }, [universityReady, schlNm]);
 
   useEffect(() => {
+    if (!universityReady || !schlNm) return;
+
     const load = async () => {
       try {
         const data = await getOverviewDetailGrid({
           screen_code: "overview",
           screen_ver: "v0.1",
           screen_base_year: 2025,
-          schl_nm: "충남대학교",
+          schl_nm: schlNm,
           metric_year: 2025,
         });
         setDetailGrid(Array.isArray(data?.items) ? data.items : []);
@@ -141,7 +152,7 @@ export default function MainPage() {
       }
     };
     load();
-  }, []);
+  }, [universityReady, schlNm]);
 
   return (
     <MainLayout>

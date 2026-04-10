@@ -11,6 +11,7 @@ import {
 import { useThemeSourceRefs } from "../../hooks/useThemeSourceRefs";
 import { useThemeHeaderContext } from "../../hooks/useThemeHeaderContext";
 import { useThemePanelSummary } from "../../hooks/useThemePanelSummary";
+import { useUniversityContext } from "../../hooks/useUniversityContext";
 import { mapDetailGridRowToGovernanceKpiCard } from "../../utils/mapThemeDetailGridToGovernanceKpiCards";
 import { mapThemeChartItemsToGovernanceCompliance } from "../../utils/mapThemeChartItemsToGovernanceCompliance";
 import {
@@ -24,6 +25,7 @@ const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
 const INSIGHT_LINE_ROLE = "INSIGHT";
 
 export default function GovernanceDashboard() {
+  const { schlNm, ready: universityReady } = useUniversityContext();
   const { meta, filters } = governanceData;
 
   const [kpiCards, setKpiCards] = useState([]);
@@ -37,9 +39,9 @@ export default function GovernanceDashboard() {
       screen_code: "governance",
       screen_ver: "v0.1",
       screen_base_year: meta.baseYear,
-      schl_nm: "충남대학교",
+      schl_nm: schlNm,
     }),
-    [meta.baseYear],
+    [meta.baseYear, schlNm],
   );
 
   const { title: headerTitle, subtitle: headerSubtitle } =
@@ -69,6 +71,8 @@ export default function GovernanceDashboard() {
   });
 
   useEffect(() => {
+    if (!universityReady || !schlNm) return;
+
     let cancelled = false;
     const load = async () => {
       try {
@@ -85,9 +89,11 @@ export default function GovernanceDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [params]);
+  }, [params, universityReady, schlNm]);
 
   useEffect(() => {
+    if (!universityReady || !schlNm) return;
+
     let cancelled = false;
     const load = async () => {
       setInsightsLoading(true);
@@ -122,9 +128,11 @@ export default function GovernanceDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [params]);
+  }, [params, universityReady, schlNm]);
 
   useEffect(() => {
+    if (!universityReady || !schlNm) return;
+
     let cancelled = false;
     const load = async () => {
       try {
@@ -145,7 +153,7 @@ export default function GovernanceDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [params]);
+  }, [params, universityReady, schlNm]);
 
   return (
     <div className="max-w-[1600px] mx-auto px-8 py-6 space-y-8">

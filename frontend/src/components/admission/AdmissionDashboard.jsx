@@ -18,11 +18,13 @@ import { useThemeSourceRefs } from "../../hooks/useThemeSourceRefs";
 import { useThemeTextBlockLines } from "../../hooks/useThemeTextBlockLines";
 import { useThemeHeaderContext } from "../../hooks/useThemeHeaderContext";
 import { useThemePanelSummary } from "../../hooks/useThemePanelSummary";
+import { useUniversityContext } from "../../hooks/useUniversityContext";
 
 const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
 const INSIGHT_LINE_ROLE = "INSIGHT";
 
 export default function AdmissionDashboard() {
+  const { schlNm, ready: universityReady } = useUniversityContext();
   const { pageTitle, pageSubtitle, baseYear, filters } = admissionData;
 
   // ✅ 최상단 KPI 카드는 DB 값만 사용 (샘플 fallback 제거)
@@ -44,9 +46,9 @@ export default function AdmissionDashboard() {
       screen_code: "admission",
       screen_ver: "v0.1",
       screen_base_year: 2025,
-      schl_nm: "충남대학교",
+      schl_nm: schlNm,
     }),
-    [],
+    [schlNm],
   );
 
   const { title: headerTitle, subtitle: headerSubtitle } = useThemeHeaderContext({
@@ -84,6 +86,8 @@ export default function AdmissionDashboard() {
   });
 
   useEffect(() => {
+    if (!universityReady || !schlNm) return;
+
     const load = async () => {
       try {
         const data = await getThemeDetailGrid(params);
@@ -107,9 +111,11 @@ export default function AdmissionDashboard() {
       }
     };
     load();
-  }, [params]);
+  }, [params, universityReady, schlNm]);
 
   useEffect(() => {
+    if (!universityReady || !schlNm) return;
+
     const load = async () => {
       try {
         const data = await getAdmissionEnrollmentRates({
@@ -127,9 +133,11 @@ export default function AdmissionDashboard() {
       }
     };
     load();
-  }, [params]);
+  }, [params, universityReady, schlNm]);
 
   useEffect(() => {
+    if (!universityReady || !schlNm) return;
+
     const load = async () => {
       try {
         const data = await getAdmissionOpportunityBalance({
@@ -147,7 +155,7 @@ export default function AdmissionDashboard() {
       }
     };
     load();
-  }, [params]);
+  }, [params, universityReady, schlNm]);
 
   return (
     <div className="max-w-[1600px] mx-auto px-8 py-6 space-y-8">

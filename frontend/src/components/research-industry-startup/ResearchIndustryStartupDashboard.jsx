@@ -17,12 +17,14 @@ import { mapThemeItemsToResearchStartupProgress } from '../../utils/mapThemeItem
 import { useThemeTextBlockLines } from '../../hooks/useThemeTextBlockLines';
 import { useThemeHeaderContext } from '../../hooks/useThemeHeaderContext';
 import { useThemePanelSummary } from '../../hooks/useThemePanelSummary';
+import { useUniversityContext } from '../../hooks/useUniversityContext';
 
 const RESEARCH_SCREEN_BASE_YEAR = 2025;
 const INSIGHT_BLOCK_CODE = 'SAMPLE_INSIGHT';
 const INSIGHT_LINE_ROLE = 'INSIGHT';
 
 export default function ResearchIndustryStartupDashboard() {
+  const { schlNm, ready: universityReady } = useUniversityContext();
   const { pageTitle, pageSubtitle, baseYear, filters } = researchData;
 
   const [kpiCards, setKpiCards] = useState([]);
@@ -32,9 +34,9 @@ export default function ResearchIndustryStartupDashboard() {
       screen_code: 'research',
       screen_ver: 'v0.1',
       screen_base_year: RESEARCH_SCREEN_BASE_YEAR,
-      schl_nm: '충남대학교',
+      schl_nm: schlNm,
     }),
-    [],
+    [schlNm],
   );
 
   const { title: headerTitle, subtitle: headerSubtitle } = useThemeHeaderContext({
@@ -56,6 +58,8 @@ export default function ResearchIndustryStartupDashboard() {
   );
 
   useEffect(() => {
+    if (!universityReady || !schlNm) return;
+
     const load = async () => {
       try {
         const data = await getThemeDetailGrid(themeParams);
@@ -77,7 +81,7 @@ export default function ResearchIndustryStartupDashboard() {
       }
     };
     load();
-  }, [themeParams]);
+  }, [themeParams, universityReady, schlNm]);
 
   const { title: insightTitle, items: dbInsights } = useThemeTextBlockLines({
     screenCode: themeParams.screen_code,
