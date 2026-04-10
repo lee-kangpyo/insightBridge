@@ -1,7 +1,13 @@
-export default function SemesterFullTimeRatioChart({ semesterRatios }) {
+export default function SemesterFullTimeRatioChart({ semesterRatios, title, subtitle }) {
+  const heading = title?.trim() ? title : '학기별 전임 강의담당 비율';
+  const sub = subtitle?.trim() ? subtitle : '';
+
   return (
     <div className="bg-surface-container-lowest p-8 rounded-lg shadow-sm border border-outline-variant/10">
-      <h3 className="text-lg font-headline font-bold text-primary mb-8">학기별 전임 강의담당 비율</h3>
+      <div className="mb-8">
+        <h3 className="text-lg font-headline font-bold text-primary">{heading}</h3>
+        {sub ? <p className="mt-1 text-xs text-on-surface-variant">{sub}</p> : null}
+      </div>
       <div className="space-y-10">
         {semesterRatios.map(({ semester, ratio, courses }) => (
           <div key={semester} className="space-y-2">

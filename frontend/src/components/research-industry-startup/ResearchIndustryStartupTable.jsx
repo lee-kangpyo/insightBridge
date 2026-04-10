@@ -4,6 +4,9 @@ const statusStyles = {
 };
 
 export default function ResearchIndustryStartupTable({ tablePreview }) {
+  const rows = Array.isArray(tablePreview) ? tablePreview : [];
+  const isApiShape = Boolean(rows?.[0] && typeof rows[0].columnExpr === 'string');
+
   return (
     <div className="bg-surface-container-lowest rounded-lg shadow-sm overflow-hidden">
       <div className="px-8 py-6 border-b border-outline-variant/10 flex justify-between items-center">
@@ -14,25 +17,49 @@ export default function ResearchIndustryStartupTable({ tablePreview }) {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-surface-container-highest">
-              <th className="px-8 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">테이블</th>
-              <th className="px-8 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">핵심 칼럼</th>
-              <th className="px-8 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">비고</th>
-              <th className="px-8 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider text-right">STATUS</th>
+              <th className="px-8 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+                {isApiShape ? '순서' : '테이블'}
+              </th>
+              <th className="px-8 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+                {isApiShape ? '테이블' : '핵심 칼럼'}
+              </th>
+              <th className="px-8 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+                {isApiShape ? '컬럼/식' : '비고'}
+              </th>
+              <th className="px-8 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider text-right">
+                {isApiShape ? '비고' : 'STATUS'}
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-outline-variant/10">
-            {tablePreview.map(({ tableName, columns, note, status }) => (
-              <tr key={tableName} className="hover:bg-surface-container-low transition-colors">
-                <td className="px-8 py-4 text-sm font-semibold text-primary">{tableName}</td>
-                <td className="px-8 py-4 text-sm text-on-surface-variant">{columns.join(', ')}</td>
-                <td className="px-8 py-4 text-sm text-outline">{note}</td>
-                <td className="px-8 py-4 text-right">
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${statusStyles[status]}`}>
-                    {status}
-                  </span>
-                </td>
-              </tr>
-            ))}
+            {isApiShape
+              ? rows.map((row) => (
+                  <tr
+                    key={`${row.order}-${row.tableName}`}
+                    className="hover:bg-surface-container-low transition-colors"
+                  >
+                    <td className="px-8 py-4 text-sm font-mono text-on-surface-variant tabular-nums">{row.order}</td>
+                    <td className="px-8 py-4 text-sm font-semibold text-primary">{row.tableName}</td>
+                    <td className="px-8 py-4 text-sm text-on-surface-variant whitespace-pre-wrap break-words">
+                      {row.columnExpr}
+                    </td>
+                    <td className="px-8 py-4 text-sm text-outline whitespace-pre-wrap break-words">{row.note}</td>
+                  </tr>
+                ))
+              : rows.map(({ tableName, columns, note, status }) => (
+                  <tr key={tableName} className="hover:bg-surface-container-low transition-colors">
+                    <td className="px-8 py-4 text-sm font-semibold text-primary">{tableName}</td>
+                    <td className="px-8 py-4 text-sm text-on-surface-variant">{columns.join(', ')}</td>
+                    <td className="px-8 py-4 text-sm text-outline">{note}</td>
+                    <td className="px-8 py-4 text-right">
+                      <span
+                        className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${statusStyles[status]}`}
+                      >
+                        {status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
           </tbody>
         </table>
       </div>

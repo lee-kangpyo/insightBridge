@@ -28,7 +28,9 @@ def _try_parse_float(v: object):
         return None
 
 
-@router.get("/api/admission/enrollment-rates", response_model=AdmissionEnrollmentRatesResponse)
+@router.get(
+    "/api/admission/enrollment-rates", response_model=AdmissionEnrollmentRatesResponse
+)
 async def get_admission_enrollment_rates(
     screen_base_year: int = Query(..., ge=1900, le=3000),
     schl_nm: str = Query(..., min_length=1),
@@ -45,6 +47,7 @@ async def get_admission_enrollment_rates(
     #   - type = item_label
     #   - currentYear = item_value_num (등록률 %, 0~100 기대)
     #   - previousYear = item_note_text (선택, 숫자 파싱)
+    #   - displayText = item_display_text (표시 텍스트)
     sql_block = """
     SELECT
       block_title,
@@ -62,6 +65,7 @@ async def get_admission_enrollment_rates(
       item_order,
       item_label,
       item_value_num,
+      item_display_text,
       item_note_text
     FROM public.tq_screen_chart_item
     WHERE screen_code=$1
@@ -77,13 +81,17 @@ async def get_admission_enrollment_rates(
         block_row = await conn.fetchrow(
             sql_block, screen_code, screen_ver, screen_base_year, schl_nm, block_code
         )
-        rows = await conn.fetch(sql_items, screen_code, screen_ver, screen_base_year, schl_nm, block_code)
+        rows = await conn.fetch(
+            sql_items, screen_code, screen_ver, screen_base_year, schl_nm, block_code
+        )
 
     title = block_row["block_title"] if block_row else "전형별 최종등록률"
     subtitle = block_row["block_subtitle"] if block_row else None
 
     if not rows:
-        return AdmissionEnrollmentRatesResponse(title=title, subtitle=subtitle, items=[])
+        return AdmissionEnrollmentRatesResponse(
+            title=title, subtitle=subtitle, items=[]
+        )
 
     items: list[AdmissionEnrollmentRateItem] = []
     for r in rows:
@@ -102,7 +110,10 @@ async def get_admission_enrollment_rates(
     return AdmissionEnrollmentRatesResponse(title=title, subtitle=subtitle, items=items)
 
 
-@router.get("/api/admission/opportunity-balance", response_model=AdmissionOpportunityBalanceResponse)
+@router.get(
+    "/api/admission/opportunity-balance",
+    response_model=AdmissionOpportunityBalanceResponse,
+)
 async def get_admission_opportunity_balance(
     screen_base_year: int = Query(..., ge=1900, le=3000),
     schl_nm: str = Query(..., min_length=1),
@@ -118,6 +129,7 @@ async def get_admission_opportunity_balance(
     #   - category = item_label
     #   - ratio = item_value_num (구성비 %, 0~100 기대)
     #   - previousRatio = item_note_text (선택, 숫자 파싱)
+    #   - barRatioDisplayText = bar_ratio_display_text 우선, 없으면 item_display_text
     sql_block = """
     SELECT
       block_title,
@@ -135,7 +147,9 @@ async def get_admission_opportunity_balance(
       item_order,
       item_label,
       item_value_num,
-      item_note_text
+      item_note_text,
+      item_display_text,
+      bar_ratio_display_text
     FROM public.tq_screen_chart_item
     WHERE screen_code=$1
       AND screen_ver=$2
@@ -150,13 +164,28 @@ async def get_admission_opportunity_balance(
         block_row = await conn.fetchrow(
             sql_block, screen_code, screen_ver, screen_base_year, schl_nm, block_code
         )
-        rows = await conn.fetch(sql_items, screen_code, screen_ver, screen_base_year, schl_nm, block_code)
+        rows = await conn.fetch(
+            sql_items, screen_code, screen_ver, screen_base_year, schl_nm, block_code
+        )
 
     title = block_row["block_title"] if block_row else "기회균형 선발 구성"
     subtitle = block_row["block_subtitle"] if block_row else None
 
     if not rows:
-        return AdmissionOpportunityBalanceResponse(title=title, subtitle=subtitle, items=[])
+        return AdmissionOpportunityBalanceResponse(
+            title=title, subtitle=subtitle, items=[]
+        )
+
+    def _pick_ratio_display(row) -> str | None:
+        d = dict(row)
+        for key in ("bar_ratio_display_text", "item_display_text"):
+            v = d.get(key)
+            if v is None:
+                continue
+            s = str(v).strip()
+            if s:
+                return s
+        return None
 
     items: list[AdmissionOpportunityBalanceItem] = []
     for r in rows:
@@ -169,10 +198,13 @@ async def get_admission_opportunity_balance(
                 category=r["item_label"],
                 ratio=ratio,
                 previousRatio=_try_parse_float(r["item_note_text"]),
+                barRatioDisplayText=_pick_ratio_display(r),
             )
         )
 
-    return AdmissionOpportunityBalanceResponse(title=title, subtitle=subtitle, items=items)
+    return AdmissionOpportunityBalanceResponse(
+        title=title, subtitle=subtitle, items=items
+    )
 
 
 @router.get("/api/admission/insights", response_model=list[AdmissionInsightItem])
@@ -200,7 +232,9 @@ async def get_admission_insights(
 
     pool = await get_pool()
     async with pool.acquire() as conn:
-        rows = await conn.fetch(sql, screen_code, screen_ver, screen_base_year, schl_nm, line_role)
+        rows = await conn.fetch(
+            sql, screen_code, screen_ver, screen_base_year, schl_nm, line_role
+        )
 
     if not rows:
         return []
@@ -213,4 +247,3 @@ async def get_admission_insights(
         items.append(AdmissionInsightItem(text=text))
 
     return items
-

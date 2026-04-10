@@ -35,7 +35,9 @@ export default function OpportunityBalanceChart({ title, subtitle, opportunityBa
                 style={{ width: `${100 - item.ratio}%` }}
               />
             </div>
-            <span className="text-xs font-bold text-primary w-12">{item.ratio}%</span>
+            <span className="text-xs font-bold text-primary min-w-[3rem] text-right">
+              {item.barRatioDisplayText ?? `${item.ratio}%`}
+            </span>
           </div>
         ))}
       </div>

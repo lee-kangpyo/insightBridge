@@ -3,24 +3,23 @@ import PageTitleSection from "../main/PageTitleSection";
 import StatusChips from "../main/StatusChips";
 import { useEffect, useMemo, useState } from "react";
 import {
-  AdmissionFilters,
   AdmissionKPICards,
   EnrollmentRateChart,
+  OpportunityBalanceChart,
   AdmissionInsights,
   AdmissionTable,
 } from "./index";
-import { getThemeDetailGrid, getThemeSourceRefs } from "../../services/api";
+import {
+  getAdmissionEnrollmentRates,
+  getAdmissionOpportunityBalance,
+  getThemeDetailGrid,
+} from "../../services/api";
+import { useThemeInsights } from "../../hooks/useThemeInsights";
+import { useThemeSourceRefs } from "../../hooks/useThemeSourceRefs";
+import { useThemeChartBlockMeta } from "../../hooks/useThemeChartBlockMeta";
 
 export default function AdmissionDashboard() {
-  const {
-    pageTitle,
-    pageSubtitle,
-    baseYear,
-    filters,
-    enrollmentRates,
-    opportunityBalance,
-    insights,
-  } = admissionData;
+  const { pageTitle, pageSubtitle, baseYear, filters, insights } = admissionData;
 
   // ✅ 최상단 KPI 카드는 DB 값만 사용 (샘플 fallback 제거)
   const [kpiCards, setKpiCards] = useState([]);
@@ -29,13 +28,12 @@ export default function AdmissionDashboard() {
     title: "",
     subtitle: "",
   });
-  const [dbRightEnrollmentRates, setDbRightEnrollmentRates] = useState([]);
-  const [rightEnrollmentMeta, setRightEnrollmentMeta] = useState({
+  const [dbOpportunityBalance, setDbOpportunityBalance] = useState([]);
+  const [opportunityBalanceMeta, setOpportunityBalanceMeta] = useState({
     title: "",
     subtitle: "",
   });
-  const [dbInsights, setDbInsights] = useState([]);
-  const [sourceRefs, setSourceRefs] = useState([]);
+  // sourceRefs: DB 기반 참조 테이블 프리뷰는 공통 훅으로 로드
 
   const params = useMemo(
     () => ({
@@ -46,6 +44,27 @@ export default function AdmissionDashboard() {
     }),
     [],
   );
+
+  const { items: dbInsights } = useThemeInsights({
+    screenCode: params.screen_code,
+    screenVer: params.screen_ver,
+    screenBaseYear: params.screen_base_year,
+    schlNm: params.schl_nm,
+  });
+
+  const { refs: sourceRefs } = useThemeSourceRefs({
+    screenCode: params.screen_code,
+    screenVer: params.screen_ver,
+    screenBaseYear: params.screen_base_year,
+    schlNm: params.schl_nm,
+  });
+
+  const { chartLeft: chartBlockLeft, chartRight: chartBlockRight } = useThemeChartBlockMeta({
+    screenCode: params.screen_code,
+    screenVer: params.screen_ver,
+    screenBaseYear: params.screen_base_year,
+    schlNm: params.schl_nm,
+  });
 
   useEffect(() => {
     const load = async () => {
@@ -96,42 +115,18 @@ export default function AdmissionDashboard() {
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await getAdmissionEnrollmentRates({
+        const data = await getAdmissionOpportunityBalance({
           ...params,
           block_code: "CHART_RIGHT",
         });
-        setDbRightEnrollmentRates(Array.isArray(data?.items) ? data.items : []);
-        setRightEnrollmentMeta({
+        setDbOpportunityBalance(Array.isArray(data?.items) ? data.items : []);
+        setOpportunityBalanceMeta({
           title: typeof data?.title === "string" ? data.title : "",
           subtitle: typeof data?.subtitle === "string" ? data.subtitle : "",
         });
       } catch {
-        setDbRightEnrollmentRates([]);
-        setRightEnrollmentMeta({ title: "", subtitle: "" });
-      }
-    };
-    load();
-  }, [params]);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const data = await getAdmissionInsights(params);
-        setDbInsights(Array.isArray(data) ? data : []);
-      } catch {
-        setDbInsights([]);
-      }
-    };
-    load();
-  }, [params]);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const data = await getThemeSourceRefs(params);
-        setSourceRefs(Array.isArray(data?.refs) ? data.refs : []);
-      } catch {
-        setSourceRefs([]);
+        setDbOpportunityBalance([]);
+        setOpportunityBalanceMeta({ title: "", subtitle: "" });
       }
     };
     load();
@@ -152,14 +147,14 @@ export default function AdmissionDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         <EnrollmentRateChart
-          title={enrollmentMeta.title}
-          subtitle={enrollmentMeta.subtitle}
+          title={enrollmentMeta.title || chartBlockLeft.title}
+          subtitle={enrollmentMeta.subtitle || chartBlockLeft.subtitle}
           enrollmentRates={dbEnrollmentRates}
         />
-        <EnrollmentRateChart
-          title={rightEnrollmentMeta.title}
-          subtitle={rightEnrollmentMeta.subtitle}
-          enrollmentRates={dbRightEnrollmentRates}
+        <OpportunityBalanceChart
+          title={opportunityBalanceMeta.title || chartBlockRight.title}
+          subtitle={opportunityBalanceMeta.subtitle || chartBlockRight.subtitle}
+          opportunityBalance={dbOpportunityBalance}
         />
       </div>
 

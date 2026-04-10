@@ -335,6 +335,7 @@ class AdmissionOpportunityBalanceItem(BaseModel):
     category: str
     ratio: float
     previousRatio: Optional[float] = None
+    barRatioDisplayText: Optional[str] = None
 
 
 class AdmissionOpportunityBalanceResponse(BaseModel):
