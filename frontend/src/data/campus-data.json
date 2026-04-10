@@ -1,0 +1,166 @@
+{
+  "meta": {
+    "baseYear": 2025,
+    "dashboardTitle": "캠퍼스/복지/안전 모니터링",
+    "institutionalDashboardLabel": "Campus & Student Support"
+  },
+  "filters": [
+    { "label": "학교종류", "value": "대학교" },
+    { "label": "설립구분", "value": "국립" },
+    { "label": "지역", "value": "수도권" },
+    { "label": "상태", "value": "운영중" }
+  ],
+  "kpis": [
+    {
+      "id": "unused-land-ratio",
+      "label": "미사용 토지 비율",
+      "value": "1.2%",
+      "year": 2025,
+      "accentColor": "tertiary",
+      "comparisons": [
+        { "label": "지역평균", "value": "10.1%" },
+        { "label": "전국평균", "value": "6.4%" }
+      ]
+    },
+    {
+      "id": "facility-secure-rate",
+      "label": "교사시설 확보율",
+      "value": "167.5%",
+      "year": 2025,
+      "accentColor": "error",
+      "comparisons": [
+        { "label": "정원기준 확보율", "value": "179.9%" }
+      ]
+    },
+    {
+      "id": "books-per-student",
+      "label": "학생 1인당 도서자료 수",
+      "value": "84.3",
+      "year": 2025,
+      "accentColor": "secondary",
+      "unit": "권",
+      "comparisons": [
+        { "label": "총 도서수", "value": "1,895,087" },
+        { "label": "지역평균", "value": "82.2" }
+      ]
+    },
+    {
+      "id": "material-budget-per-student",
+      "label": "학생 1인당 자료구입비",
+      "value": "199,798",
+      "year": 2025,
+      "accentColor": "tertiary",
+      "unit": "원",
+      "comparisons": [
+        { "label": "구입비 비율", "value": "1.2%" },
+        { "label": "전국평균", "value": "159,159" }
+      ]
+    },
+    {
+      "id": "dormitory-occupancy",
+      "label": "기숙사 수용률",
+      "value": "21.5%",
+      "year": 2025,
+      "accentColor": "secondary",
+      "comparisons": [
+        { "label": "입사경쟁률", "value": "0.7" },
+        { "label": "전국평균", "value": "32.1" }
+      ]
+    },
+    {
+      "id": "lab-safety-rate",
+      "label": "연구실 안전교육 이수율",
+      "value": "55.7%",
+      "year": 2024,
+      "accentColor": "error",
+      "comparisons": [
+        { "label": "하반기 이수율", "value": "56.1%" },
+        { "label": "전국평균", "value": "74.5%" }
+      ]
+    }
+  ],
+  "campusConfiguration": [
+    {
+      "item": "보유 교지 총액",
+      "value": "852,431",
+      "unit": "㎡",
+      "percentage": 100,
+      "color": "primary"
+    },
+    {
+      "item": "부속 토지",
+      "value": "215,640",
+      "unit": "㎡",
+      "percentage": 25.3,
+      "color": "secondary-container"
+    },
+    {
+      "item": "미사용 토지",
+      "value": "10,229",
+      "unit": "㎡",
+      "percentage": 1.2,
+      "color": "error"
+    }
+  ],
+  "safetyStatus": [
+    {
+      "label": "장애학생 지원센터",
+      "description": "전담 인력 현황",
+      "value": "3명"
+    },
+    {
+      "label": "센터 등록 장애학생",
+      "description": "전체 수혜 대상",
+      "value": "86명"
+    },
+    {
+      "label": "시설 안전관리 계획",
+      "value": "수립 완료",
+      "statusColor": "tertiary-fixed"
+    },
+    {
+      "label": "정보보안 진단",
+      "value": "우수",
+      "statusColor": "secondary-fixed"
+    },
+    {
+      "label": "개인정보보호 진단",
+      "value": "보통",
+      "statusColor": "surface-container-high"
+    }
+  ],
+  "insights": [
+    {
+      "number": "01",
+      "title": "기숙사 수용률",
+      "text": "대학의 기숙사 수용률은 21.5%로 지역 평균(19.6%)보다는 높으나 전국 평균(32.1%) 대비 다소 낮은 수준을 보입니다. 입사 경쟁률은 0.7로 안정적인 공급 상태를 유지하고 있습니다."
+    },
+    {
+      "number": "02",
+      "title": "도서 자산 현황",
+      "text": "학생 1인당 도서자료 수는 84.3권으로 지역 평균(82.2권)을 상회하며, 1,895,087권의 방대한 장서를 보유하고 있습니다. 학생 1인당 자료구입비 역시 전국 평균보다 약 4만원 가량 높게 책정되어 우수한 연구 환경을 제공하고 있습니다."
+    }
+  ],
+  "referenceTable": [
+    {
+      "tableId": "t_schlsite_secure",
+      "description": "교지 및 부속 토지 확보 현황 데이터",
+      "source": "국토교통부"
+    },
+    {
+      "tableId": "t_schlm_facl_secure",
+      "description": "교사 시설(교육/연구시설) 확보 및 이용 데이터",
+      "source": "교육부"
+    },
+    {
+      "tableId": "t_dorm_status",
+      "description": "기숙사 수용 현황 및 입사 경쟁률 원천 데이터",
+      "source": "한국장학재단"
+    },
+    {
+      "tableId": "t_safety_edu_rate",
+      "description": "연구실 안전 교육 이수 및 관리 현황 데이터",
+      "source": "한국산업안전교육원"
+    }
+  ]
+}

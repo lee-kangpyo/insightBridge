@@ -1,4 +1,4 @@
-export default function PageFilters({ filters }) {
+export default function StatusChips({ filters }) {
   if (!filters) return null;
 
   const filterList = Array.isArray(filters) 

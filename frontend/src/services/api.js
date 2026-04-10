@@ -89,3 +89,18 @@ export const getOverviewInsights = async (params) => {
   const response = await api.get('/api/insights/core', { params });
   return response.data;
 };
+
+export const getGovernanceKpis = async (params) => {
+  const response = await api.get('/api/governance/kpis', { params });
+  return response.data;
+};
+
+export const getGovernanceComplianceTable = async (params) => {
+  const response = await api.get('/api/governance/compliance-table', { params });
+  return response.data;
+};
+
+export const getGovernanceInsights = async (params) => {
+  const response = await api.get('/api/governance/insights', { params });
+  return response.data;
+};

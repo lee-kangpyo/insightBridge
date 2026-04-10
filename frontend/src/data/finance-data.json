@@ -1,0 +1,123 @@
+{
+  "meta": {
+    "baseYear": 2025,
+    "dashboardTitle": "재정/등록금/학생지원 대시보드",
+    "institutionalDashboardLabel": "Finance & Student Support"
+  },
+  "filters": [
+    { "label": "학교유형", "value": "일반대학" },
+    { "label": "설립유형", "value": "사립" },
+    { "label": "지역", "value": "전국" },
+    { "label": "상태", "value": "공시완료" }
+  ],
+  "kpis": [
+    {
+      "id": "avg-tuition",
+      "label": "평균 등록금",
+      "value": "4,387,467원",
+      "year": 2025,
+      "accentColor": "primary",
+      "comparisons": [
+        { "label": "전국 평균 대비", "value": "+2.4%", "status": "positive" },
+        { "label": "지역 평균 대비", "value": "+0.8%", "status": "positive" }
+      ]
+    },
+    {
+      "id": "scholarship-per-student",
+      "label": "재학생 1인당 장학금",
+      "value": "2.59백만",
+      "year": 2024,
+      "accentColor": "secondary",
+      "subLabel": "총액 1,240.5억 원",
+      "subLabelBg": true
+    },
+    {
+      "id": "loan-usage-rate",
+      "label": "학자금대출 이용률",
+      "value": "8.2%",
+      "year": 2024,
+      "accentColor": "primary",
+      "trend": { "value": "-1.2%p 하락", "status": "negative" }
+    },
+    {
+      "id": "edu-cost-per-student",
+      "label": "학생 1인당 교육비",
+      "value": "23.25백만",
+      "year": 2024,
+      "accentColor": "tertiary-container",
+      "subLabel": "국공립 평균 대비 85% 수준 유지"
+    },
+    {
+      "id": "tuition-dependency",
+      "label": "등록금 의존도",
+      "value": "28.0%",
+      "year": 2025,
+      "accentColor": "primary-container",
+      "subLabel": "전년 대비 안정세",
+      "subLabelBg": true
+    },
+    {
+      "id": "total-revenue",
+      "label": "세입 총계",
+      "value": "2750.1억",
+      "year": 2025,
+      "accentColor": "outline",
+      "subLabel": "정부지원금 및 수입사업 포함"
+    }
+  ],
+  "tuitionByField": [
+    { "field": "의학계열", "amount": 9850000, "percentage": 95, "color": "primary" },
+    { "field": "예체능계열", "amount": 7420000, "percentage": 75, "color": "secondary" },
+    { "field": "공학계열", "amount": 8150000, "percentage": 82, "color": "secondary-container" },
+    { "field": "자연과학계열", "amount": 7200000, "percentage": 72, "color": "on-primary-container" },
+    { "field": "인문사회계열", "amount": 5890000, "percentage": 59, "color": "primary-fixed-dim" }
+  ],
+  "revenueStructure": [
+    { "item": "국가보조금", "percentage": 42.5, "borderColor": "border-primary" },
+    { "item": "등록금 수입", "percentage": 28.0, "borderColor": "border-secondary" },
+    { "item": "기숙사비", "percentage": 12.2, "borderColor": "border-secondary-container" },
+    { "item": "논문심사료", "percentage": 4.8, "borderColor": "border-on-primary-container" },
+    { "item": "기타 전입금", "percentage": 3.5, "borderColor": "border-primary-fixed-dim" }
+  ],
+  "insights": [
+    {
+      "number": "01",
+      "text": "평균 등록금은 전국 평균 대비 소폭 높으나, 의학계열과 공학계열의 집중도가 원인으로 파악됩니다. 등록금 인상 억제 정책에 따라 5년 연속 동결 수준을 유지하고 있습니다."
+    },
+    {
+      "number": "02",
+      "text": "재학생 1인당 장학금 수혜 규모는 수도권 주요 대학 평균을 상회하며, 국가장학금 외에도 교내 자체 매칭 펀드를 통한 지원이 강화된 결과입니다."
+    },
+    {
+      "number": "03",
+      "text": "등록금 의존도가 30% 이하로 관리되고 있어 재무 건전성이 양호한 편입니다. 정부 지원 사업 및 산학협력 수익 증대가 주효한 역할을 하고 있습니다."
+    },
+    {
+      "number": "04",
+      "text": "학자금 대출 이용률의 감소는 장학금 수혜 확대와 연동된 결과로 보이며, 학생들의 학비 부담 경감 지표로 해석될 수 있습니다."
+    }
+  ],
+  "referenceTable": [
+    {
+      "tableId": "FIN-2025-001",
+      "description": "2025학년도 학부 등록금 산정 근거 자료",
+      "status": "확정",
+      "statusColor": "tertiary-fixed",
+      "lastUpdate": "2024.12.15"
+    },
+    {
+      "tableId": "SCH-2024-EX",
+      "description": "2024년 장학금 지급 실적 및 결산 보고서",
+      "status": "확정",
+      "statusColor": "tertiary-fixed",
+      "lastUpdate": "2025.01.10"
+    },
+    {
+      "tableId": "REV-2025-PR",
+      "description": "상 상반기 세입 예산 가용성 검토 분석",
+      "status": "진행중",
+      "statusColor": "secondary-fixed",
+      "lastUpdate": "2025.01.25"
+    }
+  ]
+}
