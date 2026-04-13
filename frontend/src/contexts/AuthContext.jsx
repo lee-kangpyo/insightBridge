@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useCallback } from "react";
 import axios from "axios";
-import { getApiBaseUrl } from "../services/apiBase";
 
 export const AuthContext = createContext(null);
 
