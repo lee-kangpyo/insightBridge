@@ -357,10 +357,18 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class InstitutionChips(BaseModel):
+    schl_tp: str
+    estb_gb: str
+    region: str
+    stts: str
+
+
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     univ_nm: Optional[str] = None
+    institution_chips: Optional[InstitutionChips] = None
 
 
 class OAuth2TokenResponse(BaseModel):
@@ -369,6 +377,7 @@ class OAuth2TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     univ_nm: Optional[str] = None
+    institution_chips: Optional[InstitutionChips] = None
 
 
 class TokenPayload(BaseModel):

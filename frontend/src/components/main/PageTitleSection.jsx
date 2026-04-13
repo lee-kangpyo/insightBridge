@@ -2,7 +2,7 @@ export default function PageTitleSection({
   title,
   subtitle,
   baseYear,
-  showSummaryJudgment,
+  showSummaryJudgment = false,
   summaryJudgmentTitle,
   summaryJudgmentSubtitle,
 }) {

@@ -23,7 +23,7 @@ import { useOverviewSummaryJudgmentLabel } from "../hooks/useOverviewPdfReportLa
 import { useUniversityContext } from "../hooks/useUniversityContext";
 
 export default function MainPage() {
-  const { schlNm, ready: universityReady } = useUniversityContext();
+  const { schlNm, ready: universityReady, statusChips } = useUniversityContext();
 
   // ✅ API 기반 KPI (기본: 빈값으로 시작해서 "깨지지 않게" 방어)
   const [largeKpis, setLargeKpis] = useState([]);
@@ -176,7 +176,7 @@ export default function MainPage() {
           summaryJudgmentTitle={summaryJudgmentTitle}
           summaryJudgmentSubtitle={summaryJudgmentSubtitle}
         />
-        <StatusChips filters={sampleData.filters} />
+        <StatusChips filters={statusChips} />
         <KpiBentoGrid largeKpis={largeKpis} smallKpis={smallKpis} />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <StrengthWeaknessMatrix matrix={matrix} />

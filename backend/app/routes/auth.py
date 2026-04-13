@@ -4,7 +4,9 @@ from app.services.auth import (
     authenticate_user,
     create_access_token,
     get_university_name_by_cd,
+    get_institution_chips,
 )
+from app.schemas import InstitutionChips
 from app.dependencies import require_auth
 from app.schemas import LoginRequest, LoginResponse, OAuth2TokenResponse
 
@@ -30,8 +32,13 @@ async def login_for_access_token(
         data={"sub": str(user["user_cd"]), "univ_nm": univ_nm}
     )
 
+    chips = await get_institution_chips(univ_nm)
+
     return OAuth2TokenResponse(
-        access_token=access_token, token_type="bearer", univ_nm=univ_nm
+        access_token=access_token,
+        token_type="bearer",
+        univ_nm=univ_nm,
+        institution_chips=InstitutionChips(**chips),
     )
 
 
@@ -51,7 +58,13 @@ async def login(request: LoginRequest):
         data={"sub": str(user["user_cd"]), "univ_nm": univ_nm}
     )
 
-    return LoginResponse(access_token=access_token, univ_nm=univ_nm)
+    chips = await get_institution_chips(univ_nm)
+
+    return LoginResponse(
+        access_token=access_token,
+        univ_nm=univ_nm,
+        institution_chips=InstitutionChips(**chips),
+    )
 
 
 @router.get("/me")

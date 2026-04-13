@@ -17,7 +17,6 @@ import {
 import { useThemeSourceRefs } from "../../hooks/useThemeSourceRefs";
 import { useThemeTextBlockLines } from "../../hooks/useThemeTextBlockLines";
 import { useThemeHeaderContext } from "../../hooks/useThemeHeaderContext";
-import { useThemePanelSummary } from "../../hooks/useThemePanelSummary";
 import { useUniversityContext } from "../../hooks/useUniversityContext";
 import InsightsPanel from "../main/InsightsPanel";
 
@@ -25,8 +24,8 @@ const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
 const INSIGHT_LINE_ROLE = "INSIGHT";
 
 export default function AdmissionDashboard() {
-  const { schlNm, ready: universityReady } = useUniversityContext();
-  const { pageTitle, pageSubtitle, baseYear, filters } = admissionData;
+  const { schlNm, ready: universityReady, statusChips } = useUniversityContext();
+  const { pageTitle, pageSubtitle, baseYear } = admissionData;
 
   const [kpiCards, setKpiCards] = useState([]);
   const [dbEnrollmentRates, setDbEnrollmentRates] = useState([]);
@@ -57,18 +56,6 @@ export default function AdmissionDashboard() {
       screenBaseYear: params.screen_base_year,
       schlNm: params.schl_nm,
     });
-
-  const { title: panelTitle, subtitle: panelSubtitle } = useThemePanelSummary({
-    screenCode: params.screen_code,
-    screenVer: params.screen_ver,
-    screenBaseYear: params.screen_base_year,
-    schlNm: params.schl_nm,
-  });
-
-  const showSummaryJudgment = Boolean(
-    (panelTitle && panelTitle.trim()) ||
-    (panelSubtitle && panelSubtitle.trim()),
-  );
 
   const { title: insightTitle, items: dbInsights } = useThemeTextBlockLines({
     screenCode: params.screen_code,
@@ -159,16 +146,9 @@ export default function AdmissionDashboard() {
 
   return (
     <div className="max-w-[1600px] mx-auto px-8 py-6 space-y-8">
-      <PageTitleSection
-        title={headerTitle}
-        subtitle={headerSubtitle}
-        baseYear={baseYear}
-        showSummaryJudgment={showSummaryJudgment}
-        summaryJudgmentTitle={panelTitle}
-        summaryJudgmentSubtitle={panelSubtitle}
-      />
+      <PageTitleSection title={headerTitle} subtitle={headerSubtitle} baseYear={baseYear} />
 
-      <StatusChips filters={filters} />
+      <StatusChips filters={statusChips} />
       <AdmissionKPICards kpiCards={kpiCards} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">

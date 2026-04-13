@@ -65,3 +65,35 @@ async def get_university_name_by_cd(univ_cd: str) -> Optional[str]:
         return None
 
     return df.iloc[0]["univ_nm"]
+
+
+def _normalize_chip_value(value: Optional[str]) -> str:
+    if value is None or (isinstance(value, str) and value.strip() == ""):
+        return "-"
+    return str(value).strip()
+
+
+async def get_institution_chips(schl_nm: str) -> dict:
+    query = """
+        SELECT schl_tp, estb_gb, region, stts
+        FROM public.tq_overview_detail_grid
+        WHERE schl_nm = $1
+        LIMIT 1
+    """
+    df = await fetch_df(query, (schl_nm,))
+
+    if df.empty:
+        return {
+            "schl_tp": "-",
+            "estb_gb": "-",
+            "region": "-",
+            "stts": "-",
+        }
+
+    row = df.iloc[0]
+    return {
+        "schl_tp": _normalize_chip_value(row.get("schl_tp")),
+        "estb_gb": _normalize_chip_value(row.get("estb_gb")),
+        "region": _normalize_chip_value(row.get("region")),
+        "stts": _normalize_chip_value(row.get("stts")),
+    }

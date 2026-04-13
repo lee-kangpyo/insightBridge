@@ -17,7 +17,6 @@ import { mapThemeItemsToResearchFundSources } from "../../utils/mapThemeItemsToR
 import { mapThemeItemsToResearchStartupProgress } from "../../utils/mapThemeItemsToResearchStartupProgress";
 import { useThemeTextBlockLines } from "../../hooks/useThemeTextBlockLines";
 import { useThemeHeaderContext } from "../../hooks/useThemeHeaderContext";
-import { useThemePanelSummary } from "../../hooks/useThemePanelSummary";
 import { useUniversityContext } from "../../hooks/useUniversityContext";
 
 const RESEARCH_SCREEN_BASE_YEAR = 2025;
@@ -25,8 +24,8 @@ const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
 const INSIGHT_LINE_ROLE = "INSIGHT";
 
 export default function ResearchIndustryStartupDashboard() {
-  const { schlNm, ready: universityReady } = useUniversityContext();
-  const { pageTitle, pageSubtitle, baseYear, filters } = researchData;
+  const { schlNm, ready: universityReady, statusChips } = useUniversityContext();
+  const { pageTitle, pageSubtitle, baseYear } = researchData;
 
   const [kpiCards, setKpiCards] = useState([]);
 
@@ -47,18 +46,6 @@ export default function ResearchIndustryStartupDashboard() {
       screenBaseYear: themeParams.screen_base_year,
       schlNm: themeParams.schl_nm,
     });
-
-  const { title: panelTitle, subtitle: panelSubtitle } = useThemePanelSummary({
-    screenCode: themeParams.screen_code,
-    screenVer: themeParams.screen_ver,
-    screenBaseYear: themeParams.screen_base_year,
-    schlNm: themeParams.schl_nm,
-  });
-
-  const showSummaryJudgment = Boolean(
-    (panelTitle && panelTitle.trim()) ||
-    (panelSubtitle && panelSubtitle.trim()),
-  );
 
   useEffect(() => {
     if (!universityReady || !schlNm) return;
@@ -123,16 +110,9 @@ export default function ResearchIndustryStartupDashboard() {
 
   return (
     <div className="max-w-[1600px] mx-auto px-8 py-6 space-y-8">
-      <PageTitleSection
-        title={headerTitle}
-        subtitle={headerSubtitle}
-        baseYear={baseYear}
-        showSummaryJudgment={showSummaryJudgment}
-        summaryJudgmentTitle={panelTitle}
-        summaryJudgmentSubtitle={panelSubtitle}
-      />
+      <PageTitleSection title={headerTitle} subtitle={headerSubtitle} baseYear={baseYear} />
 
-      <StatusChips filters={filters} />
+      <StatusChips filters={statusChips} />
       <ResearchIndustryStartupKPICards kpiCards={kpiCards} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

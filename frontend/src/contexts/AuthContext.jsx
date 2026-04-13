@@ -14,13 +14,13 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (email, password) => {
     const res = await axios.post(`${API_BASE}/api/auth/login`, { email, password });
-    const { access_token, univ_nm } = res.data;
+    const { access_token, univ_nm, institution_chips } = res.data;
     
     localStorage.setItem('auth_token', access_token);
-    localStorage.setItem('auth_user', JSON.stringify({ email, univ_nm }));
+    localStorage.setItem('auth_user', JSON.stringify({ email, univ_nm, institution_chips }));
     
     setToken(access_token);
-    setUser({ email, univ_nm });
+    setUser({ email, univ_nm, institution_chips });
   }, []);
 
   const logout = useCallback(() => {

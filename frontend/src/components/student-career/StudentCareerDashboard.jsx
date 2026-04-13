@@ -13,15 +13,14 @@ import {
 import { useThemeSourceRefs } from "../../hooks/useThemeSourceRefs";
 import { useThemeTextBlockLines } from "../../hooks/useThemeTextBlockLines";
 import { useThemeHeaderContext } from "../../hooks/useThemeHeaderContext";
-import { useThemePanelSummary } from "../../hooks/useThemePanelSummary";
 import { useUniversityContext } from "../../hooks/useUniversityContext";
 
 const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
 const INSIGHT_LINE_ROLE = "INSIGHT";
 
 export default function StudentCareerDashboard() {
-  const { schlNm, ready: universityReady } = useUniversityContext();
-  const { pageTitle, pageSubtitle, baseYear, filters } = studentCareerData;
+  const { schlNm, ready: universityReady, statusChips } = useUniversityContext();
+  const { pageTitle, pageSubtitle, baseYear } = studentCareerData;
 
   const sourceRefParams = useMemo(
     () => ({
@@ -40,18 +39,6 @@ export default function StudentCareerDashboard() {
       screenBaseYear: sourceRefParams.screen_base_year,
       schlNm: sourceRefParams.schl_nm,
     });
-
-  const { title: panelTitle, subtitle: panelSubtitle } = useThemePanelSummary({
-    screenCode: sourceRefParams.screen_code,
-    screenVer: sourceRefParams.screen_ver,
-    screenBaseYear: sourceRefParams.screen_base_year,
-    schlNm: sourceRefParams.schl_nm,
-  });
-
-  const showSummaryJudgment = Boolean(
-    (panelTitle && panelTitle.trim()) ||
-    (panelSubtitle && panelSubtitle.trim()),
-  );
 
   const [kpiCards, setKpiCards] = useState([]);
   const [chartLeftItems, setChartLeftItems] = useState([]);
@@ -152,16 +139,9 @@ export default function StudentCareerDashboard() {
 
   return (
     <div className="max-w-[1600px] mx-auto px-8 py-6 space-y-8">
-      <PageTitleSection
-        title={headerTitle}
-        subtitle={headerSubtitle}
-        baseYear={baseYear}
-        showSummaryJudgment={showSummaryJudgment}
-        summaryJudgmentTitle={panelTitle}
-        summaryJudgmentSubtitle={panelSubtitle}
-      />
+      <PageTitleSection title={headerTitle} subtitle={headerSubtitle} baseYear={baseYear} />
 
-      <StatusChips filters={filters} />
+      <StatusChips filters={statusChips} />
       <AdmissionKPICards kpiCards={kpiCards} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

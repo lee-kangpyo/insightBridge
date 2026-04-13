@@ -149,3 +149,116 @@ class TestSchemasExist:
         from app.schemas import TokenPayload
 
         assert TokenPayload is not None
+
+
+class TestNormalizeChipValue:
+    def test_normalize_null_returns_dash(self):
+        from app.services.auth import _normalize_chip_value
+
+        assert _normalize_chip_value(None) == "-"
+
+    def test_normalize_empty_string_returns_dash(self):
+        from app.services.auth import _normalize_chip_value
+
+        assert _normalize_chip_value("") == "-"
+
+    def test_normalize_whitespace_returns_dash(self):
+        from app.services.auth import _normalize_chip_value
+
+        assert _normalize_chip_value("   ") == "-"
+
+    def test_normalize_valid_value_returns_trimmed(self):
+        from app.services.auth import _normalize_chip_value
+
+        assert _normalize_chip_value("국립") == "국립"
+        assert _normalize_chip_value("  사립  ") == "사립"
+
+
+class TestGetInstitutionChips:
+    @pytest.mark.asyncio
+    async def test_get_institution_chips_returns_normalized_values(
+        self, mock_db_fetch_df
+    ):
+        from app.services.auth import get_institution_chips
+        import pandas as pd
+
+        mock_db_fetch_df.return_value = pd.DataFrame(
+            [{"schl_tp": "대학교", "estb_gb": "국립", "region": "서울", "stts": "정상"}]
+        )
+
+        result = await get_institution_chips("테스트대학교")
+
+        assert result["schl_tp"] == "대학교"
+        assert result["estb_gb"] == "국립"
+        assert result["region"] == "서울"
+        assert result["stts"] == "정상"
+
+    @pytest.mark.asyncio
+    async def test_get_institution_chips_empty_df_returns_all_dashes(
+        self, mock_db_fetch_df
+    ):
+        from app.services.auth import get_institution_chips
+        import pandas as pd
+
+        mock_db_fetch_df.return_value = pd.DataFrame([])
+
+        result = await get_institution_chips("없는학교")
+
+        assert result["schl_tp"] == "-"
+        assert result["estb_gb"] == "-"
+        assert result["region"] == "-"
+        assert result["stts"] == "-"
+
+    @pytest.mark.asyncio
+    async def test_get_institution_chips_null_values_become_dash(
+        self, mock_db_fetch_df
+    ):
+        from app.services.auth import get_institution_chips
+        import pandas as pd
+
+        mock_db_fetch_df.return_value = pd.DataFrame(
+            [{"schl_tp": None, "estb_gb": "", "region": "  ", "stts": "정상"}]
+        )
+
+        result = await get_institution_chips("테스트대학교")
+
+        assert result["schl_tp"] == "-"
+        assert result["estb_gb"] == "-"
+        assert result["region"] == "-"
+        assert result["stts"] == "정상"
+
+
+class TestInstitutionChipsSchema:
+    def test_institution_chips_model_exists(self):
+        from app.schemas import InstitutionChips
+
+        assert InstitutionChips is not None
+
+    def test_institution_chips_has_four_fields(self):
+        from app.schemas import InstitutionChips
+
+        chips = InstitutionChips(schl_tp="x", estb_gb="y", region="z", stts="w")
+        assert hasattr(chips, "schl_tp")
+        assert hasattr(chips, "estb_gb")
+        assert hasattr(chips, "region")
+        assert hasattr(chips, "stts")
+
+    def test_login_response_has_institution_chips(self):
+        from app.schemas import LoginResponse, InstitutionChips
+
+        chips = InstitutionChips(schl_tp="x", estb_gb="y", region="z", stts="w")
+        resp = LoginResponse(
+            access_token="token", univ_nm="Univ", institution_chips=chips
+        )
+        assert resp.institution_chips is not None
+        assert resp.institution_chips.schl_tp == "x"
+
+    def test_oauth2_token_response_has_institution_chips(self):
+        from app.schemas import OAuth2TokenResponse, InstitutionChips
+
+        chips = InstitutionChips(schl_tp="x", estb_gb="y", region="z", stts="w")
+        resp = OAuth2TokenResponse(
+            access_token="token", univ_nm="Univ", institution_chips=chips
+        )
+        assert resp.institution_chips is not None
+        assert resp.institution_chips.region == "z"

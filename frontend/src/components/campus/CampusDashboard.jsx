@@ -11,7 +11,6 @@ import { useThemeSourceRefs } from '../../hooks/useThemeSourceRefs';
 import { useThemeChartBlockMeta } from '../../hooks/useThemeChartBlockMeta';
 import { useThemeTextBlockLines } from '../../hooks/useThemeTextBlockLines';
 import { useThemeHeaderContext } from '../../hooks/useThemeHeaderContext';
-import { useThemePanelSummary } from '../../hooks/useThemePanelSummary';
 import { useUniversityContext } from '../../hooks/useUniversityContext';
 import {
   mapThemeItemsToCampusConfiguration,
@@ -44,8 +43,8 @@ const INSIGHT_BLOCK_CODE = 'SAMPLE_INSIGHT';
 const INSIGHT_LINE_ROLE = 'INSIGHT';
 
 export default function CampusDashboard() {
-  const { schlNm, ready: universityReady } = useUniversityContext();
-  const { meta, filters, campusConfiguration, safetyStatus } = campusData;
+  const { schlNm, ready: universityReady, statusChips } = useUniversityContext();
+  const { meta, campusConfiguration, safetyStatus } = campusData;
 
   const [kpiCards, setKpiCards] = useState([]);
 
@@ -65,17 +64,6 @@ export default function CampusDashboard() {
     screenBaseYear: themeParams.screen_base_year,
     schlNm: themeParams.schl_nm,
   });
-
-  const { title: panelTitle, subtitle: panelSubtitle } = useThemePanelSummary({
-    screenCode: themeParams.screen_code,
-    screenVer: themeParams.screen_ver,
-    screenBaseYear: themeParams.screen_base_year,
-    schlNm: themeParams.schl_nm,
-  });
-
-  const showSummaryJudgment = Boolean(
-    (panelTitle && panelTitle.trim()) || (panelSubtitle && panelSubtitle.trim()),
-  );
 
   const {
     title: insightTitle,
@@ -159,12 +147,9 @@ export default function CampusDashboard() {
         title={headerTitle}
         subtitle={headerSubtitle}
         baseYear={meta.baseYear}
-        showSummaryJudgment={showSummaryJudgment}
-        summaryJudgmentTitle={panelTitle}
-        summaryJudgmentSubtitle={panelSubtitle}
       />
 
-      <StatusChips filters={filters} />
+      <StatusChips filters={statusChips} />
       <CampusKPICards kpiCards={kpiCards} />
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
