@@ -37,13 +37,14 @@ const SAFETY_BORDER_COLORS = {
   'surface-container-high': 'border-b-outline-variant/15',
 };
 
-const CAMPUS_SCREEN_BASE_YEAR = 2025;
 const INSIGHT_BLOCK_CODE = 'SAMPLE_INSIGHT';
 const INSIGHT_LINE_ROLE = 'INSIGHT';
 
 export default function CampusDashboard() {
   const { schlNm, ready: universityReady } = useUniversityContext();
   const { meta, filters, campusConfiguration, safetyStatus } = campusData;
+  const BASE_YEAR_OPTIONS = [2025, 2024, 2023];
+  const [selectedBaseYear, setSelectedBaseYear] = useState(2025);
 
   const [kpiCards, setKpiCards] = useState([]);
 
@@ -51,10 +52,10 @@ export default function CampusDashboard() {
     () => ({
       screen_code: 'campus',
       screen_ver: 'v0.1',
-      screen_base_year: CAMPUS_SCREEN_BASE_YEAR,
+      screen_base_year: selectedBaseYear,
       schl_nm: schlNm,
     }),
-    [schlNm],
+    [schlNm, selectedBaseYear],
   );
 
   const { title: headerTitle, subtitle: headerSubtitle } = useThemeHeaderContext({
@@ -155,7 +156,9 @@ export default function CampusDashboard() {
       <PageTitleSection
         title={headerTitle}
         subtitle={headerSubtitle}
-        baseYear={meta.baseYear}
+        baseYear={selectedBaseYear}
+        baseYearOptions={BASE_YEAR_OPTIONS}
+        onBaseYearChange={setSelectedBaseYear}
         showSummaryJudgment={showSummaryJudgment}
         summaryJudgmentTitle={panelTitle}
         summaryJudgmentSubtitle={panelSubtitle}

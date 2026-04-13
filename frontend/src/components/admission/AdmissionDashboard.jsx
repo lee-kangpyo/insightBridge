@@ -26,6 +26,8 @@ const INSIGHT_LINE_ROLE = "INSIGHT";
 export default function AdmissionDashboard() {
   const { schlNm, ready: universityReady } = useUniversityContext();
   const { pageTitle, pageSubtitle, baseYear, filters } = admissionData;
+  const BASE_YEAR_OPTIONS = [2025, 2024, 2023];
+  const [selectedBaseYear, setSelectedBaseYear] = useState(2025);
 
   // ✅ 최상단 KPI 카드는 DB 값만 사용 (샘플 fallback 제거)
   const [kpiCards, setKpiCards] = useState([]);
@@ -45,10 +47,10 @@ export default function AdmissionDashboard() {
     () => ({
       screen_code: "admission",
       screen_ver: "v0.1",
-      screen_base_year: 2025,
+      screen_base_year: selectedBaseYear,
       schl_nm: schlNm,
     }),
-    [schlNm],
+    [schlNm, selectedBaseYear],
   );
 
   const { title: headerTitle, subtitle: headerSubtitle } =
@@ -165,7 +167,9 @@ export default function AdmissionDashboard() {
       <PageTitleSection
         title={headerTitle}
         subtitle={headerSubtitle}
-        baseYear={baseYear}
+        baseYear={selectedBaseYear}
+        baseYearOptions={BASE_YEAR_OPTIONS}
+        onBaseYearChange={setSelectedBaseYear}
         showSummaryJudgment={showSummaryJudgment}
         summaryJudgmentTitle={panelTitle}
         summaryJudgmentSubtitle={panelSubtitle}

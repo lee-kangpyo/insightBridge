@@ -34,13 +34,14 @@ const REVENUE_BORDER = {
   "border-primary-fixed-dim": BAR_FILL["primary-fixed-dim"],
 };
 
-const FINANCE_SCREEN_BASE_YEAR = 2025;
 const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
 const INSIGHT_LINE_ROLE = "INSIGHT";
 
 export default function FinanceDashboard() {
   const { schlNm, ready: universityReady } = useUniversityContext();
   const { meta, filters, tuitionByField, revenueStructure } = financeData;
+  const BASE_YEAR_OPTIONS = [2025, 2024, 2023];
+  const [selectedBaseYear, setSelectedBaseYear] = useState(2025);
 
   const [kpiCards, setKpiCards] = useState([]);
 
@@ -48,10 +49,10 @@ export default function FinanceDashboard() {
     () => ({
       screen_code: "finance",
       screen_ver: "v0.1",
-      screen_base_year: FINANCE_SCREEN_BASE_YEAR,
+      screen_base_year: selectedBaseYear,
       schl_nm: schlNm,
     }),
-    [schlNm],
+    [schlNm, selectedBaseYear],
   );
 
   const { title: headerTitle, subtitle: headerSubtitle } = useThemeHeaderContext({
@@ -152,7 +153,9 @@ export default function FinanceDashboard() {
       <PageTitleSection
         title={headerTitle}
         subtitle={headerSubtitle}
-        baseYear={meta.baseYear}
+        baseYear={selectedBaseYear}
+        baseYearOptions={BASE_YEAR_OPTIONS}
+        onBaseYearChange={setSelectedBaseYear}
         showSummaryJudgment={showSummaryJudgment}
         summaryJudgmentTitle={panelTitle}
         summaryJudgmentSubtitle={panelSubtitle}

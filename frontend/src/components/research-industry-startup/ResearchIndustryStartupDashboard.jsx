@@ -19,13 +19,14 @@ import { useThemeHeaderContext } from "../../hooks/useThemeHeaderContext";
 import { useThemePanelSummary } from "../../hooks/useThemePanelSummary";
 import { useUniversityContext } from "../../hooks/useUniversityContext";
 
-const RESEARCH_SCREEN_BASE_YEAR = 2025;
 const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
 const INSIGHT_LINE_ROLE = "INSIGHT";
 
 export default function ResearchIndustryStartupDashboard() {
   const { schlNm, ready: universityReady } = useUniversityContext();
   const { pageTitle, pageSubtitle, baseYear, filters } = researchData;
+  const BASE_YEAR_OPTIONS = [2025, 2024, 2023];
+  const [selectedBaseYear, setSelectedBaseYear] = useState(2025);
 
   const [kpiCards, setKpiCards] = useState([]);
 
@@ -33,10 +34,10 @@ export default function ResearchIndustryStartupDashboard() {
     () => ({
       screen_code: "research",
       screen_ver: "v0.1",
-      screen_base_year: RESEARCH_SCREEN_BASE_YEAR,
+      screen_base_year: selectedBaseYear,
       schl_nm: schlNm,
     }),
-    [schlNm],
+    [schlNm, selectedBaseYear],
   );
 
   const { title: headerTitle, subtitle: headerSubtitle } =
@@ -125,7 +126,9 @@ export default function ResearchIndustryStartupDashboard() {
       <PageTitleSection
         title={headerTitle}
         subtitle={headerSubtitle}
-        baseYear={baseYear}
+        baseYear={selectedBaseYear}
+        baseYearOptions={BASE_YEAR_OPTIONS}
+        onBaseYearChange={setSelectedBaseYear}
         showSummaryJudgment={showSummaryJudgment}
         summaryJudgmentTitle={panelTitle}
         summaryJudgmentSubtitle={panelSubtitle}
@@ -140,7 +143,7 @@ export default function ResearchIndustryStartupDashboard() {
             overrideSources={fundSourcesFromDb}
             bannerYear={
               fundSourcesFromDb.length > 0
-                ? RESEARCH_SCREEN_BASE_YEAR
+                ? selectedBaseYear
                 : undefined
             }
             title={chartLeft.title}

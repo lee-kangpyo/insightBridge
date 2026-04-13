@@ -20,15 +20,17 @@ const INSIGHT_LINE_ROLE = "INSIGHT";
 export default function StudentCareerDashboard() {
   const { schlNm, ready: universityReady } = useUniversityContext();
   const { pageTitle, pageSubtitle, baseYear, filters } = studentCareerData;
+  const BASE_YEAR_OPTIONS = [2025, 2024, 2023];
+  const [selectedBaseYear, setSelectedBaseYear] = useState(2025);
 
   const sourceRefParams = useMemo(
     () => ({
       screen_code: "student",
       screen_ver: "v0.1",
-      screen_base_year: 2025,
+      screen_base_year: selectedBaseYear,
       schl_nm: schlNm,
     }),
-    [schlNm],
+    [schlNm, selectedBaseYear],
   );
 
   const { title: headerTitle, subtitle: headerSubtitle } =
@@ -153,7 +155,9 @@ export default function StudentCareerDashboard() {
       <PageTitleSection
         title={headerTitle}
         subtitle={headerSubtitle}
-        baseYear={baseYear}
+        baseYear={selectedBaseYear}
+        baseYearOptions={BASE_YEAR_OPTIONS}
+        onBaseYearChange={setSelectedBaseYear}
         showSummaryJudgment={showSummaryJudgment}
         summaryJudgmentTitle={panelTitle}
         summaryJudgmentSubtitle={panelSubtitle}

@@ -1,3 +1,5 @@
+import AnimatedNumberText from "../common/AnimatedNumberText";
+
 /** 본문 지표 색(valueColors)과 동일 토너로 맞춤(종합현황 등 토큰-only 카드). *-fixed 배지는 본문 text-*와 색상 계열이 달라져 어긋남. */
 const yearBadgeColors = {
   primary: 'bg-primary/15 text-primary',
@@ -61,6 +63,9 @@ export default function KPICard({
     ? undefined
     : valueColors[accentColor] || valueColors.primary;
 
+  const valueText = value == null ? "" : String(value);
+  const shouldAppendUnit = Boolean(unit && !valueText.includes(String(unit)));
+
   /** accentColorHex가 있으면 본문 숫자와 같은 액센트로 배지를 맞춤(스펙: 액센트에 맞는 연도 배지). */
   const yearBadgeStyle = accentColorHex
     ? {
@@ -96,8 +101,14 @@ export default function KPICard({
         className={`text-3xl font-semibold mb-3 ${valueColor || ''}`}
         style={accentColorHex ? { color: accentColorHex } : undefined}
       >
-        {value}
-        {unit && <span className="text-base font-medium ml-0.5">{unit}</span>}
+        {isMainDashboard ? (
+    <AnimatedNumberText text={valueText} duration={1500} />
+        ) : (
+          valueText
+        )}
+        {shouldAppendUnit && (
+          <span className="text-base font-medium ml-0.5">{unit}</span>
+        )}
       </div>
       <div className="space-y-1">
         {isMainDashboard ? (

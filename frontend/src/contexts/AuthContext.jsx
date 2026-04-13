@@ -1,9 +1,8 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import axios from 'axios';
+import { getApiBaseUrl } from '../services/apiBase';
 
 export const AuthContext = createContext(null);
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
@@ -13,7 +12,7 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem('auth_token'));
 
   const login = useCallback(async (email, password) => {
-    const res = await axios.post(`${API_BASE}/api/auth/login`, { email, password });
+    const res = await axios.post(`${getApiBaseUrl()}/api/auth/login`, { email, password });
     const { access_token, univ_nm } = res.data;
     
     localStorage.setItem('auth_token', access_token);

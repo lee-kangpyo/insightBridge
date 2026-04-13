@@ -21,6 +21,8 @@ import { useUniversityContext } from "../hooks/useUniversityContext";
 
 export default function MainPage() {
   const { schlNm, ready: universityReady } = useUniversityContext();
+  const BASE_YEAR_OPTIONS = [2025, 2024, 2023];
+  const [selectedBaseYear, setSelectedBaseYear] = useState(2025);
 
   // ✅ API 기반 KPI (기본: 빈값으로 시작해서 "깨지지 않게" 방어)
   const [largeKpis, setLargeKpis] = useState([]);
@@ -40,7 +42,7 @@ export default function MainPage() {
   const screenParams = {
     screenCode: "overview",
     screenVer: "v0.1",
-    screenBaseYear: 2025,
+    screenBaseYear: selectedBaseYear,
     schlNm: schlNm,
   };
 
@@ -74,7 +76,7 @@ export default function MainPage() {
         const data = await getOverviewKpis({
           screen_code: "overview",
           screen_ver: "v0.1",
-          screen_base_year: 2025,
+          screen_base_year: selectedBaseYear,
           schl_nm: schlNm,
         });
 
@@ -89,7 +91,7 @@ export default function MainPage() {
       }
     };
     load();
-  }, [universityReady, schlNm]);
+  }, [universityReady, schlNm, selectedBaseYear]);
 
   useEffect(() => {
     if (!universityReady || !schlNm) return;
@@ -99,8 +101,8 @@ export default function MainPage() {
         const data = await getOverviewMatrixPoints({
           screen_code: "overview",
           screen_ver: "v0.1",
-          screen_base_year: 2025,
-          metric_year: 2025,
+          screen_base_year: selectedBaseYear,
+          metric_year: selectedBaseYear,
           schl_nm: schlNm,
         });
         setMatrix(data && Array.isArray(data.points) ? data : null);
@@ -109,7 +111,7 @@ export default function MainPage() {
       }
     };
     load();
-  }, [universityReady, schlNm]);
+  }, [universityReady, schlNm, selectedBaseYear]);
 
   useEffect(() => {
     if (!universityReady || !schlNm) return;
@@ -119,7 +121,7 @@ export default function MainPage() {
         const data = await getOverviewRiskTable({
           screen_code: "overview",
           screen_ver: "v0.1",
-          screen_base_year: 2025,
+          screen_base_year: selectedBaseYear,
           schl_nm: schlNm,
         });
         const nextItems = Array.isArray(data?.items) ? data.items : [];
@@ -132,7 +134,7 @@ export default function MainPage() {
       }
     };
     load();
-  }, [universityReady, schlNm]);
+  }, [universityReady, schlNm, selectedBaseYear]);
 
   useEffect(() => {
     if (!universityReady || !schlNm) return;
@@ -142,9 +144,9 @@ export default function MainPage() {
         const data = await getOverviewDetailGrid({
           screen_code: "overview",
           screen_ver: "v0.1",
-          screen_base_year: 2025,
+          screen_base_year: selectedBaseYear,
           schl_nm: schlNm,
-          metric_year: 2025,
+          metric_year: selectedBaseYear,
         });
         setDetailGrid(Array.isArray(data?.items) ? data.items : []);
       } catch {
@@ -152,7 +154,7 @@ export default function MainPage() {
       }
     };
     load();
-  }, [universityReady, schlNm]);
+  }, [universityReady, schlNm, selectedBaseYear]);
 
   return (
     <MainLayout>
@@ -162,7 +164,9 @@ export default function MainPage() {
           subtitle={
             headerSubtitle || sampleData.meta?.institutionalDashboardLabel
           }
-          baseYear={sampleData.meta?.baseYear}
+          baseYear={selectedBaseYear}
+          baseYearOptions={BASE_YEAR_OPTIONS}
+          onBaseYearChange={setSelectedBaseYear}
           showSummaryJudgment={showSummaryJudgment}
           summaryJudgmentTitle={summaryJudgmentTitle}
           summaryJudgmentSubtitle={summaryJudgmentSubtitle}
