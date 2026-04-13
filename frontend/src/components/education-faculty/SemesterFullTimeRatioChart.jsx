@@ -1,3 +1,5 @@
+import { AnimatedPercentBarFill } from '../common/AnimatedPercentBarFill';
+
 export default function SemesterFullTimeRatioChart({ semesterRatios, title, subtitle }) {
   const heading = title?.trim() ? title : '학기별 전임 강의담당 비율';
   const sub = subtitle?.trim() ? subtitle : '';
@@ -19,16 +21,14 @@ export default function SemesterFullTimeRatioChart({ semesterRatios, title, subt
               <span>{semester}</span>
               <span className="text-primary font-bold">{ratio}%</span>
             </div>
-            <div className="h-6 bg-surface-container rounded-sm overflow-hidden flex">
-              <div
-                className="h-full flex items-center px-2 text-[10px] text-white font-bold bg-primary"
-                style={{
-                  width: `${ratio}%`,
-                  ...(colorHex ? { backgroundColor: colorHex } : {}),
-                }}
+            <div className="flex h-6 overflow-hidden rounded-sm bg-surface-container">
+              <AnimatedPercentBarFill
+                percent={ratio}
+                className="flex h-full min-w-0 shrink-0 items-center overflow-hidden bg-primary px-2 text-[10px] font-bold text-white"
+                style={colorHex ? { backgroundColor: colorHex } : undefined}
               >
                 {Number(courses).toLocaleString()}강좌
-              </div>
+              </AnimatedPercentBarFill>
             </div>
           </div>
         ))}

@@ -17,6 +17,7 @@ import {
   mapThemeItemsToCampusConfiguration,
   mapThemeItemsToCampusSafetyStatus,
 } from '../../utils/mapThemeItemsToCampusCharts';
+import { AnimatedPercentBarFill } from '../common/AnimatedPercentBarFill';
 
 const BAR_FILL = {
   primary: '#002c5a',
@@ -197,11 +198,11 @@ export default function CampusDashboard() {
                     <span className="text-on-surface">{item.item}</span>
                     <span className="text-primary">{item.value.toLocaleString()} {item.unit}</span>
                   </div>
-                  <div className="w-full h-8 bg-surface-container-highest rounded-full overflow-hidden flex">
-                    <div
-                      className="h-full rounded-full"
+                  <div className="flex h-8 w-full overflow-hidden rounded-full bg-surface-container-highest">
+                    <AnimatedPercentBarFill
+                      percent={item.percentage}
+                      className="h-full shrink-0 rounded-full"
                       style={{
-                        width: `${item.percentage}%`,
                         backgroundColor:
                           item.colorHex ||
                           BAR_FILL[item.colorToken || item.color] ||

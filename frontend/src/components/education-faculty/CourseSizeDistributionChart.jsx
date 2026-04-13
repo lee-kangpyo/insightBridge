@@ -1,3 +1,5 @@
+import { AnimatedPercentBarFill } from '../common/AnimatedPercentBarFill';
+
 export default function CourseSizeDistributionChart({ courseDistribution, title, subtitle }) {
   const heading = title?.trim() ? title : '강좌 규모 분포';
   const sub = subtitle?.trim() ? subtitle : '2024 최신 확정치 기준';
@@ -20,13 +22,11 @@ export default function CourseSizeDistributionChart({ courseDistribution, title,
         {courseDistribution.map(({ range, count, percentage, colorHex }) => (
           <div key={range} className="grid grid-cols-[100px_1fr_60px] items-center gap-4">
             <span className="text-[11px] text-slate-500">{range}</span>
-            <div className="h-4 bg-surface-container-high rounded-sm overflow-hidden">
-              <div
-                className="bg-tertiary/70 h-full"
-                style={{
-                  width: `${percentage}%`,
-                  ...(colorHex ? { backgroundColor: colorHex } : {}),
-                }}
+            <div className="h-4 overflow-hidden rounded-sm bg-surface-container-high">
+              <AnimatedPercentBarFill
+                percent={percentage}
+                className="h-full shrink-0 bg-tertiary/70"
+                style={colorHex ? { backgroundColor: colorHex } : undefined}
               />
             </div>
             <span className="text-[11px] font-bold text-right text-on-surface">

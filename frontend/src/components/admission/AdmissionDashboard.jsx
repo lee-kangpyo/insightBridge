@@ -50,12 +50,13 @@ export default function AdmissionDashboard() {
     [schlNm],
   );
 
-  const { title: headerTitle, subtitle: headerSubtitle } = useThemeHeaderContext({
-    screenCode: params.screen_code,
-    screenVer: params.screen_ver,
-    screenBaseYear: params.screen_base_year,
-    schlNm: params.schl_nm,
-  });
+  const { title: headerTitle, subtitle: headerSubtitle } =
+    useThemeHeaderContext({
+      screenCode: params.screen_code,
+      screenVer: params.screen_ver,
+      screenBaseYear: params.screen_base_year,
+      schlNm: params.schl_nm,
+    });
 
   const { title: panelTitle, subtitle: panelSubtitle } = useThemePanelSummary({
     screenCode: params.screen_code,
@@ -65,7 +66,8 @@ export default function AdmissionDashboard() {
   });
 
   const showSummaryJudgment = Boolean(
-    (panelTitle && panelTitle.trim()) || (panelSubtitle && panelSubtitle.trim()),
+    (panelTitle && panelTitle.trim()) ||
+    (panelSubtitle && panelSubtitle.trim()),
   );
 
   const { title: insightTitle, items: dbInsights } = useThemeTextBlockLines({
