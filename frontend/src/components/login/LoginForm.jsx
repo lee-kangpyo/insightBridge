@@ -46,7 +46,7 @@ export default function LoginForm() {
           htmlFor="loginEmail"
           className="block text-[0.75rem] uppercase tracking-wider font-bold text-on-surface-variant px-4 font-login-body"
         >
-          이메일 주소 (EMAIL)
+          이메일 주소
         </label>
         <div className="relative">
           <input
@@ -73,7 +73,7 @@ export default function LoginForm() {
           htmlFor="password"
           className="block text-[0.75rem] uppercase tracking-wider font-bold text-on-surface-variant px-4 font-login-body"
         >
-          비밀번호 (PASSWORD)
+          비밀번호
         </label>
         <div className="relative">
           <input

@@ -6,7 +6,7 @@ export default function NotFoundPage() {
     <div className="flex min-h-screen flex-col bg-surface text-on-surface">
       <nav className="sticky top-0 z-50 mx-auto flex w-full max-w-full items-center justify-between border-b border-outline-variant/30 bg-[#f7f9fb] px-6 py-4 dark:bg-slate-950 md:px-8">
         <div className="text-xl font-bold tracking-tight text-[#002045] dark:text-blue-100">
-          Scholar Metric
+          EZ Dashboard
         </div>
         <div className="hidden items-center space-x-8 md:flex">
           <a
@@ -103,7 +103,7 @@ export default function NotFoundPage() {
         </div>
       </main>
       <footer className="flex w-full flex-col items-center justify-between border-t border-outline-variant/30 bg-surface px-8 py-8 md:flex-row md:px-12">
-        <div className="mb-4 text-lg font-bold text-[#002045] md:mb-0">Scholar Metric</div>
+        <div className="mb-4 text-lg font-bold text-[#002045] md:mb-0">EZ Dashboard</div>
         <div className="mb-4 flex flex-wrap justify-center gap-8 md:mb-0">
           <a
             className="text-xs uppercase tracking-widest text-slate-500 transition-colors hover:text-secondary"
@@ -125,7 +125,7 @@ export default function NotFoundPage() {
           </a>
         </div>
         <div className="text-xs uppercase tracking-widest text-slate-400">
-          © 2024 Scholar Metric Intelligence.
+          © 2024 EZ Dashboard Intelligence.
         </div>
       </footer>
     </div>

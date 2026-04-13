@@ -15,7 +15,7 @@ function profileInitials(user) {
 }
 
 const NAV_TABS = [
-  { label: '일반현황', path: '/' },
+  { label: '종합현황', path: '/' },
   { label: '입시/충원', path: '/admission' },
   { label: '학생/진로', path: '/student-career' },
   { label: '교육/교원', path: '/education-faculty' },
@@ -46,7 +46,7 @@ export default function MainPageHeader() {
       <div className="flex justify-between items-center px-8 h-16 w-full max-w-[1920px] mx-auto">
         <div className="flex items-center gap-8">
           <Link to="/" className="text-lg font-bold text-primary font-headline">
-            Scholar Metric Dashboard
+            EZ Dashboard
           </Link>
           <nav className="hidden md:flex gap-6 items-end h-full pt-2">
             {NAV_TABS.map((tab) => {

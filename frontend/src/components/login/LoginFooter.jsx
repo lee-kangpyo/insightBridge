@@ -1,7 +1,7 @@
 export default function LoginFooter() {
   return (
     <footer className="relative z-10 font-login-body text-[0.75rem] font-medium flex flex-col md:flex-row justify-center gap-4 md:gap-8 items-center w-full py-12 text-[#004282]">
-      <span className="opacity-60">&copy; 2024 Scholar Metric. All rights reserved.</span>
+      <span className="opacity-60">&copy; 2026 EZ Dashboard. All rights reserved.</span>
       <div className="flex gap-6">
         <a
           href="#"

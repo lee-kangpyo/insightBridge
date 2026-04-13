@@ -71,6 +71,7 @@ export default function EducationFacultyDashboard() {
           label: row.metricName,
           value: row.myValueDisplay,
           unit: '',
+          year: row.metricYear,
           regionalAvg: row.regionAvgDisplay,
           nationalAvg: row.nationalAvgDisplay,
           accentColorHex: row.accentColorHex,
