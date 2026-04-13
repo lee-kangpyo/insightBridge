@@ -3,5 +3,4 @@ export { default as EducationFacultyFilters } from './EducationFacultyFilters';
 export { default as EducationFacultyKPICards } from './EducationFacultyKPICards';
 export { default as SemesterFullTimeRatioChart } from './SemesterFullTimeRatioChart';
 export { default as CourseSizeDistributionChart } from './CourseSizeDistributionChart';
-export { default as EducationFacultyInsights } from './EducationFacultyInsights';
 export { default as EducationFacultyTable } from './EducationFacultyTable';

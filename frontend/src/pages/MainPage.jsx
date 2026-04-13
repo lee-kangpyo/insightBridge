@@ -3,18 +3,21 @@ import PageTitleSection from "../components/main/PageTitleSection";
 import StatusChips from "../components/main/StatusChips";
 import KpiBentoGrid from "../components/main/KpiBentoGrid";
 import StrengthWeaknessMatrix from "../components/main/StrengthWeaknessMatrix";
-import AdmissionInsights from "../components/admission/AdmissionInsights";
+import InsightsPanel from "../components/main/InsightsPanel";
 import RiskStrengthTable from "../components/main/RiskStrengthTable";
 import OverviewDetailGridTable from "../components/main/OverviewDetailGridTable";
 import sampleData from "../data/main_page_samples.json";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   getOverviewKpis,
   getOverviewMatrixPoints,
   getOverviewRiskTable,
   getOverviewDetailGrid,
 } from "../services/api";
-import { useOverviewHeaderContext } from "../hooks/useOverviewHeaderContext";
+import {
+  applySchoolPrefix,
+  useOverviewHeaderContext,
+} from "../hooks/useOverviewHeaderContext";
 import { useOverviewTextBlockLines } from "../hooks/useOverviewTextBlockLines";
 import { useOverviewSummaryJudgmentLabel } from "../hooks/useOverviewPdfReportLabel";
 import { useUniversityContext } from "../hooks/useUniversityContext";
@@ -62,6 +65,12 @@ export default function MainPage() {
     blockCode: "SAMPLE_INSIGHT",
     lineRole: "INSIGHT",
   });
+
+  const pageTitle = useMemo(() => {
+    const raw = (headerTitle || sampleData.meta?.dashboardTitle || "").trim();
+    if (!raw) return "";
+    return applySchoolPrefix(schlNm, raw) || raw;
+  }, [headerTitle, schlNm]);
 
   // 🔁 샘플 fallback을 쓰고 싶으면 아래 3줄을 켜세요.
   // const [matrix, setMatrix] = useState(sampleData.matrix);
@@ -179,7 +188,7 @@ export default function MainPage() {
         />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <StrengthWeaknessMatrix matrix={matrix} />
-          <AdmissionInsights title={insightTitle} insights={dbInsights} />
+          <InsightsPanel title="인사이트" items={dbInsights} loading={false} />
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <RiskStrengthTable data={riskTable} legend={riskLegend} />

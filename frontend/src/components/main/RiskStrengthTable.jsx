@@ -66,7 +66,7 @@ export default function RiskStrengthTable({ data, legend }) {
               </td>
               <td className="px-4 py-4">
                 <div
-                  className="px-3 py-2 rounded-md border border-outline-variant/20 text-[12px] font-bold text-black inline-block"
+                  className="inline-flex min-w-[7rem] max-w-full justify-center items-center px-3 py-2 rounded-md border border-outline-variant/20 text-[12px] font-bold text-black text-center leading-tight"
                   style={{ backgroundColor: row.overall?.colorHex }}
                   title={row.overall?.statusName}
                 >

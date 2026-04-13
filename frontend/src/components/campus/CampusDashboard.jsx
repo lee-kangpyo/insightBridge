@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import campusData from '../../data/campus-data.json';
 import PageTitleSection from '../main/PageTitleSection';
 import StatusChips from '../main/StatusChips';
+import InsightsTableLayout from '../main/InsightsTableLayout';
+import InsightsPanel from '../main/InsightsPanel';
 import { CampusKPICards } from './index';
 import AdmissionTable from '../admission/AdmissionTable';
 import { getThemeDetailGrid } from '../../services/api';
@@ -102,6 +104,7 @@ export default function CampusDashboard() {
     screenVer: themeParams.screen_ver,
     screenBaseYear: themeParams.screen_base_year,
     schlNm: themeParams.schl_nm,
+    blockCode: "CHART_BLOCK",
   });
 
   const campusConfigTitle =
@@ -260,37 +263,16 @@ export default function CampusDashboard() {
         </div>
       </section>
 
-      <section className="space-y-8">
-        {(insightsLoading || dbInsights.length > 0) && (
-          <div className="bg-white p-8 rounded-lg shadow-sm border border-outline-variant/10">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="material-symbols-outlined text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>lightbulb</span>
-              <h2 className="text-lg font-headline font-bold text-primary">
-                {(insightTitle || '인사이트 분석').trim() || '인사이트 분석'}
-              </h2>
-            </div>
-            <div className="space-y-4">
-              {insightsLoading ? (
-                <p className="text-sm text-on-surface-variant">인사이트를 불러오는 중…</p>
-              ) : (
-                dbInsights.map((item, index) => (
-                  <div key={`insight-${index}`} className="flex gap-3 p-4 bg-surface-container-low/50 rounded-xl">
-                    <span className="text-xl font-extrabold text-primary opacity-30 font-headline shrink-0">
-                      {String(index + 1).padStart(2, '0')}
-                    </span>
-                    <p
-                      className="text-sm text-on-surface leading-relaxed flex-1"
-                      dangerouslySetInnerHTML={{ __html: item.text }}
-                    />
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-
-        <AdmissionTable refs={sourceRefs} />
-      </section>
+      <InsightsTableLayout
+        insightsComponent={
+          <InsightsPanel
+            title={insightTitle}
+            items={dbInsights}
+            loading={insightsLoading}
+          />
+        }
+        tableComponent={<AdmissionTable refs={sourceRefs} />}
+      />
     </div>
   );
 }

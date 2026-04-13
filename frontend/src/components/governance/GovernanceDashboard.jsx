@@ -2,25 +2,17 @@ import governanceData from "../../data/governance-data.json";
 import PageTitleSection from "../main/PageTitleSection";
 import StatusChips from "../main/StatusChips";
 import AdmissionTable from "../admission/AdmissionTable";
+import InsightsTableLayout from "../main/InsightsTableLayout";
+import InsightsPanel from "../main/InsightsPanel";
 import { useEffect, useMemo, useState } from "react";
-import {
-  getThemeChartBlocks,
-  getThemeDetailGrid,
-  getThemeTextBlocks,
-} from "../../services/api";
+import { getThemeDetailGrid, getThemeTextBlocks } from "../../services/api";
 import { useThemeSourceRefs } from "../../hooks/useThemeSourceRefs";
 import { useThemeHeaderContext } from "../../hooks/useThemeHeaderContext";
 import { useThemePanelSummary } from "../../hooks/useThemePanelSummary";
 import { useUniversityContext } from "../../hooks/useUniversityContext";
 import { mapDetailGridRowToGovernanceKpiCard } from "../../utils/mapThemeDetailGridToGovernanceKpiCards";
-import { mapThemeChartItemsToGovernanceCompliance } from "../../utils/mapThemeChartItemsToGovernanceCompliance";
-import {
-  GovernanceKPICards,
-  GovernanceComplianceTable,
-  GovernanceInsights,
-} from "./index";
+import { GovernanceKPICards } from "./index";
 
-const COMPLIANCE_BLOCK_CODE = "COMPLIANCE";
 const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
 const INSIGHT_LINE_ROLE = "INSIGHT";
 
@@ -29,7 +21,6 @@ export default function GovernanceDashboard() {
   const { meta, filters } = governanceData;
 
   const [kpiCards, setKpiCards] = useState([]);
-  const [complianceItems, setComplianceItems] = useState([]);
   const [insightsLoading, setInsightsLoading] = useState(true);
   const [insightTitle, setInsightTitle] = useState(null);
   const [insightItems, setInsightItems] = useState([]);
@@ -130,31 +121,6 @@ export default function GovernanceDashboard() {
     };
   }, [params, universityReady, schlNm]);
 
-  useEffect(() => {
-    if (!universityReady || !schlNm) return;
-
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const data = await getThemeChartBlocks(params);
-        const blocks = Array.isArray(data?.blocks) ? data.blocks : [];
-        const block = blocks.find((b) => b.blockCode === COMPLIANCE_BLOCK_CODE);
-        const rawItems = Array.isArray(block?.items) ? block.items : [];
-        if (!cancelled) {
-          setComplianceItems(
-            mapThemeChartItemsToGovernanceCompliance(rawItems),
-          );
-        }
-      } catch {
-        if (!cancelled) setComplianceItems([]);
-      }
-    };
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [params, universityReady, schlNm]);
-
   return (
     <div className="max-w-[1600px] mx-auto px-8 py-6 space-y-8">
       <PageTitleSection
@@ -169,17 +135,16 @@ export default function GovernanceDashboard() {
       <StatusChips filters={filters} />
       <GovernanceKPICards kpiCards={kpiCards} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <GovernanceInsights
-          title={insightTitle}
-          items={insightItems}
-          loading={insightsLoading}
-        />
-        <div className="lg:col-span-2 space-y-8">
-          <GovernanceComplianceTable complianceItems={complianceItems} />
-          <AdmissionTable refs={sourceRefs} />
-        </div>
-      </div>
+      <InsightsTableLayout
+        insightsComponent={
+          <InsightsPanel
+            title={insightTitle}
+            items={insightItems}
+            loading={insightsLoading}
+          />
+        }
+        tableComponent={<AdmissionTable refs={sourceRefs} />}
+      />
     </div>
   );
 }

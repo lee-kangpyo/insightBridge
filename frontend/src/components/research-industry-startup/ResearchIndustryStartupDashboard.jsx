@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
-import researchData from "../../data/research-industry-startup-data.json";
-import PageTitleSection from "../main/PageTitleSection";
-import StatusChips from "../main/StatusChips";
+import { useEffect, useMemo, useState } from 'react';
+import researchData from '../../data/research-industry-startup-data.json';
+import PageTitleSection from '../main/PageTitleSection';
+import StatusChips from '../main/StatusChips';
+import InsightsTableLayout from '../main/InsightsTableLayout';
+import InsightsPanel from '../main/InsightsPanel';
 import {
   ResearchIndustryStartupKPICards,
   ResearchFundStructureChart,
   TechStartupProgressChart,
-  ResearchIndustryStartupInsights,
   ResearchIndustryStartupTable,
 } from "./index";
 import { getThemeDetailGrid } from "../../services/api";
@@ -157,15 +158,12 @@ export default function ResearchIndustryStartupDashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <ResearchIndustryStartupInsights
-          title={insightTitle}
-          insights={dbInsights}
-        />
-        <div className="lg:col-span-2">
-          <ResearchIndustryStartupTable tablePreview={sourceRefs} />
-        </div>
-      </div>
+      <InsightsTableLayout
+        insightsComponent={
+          <InsightsPanel title={insightTitle} items={dbInsights} loading={false} />
+        }
+        tableComponent={<ResearchIndustryStartupTable tablePreview={sourceRefs} />}
+      />
     </div>
   );
 }

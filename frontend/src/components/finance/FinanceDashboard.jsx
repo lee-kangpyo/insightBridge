@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import financeData from "../../data/finance-data.json";
 import PageTitleSection from "../main/PageTitleSection";
 import StatusChips from "../main/StatusChips";
+import InsightsTableLayout from "../main/InsightsTableLayout";
+import InsightsPanel from "../main/InsightsPanel";
 import { FinanceKPICards } from "./index";
 import AdmissionTable from "../admission/AdmissionTable";
 import { getThemeDetailGrid } from "../../services/api";
@@ -17,7 +19,6 @@ import {
 } from "../../utils/mapThemeItemsToFinanceCharts";
 import { AnimatedPercentBarFill } from "../common/AnimatedPercentBarFill";
 
-/** docs/6tap/code.html 계열별 막대(bg-primary, bg-secondary, …)와 동일 — JIT 누락 방지용 hex */
 const BAR_FILL = {
   primary: "#002c5a",
   secondary: "#006492",
@@ -99,6 +100,7 @@ export default function FinanceDashboard() {
     screenVer: themeParams.screen_ver,
     screenBaseYear: themeParams.screen_base_year,
     schlNm: themeParams.schl_nm,
+    blockCode: "CHART_BLOCK",
   });
 
   const tuitionBlockTitle =
@@ -261,35 +263,16 @@ export default function FinanceDashboard() {
         </div>
       </section>
 
-      {(insightsLoading || dbInsights.length > 0) && (
-        <section className="bg-white rounded-lg p-8 border-l-8 border-primary shadow-sm">
-          <h3 className="text-lg font-bold text-primary mb-6 font-headline flex items-center gap-2">
-            <span className="material-symbols-outlined">lightbulb</span>
-            {(insightTitle || "인사이트").trim() || "인사이트"}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {insightsLoading ? (
-              <p className="text-sm text-on-surface-variant col-span-full">
-                인사이트를 불러오는 중…
-              </p>
-            ) : (
-              dbInsights.map((item, index) => (
-                <div key={`insight-${index}`} className="flex gap-4">
-                  <span className="text-xl font-extrabold text-primary opacity-30 font-headline">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <p
-                    className="text-sm text-on-surface-variant leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: item.text }}
-                  />
-                </div>
-              ))
-            )}
-          </div>
-        </section>
-      )}
-
-      <AdmissionTable refs={sourceRefs} />
+      <InsightsTableLayout
+        insightsComponent={
+          <InsightsPanel
+            title={insightTitle}
+            items={dbInsights}
+            loading={insightsLoading}
+          />
+        }
+        tableComponent={<AdmissionTable refs={sourceRefs} />}
+      />
     </div>
   );
 }

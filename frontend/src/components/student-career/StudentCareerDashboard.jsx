@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
-import studentCareerData from "../../data/student-career-data.json";
-import PageTitleSection from "../main/PageTitleSection";
-import StatusChips from "../main/StatusChips";
-import { AdmissionKPICards, EnrollmentRateChart } from "../admission";
-import { StudentCareerInsights, StudentCareerTable } from "./index";
+import { useEffect, useMemo, useState } from 'react';
+import studentCareerData from '../../data/student-career-data.json';
+import PageTitleSection from '../main/PageTitleSection';
+import StatusChips from '../main/StatusChips';
+import InsightsTableLayout from '../main/InsightsTableLayout';
+import InsightsPanel from '../main/InsightsPanel';
+import { AdmissionKPICards, EnrollmentRateChart } from '../admission';
+import { StudentCareerTable } from './index';
 import {
   getAdmissionEnrollmentRates,
   getThemeDetailGrid,
@@ -179,12 +181,12 @@ export default function StudentCareerDashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <StudentCareerInsights title={insightTitle} insights={dbInsights} />
-        <div className="lg:col-span-2">
-          <StudentCareerTable refs={sourceRefs} />
-        </div>
-      </div>
+      <InsightsTableLayout
+        insightsComponent={
+          <InsightsPanel title={insightTitle} items={dbInsights} loading={false} />
+        }
+        tableComponent={<StudentCareerTable refs={sourceRefs} />}
+      />
     </div>
   );
 }

@@ -16,6 +16,18 @@ function firstNonEmptyText(lines, roles) {
   return any ? any.text : null;
 }
 
+/** 입시 등 테마 헤더와 같이 `학교명 | 제목` 형태로 맞춤 (DB 제목에 학교가 없을 때). */
+export function applySchoolPrefix(schlNm, title) {
+  const t = (title || "").trim();
+  const s = (schlNm || "").trim();
+  if (!t) return null;
+  if (!s) return t;
+  if (t.startsWith(`${s} | `) || t.startsWith(`${s}|`)) return t;
+  if (t.startsWith(s) && (t.length === s.length || t[s.length] === " " || t[s.length] === "|"))
+    return t;
+  return `${s} | ${t}`;
+}
+
 /**
  * `/api/overview/text-blocks`의 `HEADER_CONTEXT` 블록을 페이지 최상단 타이틀/부제로 사용.
  *
@@ -57,7 +69,7 @@ export function useOverviewHeaderContext({
         const sub = firstNonEmptyText(lines, ["SUBTITLE", "SUMMARY"]);
 
         if (!cancelled) {
-          setTitle(t || null);
+          setTitle(applySchoolPrefix(schlNm, t));
           setSubtitle((sub || "").trim() ? sub : null);
         }
       } catch {

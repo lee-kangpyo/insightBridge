@@ -48,18 +48,24 @@ export default function MainPageHeader() {
           <Link to="/" className="text-lg font-bold text-primary font-headline">
             EZ Dashboard
           </Link>
-          <nav className="hidden md:flex gap-6 items-end h-full pt-2">
+          <nav
+            className="hidden md:flex flex-wrap gap-1.5 items-center max-w-[min(100%,52rem)]"
+            aria-label="주요 화면"
+          >
             {NAV_TABS.map((tab) => {
               const isActive = location.pathname === tab.path;
               return (
                 <Link
-                  key={tab.label}
+                  key={tab.path}
                   to={tab.path}
-                  className={`font-label text-sm tracking-tight pb-2 transition-colors ${
+                  className={[
+                    'font-label text-[11px] sm:text-xs font-semibold tracking-tight whitespace-nowrap',
+                    'rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 border transition-all duration-200',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low',
                     isActive
-                      ? 'text-secondary border-b-2 border-secondary font-bold'
-                      : 'text-[#5a5f64] hover:text-primary'
-                  }`}
+                      ? 'bg-primary text-on-primary border-primary shadow-md shadow-primary/15 font-bold'
+                      : 'bg-surface-container-highest/80 text-on-surface-variant border-outline-variant/25 hover:bg-surface-container-high hover:text-primary hover:border-secondary/35 hover:shadow-sm',
+                  ].join(' ')}
                 >
                   {tab.label}
                 </Link>

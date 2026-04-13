@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
-import educationFacultyData from "../../data/education-faculty-data.json";
-import PageTitleSection from "../main/PageTitleSection";
-import StatusChips from "../main/StatusChips";
+import { useEffect, useMemo, useState } from 'react';
+import educationFacultyData from '../../data/education-faculty-data.json';
+import PageTitleSection from '../main/PageTitleSection';
+import StatusChips from '../main/StatusChips';
+import InsightsTableLayout from '../main/InsightsTableLayout';
+import InsightsPanel from '../main/InsightsPanel';
 import {
   EducationFacultyKPICards,
   SemesterFullTimeRatioChart,
   CourseSizeDistributionChart,
-  EducationFacultyInsights,
   EducationFacultyTable,
 } from "./index";
 import { getThemeDetailGrid } from "../../services/api";
@@ -145,12 +146,12 @@ export default function EducationFacultyDashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <EducationFacultyInsights title={insightTitle} insights={dbInsights} />
-        <div className="lg:col-span-2">
-          <EducationFacultyTable tablePreview={sourceRefs} />
-        </div>
-      </div>
+      <InsightsTableLayout
+        insightsComponent={
+          <InsightsPanel title={insightTitle} items={dbInsights} loading={false} />
+        }
+        tableComponent={<EducationFacultyTable tablePreview={sourceRefs} />}
+      />
     </div>
   );
 }
