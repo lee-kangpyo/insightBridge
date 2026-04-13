@@ -1,48 +1,53 @@
-import { useEffect, useMemo, useState } from 'react';
-import campusData from '../../data/campus-data.json';
-import PageTitleSection from '../main/PageTitleSection';
-import StatusChips from '../main/StatusChips';
-import InsightsTableLayout from '../main/InsightsTableLayout';
-import InsightsPanel from '../main/InsightsPanel';
-import { CampusKPICards } from './index';
-import AdmissionTable from '../admission/AdmissionTable';
-import { getThemeDetailGrid } from '../../services/api';
-import { useThemeSourceRefs } from '../../hooks/useThemeSourceRefs';
-import { useThemeChartBlockMeta } from '../../hooks/useThemeChartBlockMeta';
-import { useThemeTextBlockLines } from '../../hooks/useThemeTextBlockLines';
-import { useThemeHeaderContext } from '../../hooks/useThemeHeaderContext';
-import { useThemePanelSummary } from '../../hooks/useThemePanelSummary';
-import { useUniversityContext } from '../../hooks/useUniversityContext';
+import { useEffect, useMemo, useState } from "react";
+import campusData from "../../data/campus-data.json";
+import PageTitleSection from "../main/PageTitleSection";
+import StatusChips from "../main/StatusChips";
+import InsightsTableLayout from "../main/InsightsTableLayout";
+import InsightsPanel from "../main/InsightsPanel";
+import { CampusKPICards } from "./index";
+import AdmissionTable from "../admission/AdmissionTable";
+import { getThemeDetailGrid } from "../../services/api";
+import { useThemeSourceRefs } from "../../hooks/useThemeSourceRefs";
+import { useThemeChartBlockMeta } from "../../hooks/useThemeChartBlockMeta";
+import { useThemeTextBlockLines } from "../../hooks/useThemeTextBlockLines";
+import { useThemeHeaderContext } from "../../hooks/useThemeHeaderContext";
+import { useUniversityContext } from "../../hooks/useUniversityContext";
 import {
   mapThemeItemsToCampusConfiguration,
   mapThemeItemsToCampusSafetyStatus,
-} from '../../utils/mapThemeItemsToCampusCharts';
-import { AnimatedPercentBarFill } from '../common/AnimatedPercentBarFill';
+} from "../../utils/mapThemeItemsToCampusCharts";
+import { AnimatedPercentBarFill } from "../common/AnimatedPercentBarFill";
 
 const BAR_FILL = {
-  primary: '#002c5a',
-  secondary: '#006492',
-  'secondary-container': '#58bcfd',
-  error: '#ba1a1a',
-  tertiary: '#61c462',
+  primary: "#002c5a",
+  secondary: "#006492",
+  "secondary-container": "#58bcfd",
+  error: "#ba1a1a",
+  tertiary: "#61c462",
 };
 
 const STATUS_BADGE_COLORS = {
-  'tertiary-fixed': 'bg-tertiary-fixed text-on-tertiary-fixed',
-  'secondary-fixed': 'bg-secondary-fixed text-on-secondary-fixed',
-  'surface-container-high': 'bg-surface-container-high text-on-surface-variant',
+  "tertiary-fixed": "bg-tertiary-fixed text-on-tertiary-fixed",
+  "secondary-fixed": "bg-secondary-fixed text-on-secondary-fixed",
+  "surface-container-high": "bg-surface-container-high text-on-surface-variant",
 };
 
 const SAFETY_BORDER_COLORS = {
-  'tertiary-fixed': 'border-b-tertiary-fixed/15',
-  'secondary-fixed': 'border-b-secondary-fixed/15',
-  'surface-container-high': 'border-b-outline-variant/15',
+  "tertiary-fixed": "border-b-tertiary-fixed/15",
+  "secondary-fixed": "border-b-secondary-fixed/15",
+  "surface-container-high": "border-b-outline-variant/15",
 };
 
-const INSIGHT_BLOCK_CODE = 'SAMPLE_INSIGHT';
-const INSIGHT_LINE_ROLE = 'INSIGHT';
+const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
+const INSIGHT_LINE_ROLE = "INSIGHT";
 
 export default function CampusDashboard() {
+  const {
+    schlNm,
+    ready: universityReady,
+    statusChips,
+  } = useUniversityContext();
+  const { meta, campusConfiguration, safetyStatus } = campusData;
   const { schlNm, ready: universityReady } = useUniversityContext();
   const { meta, filters, campusConfiguration, safetyStatus } = campusData;
   const BASE_YEAR_OPTIONS = [2025, 2024, 2023];
@@ -52,31 +57,21 @@ export default function CampusDashboard() {
 
   const themeParams = useMemo(
     () => ({
-      screen_code: 'campus',
-      screen_ver: 'v0.1',
+      screen_code: "campus",
+      screen_ver: "v0.1",
       screen_base_year: selectedBaseYear,
       schl_nm: schlNm,
     }),
     [schlNm, selectedBaseYear],
   );
 
-  const { title: headerTitle, subtitle: headerSubtitle } = useThemeHeaderContext({
-    screenCode: themeParams.screen_code,
-    screenVer: themeParams.screen_ver,
-    screenBaseYear: themeParams.screen_base_year,
-    schlNm: themeParams.schl_nm,
-  });
-
-  const { title: panelTitle, subtitle: panelSubtitle } = useThemePanelSummary({
-    screenCode: themeParams.screen_code,
-    screenVer: themeParams.screen_ver,
-    screenBaseYear: themeParams.screen_base_year,
-    schlNm: themeParams.schl_nm,
-  });
-
-  const showSummaryJudgment = Boolean(
-    (panelTitle && panelTitle.trim()) || (panelSubtitle && panelSubtitle.trim()),
-  );
+  const { title: headerTitle, subtitle: headerSubtitle } =
+    useThemeHeaderContext({
+      screenCode: themeParams.screen_code,
+      screenVer: themeParams.screen_ver,
+      screenBaseYear: themeParams.screen_base_year,
+      schlNm: themeParams.schl_nm,
+    });
 
   const {
     title: insightTitle,
@@ -98,8 +93,13 @@ export default function CampusDashboard() {
     schlNm: themeParams.schl_nm,
   });
 
-  const { chartLeft, chartRight, leftBlockItems, rightBlockItems, chartBlocksStatus } =
-    useThemeChartBlockMeta({
+  const {
+    chartLeft,
+    chartRight,
+    leftBlockItems,
+    rightBlockItems,
+    chartBlocksStatus,
+  } = useThemeChartBlockMeta({
     screenCode: themeParams.screen_code,
     screenVer: themeParams.screen_ver,
     screenBaseYear: themeParams.screen_base_year,
@@ -107,12 +107,10 @@ export default function CampusDashboard() {
     blockCode: "CHART_BLOCK",
   });
 
-  const campusConfigTitle =
-    chartLeft.title?.trim() || '교지 구성 및 이용 현황';
-  const campusConfigSubtitle = chartLeft.subtitle?.trim() || '';
-  const safetyTitle =
-    chartRight.title?.trim() || '안전·보호 운영 상태';
-  const safetySubtitle = chartRight.subtitle?.trim() || '';
+  const campusConfigTitle = chartLeft.title?.trim() || "교지 구성 및 이용 현황";
+  const campusConfigSubtitle = chartLeft.subtitle?.trim() || "";
+  const safetyTitle = chartRight.title?.trim() || "안전·보호 운영 상태";
+  const safetySubtitle = chartRight.subtitle?.trim() || "";
 
   const campusConfigFromDb = useMemo(() => {
     const mapped = mapThemeItemsToCampusConfiguration(leftBlockItems);
@@ -124,8 +122,8 @@ export default function CampusDashboard() {
     return mapped;
   }, [chartBlocksStatus, rightBlockItems]);
 
-  const campusConfigRows = chartBlocksStatus === 'ok' ? campusConfigFromDb : [];
-  const safetyRows = chartBlocksStatus === 'ok' ? safetyFromDb : [];
+  const campusConfigRows = chartBlocksStatus === "ok" ? campusConfigFromDb : [];
+  const safetyRows = chartBlocksStatus === "ok" ? safetyFromDb : [];
 
   useEffect(() => {
     if (!universityReady || !schlNm) return;
@@ -138,7 +136,7 @@ export default function CampusDashboard() {
           id: row.metricCode,
           label: row.metricName,
           value: row.myValueDisplay,
-          unit: '',
+          unit: "",
           year: row.metricYear,
           regionalAvg: row.regionAvgDisplay,
           nationalAvg: row.nationalAvgDisplay,
@@ -167,7 +165,7 @@ export default function CampusDashboard() {
         summaryJudgmentSubtitle={panelSubtitle}
       />
 
-      <StatusChips filters={filters} />
+      <StatusChips filters={statusChips} />
       <CampusKPICards kpiCards={kpiCards} />
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -188,18 +186,26 @@ export default function CampusDashboard() {
             ) : null}
           </div>
           <div className="space-y-10">
-            {chartBlocksStatus === 'loading' ? (
-              <p className="text-sm text-on-surface-variant">데이터를 불러오는 중…</p>
-            ) : chartBlocksStatus === 'error' ? (
-              <p className="text-sm text-on-surface-variant">데이터를 불러오지 못했습니다.</p>
+            {chartBlocksStatus === "loading" ? (
+              <p className="text-sm text-on-surface-variant">
+                데이터를 불러오는 중…
+              </p>
+            ) : chartBlocksStatus === "error" ? (
+              <p className="text-sm text-on-surface-variant">
+                데이터를 불러오지 못했습니다.
+              </p>
             ) : campusConfigRows.length === 0 ? (
-              <p className="text-sm text-on-surface-variant">표시할 데이터가 없습니다.</p>
+              <p className="text-sm text-on-surface-variant">
+                표시할 데이터가 없습니다.
+              </p>
             ) : (
               campusConfigRows.map((item, index) => (
                 <div key={index} className="space-y-2">
                   <div className="flex justify-between text-xs font-bold mb-1">
                     <span className="text-on-surface">{item.item}</span>
-                    <span className="text-primary">{item.value.toLocaleString()} {item.unit}</span>
+                    <span className="text-primary">
+                      {item.value.toLocaleString()} {item.unit}
+                    </span>
                   </div>
                   <div className="flex h-8 w-full overflow-hidden rounded-full bg-surface-container-highest">
                     <AnimatedPercentBarFill
@@ -231,30 +237,44 @@ export default function CampusDashboard() {
             ) : null}
           </div>
           <div className="space-y-6">
-            {chartBlocksStatus === 'loading' ? (
-              <p className="text-sm text-on-surface-variant">데이터를 불러오는 중…</p>
-            ) : chartBlocksStatus === 'error' ? (
-              <p className="text-sm text-on-surface-variant">데이터를 불러오지 못했습니다.</p>
+            {chartBlocksStatus === "loading" ? (
+              <p className="text-sm text-on-surface-variant">
+                데이터를 불러오는 중…
+              </p>
+            ) : chartBlocksStatus === "error" ? (
+              <p className="text-sm text-on-surface-variant">
+                데이터를 불러오지 못했습니다.
+              </p>
             ) : safetyRows.length === 0 ? (
-              <p className="text-sm text-on-surface-variant">표시할 데이터가 없습니다.</p>
+              <p className="text-sm text-on-surface-variant">
+                표시할 데이터가 없습니다.
+              </p>
             ) : (
               safetyRows.map((item, index) => (
                 <div
                   key={index}
-                  className={`flex items-center justify-between py-3 border-b ${SAFETY_BORDER_COLORS[item.statusColor] || 'border-b-outline-variant/15'}`}
+                  className={`flex items-center justify-between py-3 border-b ${SAFETY_BORDER_COLORS[item.statusColor] || "border-b-outline-variant/15"}`}
                 >
                   <div className="flex flex-col">
-                    <span className="text-xs font-bold text-on-surface-variant">{item.label}</span>
+                    <span className="text-xs font-bold text-on-surface-variant">
+                      {item.label}
+                    </span>
                     {item.description && (
-                      <span className="text-[10px] text-outline">{item.description}</span>
+                      <span className="text-[10px] text-outline">
+                        {item.description}
+                      </span>
                     )}
                   </div>
                   {item.statusColor ? (
-                    <span className={`px-2 py-1 text-[10px] font-bold rounded-full ${STATUS_BADGE_COLORS[item.statusColor] || 'bg-surface-container text-on-surface'}`}>
+                    <span
+                      className={`px-2 py-1 text-[10px] font-bold rounded-full ${STATUS_BADGE_COLORS[item.statusColor] || "bg-surface-container text-on-surface"}`}
+                    >
                       {item.value}
                     </span>
                   ) : (
-                    <span className="text-sm font-bold text-primary">{item.value}</span>
+                    <span className="text-sm font-bold text-primary">
+                      {item.value}
+                    </span>
                   )}
                 </div>
               ))

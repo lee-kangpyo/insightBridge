@@ -23,6 +23,11 @@ import { useOverviewSummaryJudgmentLabel } from "../hooks/useOverviewPdfReportLa
 import { useUniversityContext } from "../hooks/useUniversityContext";
 
 export default function MainPage() {
+  const {
+    schlNm,
+    ready: universityReady,
+    statusChips,
+  } = useUniversityContext();
   const { schlNm, ready: universityReady } = useUniversityContext();
   const BASE_YEAR_OPTIONS = [2025, 2024, 2023];
   const [selectedBaseYear, setSelectedBaseYear] = useState(2025);

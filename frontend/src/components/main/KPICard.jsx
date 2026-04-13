@@ -105,18 +105,22 @@ export default function KPICard({
       className="bg-surface-container-lowest p-5 rounded-lg border border-transparent hover:border-outline-variant/15 transition-all"
       style={cardStyle}
     >
-      <div className={`relative mb-1 ${year ? "pt-5" : ""}`}>
+      {/** 같은 그리드 행에서 제목 줄 수(1·2줄)에 따라 본문 수치·구분선 높이가 어긋나지 않도록 2줄 분 min-height + 초과 시 말줄임 */}
+      <div className="flex justify-between items-start gap-3 min-w-0 mb-1.5 min-h-[2.75rem]">
+        <span
+          className="min-w-0 flex-1 pr-1 text-base font-bold text-on-surface-variant uppercase tracking-wide leading-snug line-clamp-2 break-words"
+          title={label}
+        >
+          {label}
+        </span>
         {year && (
           <span
-            className={`absolute left-0 top-0 z-[1] px-2 py-0.5 text-xs font-semibold leading-none rounded-full ${accentColorHex ? "" : yearBadgeColor}`}
+            className={`shrink-0 self-start px-1 py-px text-[10px] font-semibold leading-none rounded-full ${accentColorHex ? "" : yearBadgeColor}`}
             style={yearBadgeStyle}
           >
             {year}
           </span>
         )}
-        <span className="relative z-0 block text-xs font-semibold text-on-surface-variant uppercase tracking-wide leading-tight break-words break-keep">
-          {label}
-        </span>
       </div>
       <div
         className={`text-3xl font-semibold tabular-nums mb-3 ${valueColor || ""}`}

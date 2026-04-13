@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
-import educationFacultyData from '../../data/education-faculty-data.json';
-import PageTitleSection from '../main/PageTitleSection';
-import StatusChips from '../main/StatusChips';
-import InsightsTableLayout from '../main/InsightsTableLayout';
-import InsightsPanel from '../main/InsightsPanel';
+import { useEffect, useMemo, useState } from "react";
+import educationFacultyData from "../../data/education-faculty-data.json";
+import PageTitleSection from "../main/PageTitleSection";
+import StatusChips from "../main/StatusChips";
+import InsightsTableLayout from "../main/InsightsTableLayout";
+import InsightsPanel from "../main/InsightsPanel";
 import {
   EducationFacultyKPICards,
   SemesterFullTimeRatioChart,
@@ -19,13 +19,18 @@ import {
 } from "../../utils/mapThemeChartItemsToEducationBars";
 import { useThemeTextBlockLines } from "../../hooks/useThemeTextBlockLines";
 import { useThemeHeaderContext } from "../../hooks/useThemeHeaderContext";
-import { useThemePanelSummary } from "../../hooks/useThemePanelSummary";
 import { useUniversityContext } from "../../hooks/useUniversityContext";
 
 const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
 const INSIGHT_LINE_ROLE = "INSIGHT";
 
 export default function EducationFacultyDashboard() {
+  const {
+    schlNm,
+    ready: universityReady,
+    statusChips,
+  } = useUniversityContext();
+  const { pageTitle, pageSubtitle, baseYear } = educationFacultyData;
   const { schlNm, ready: universityReady } = useUniversityContext();
   const { pageTitle, pageSubtitle, baseYear, filters } = educationFacultyData;
   const BASE_YEAR_OPTIONS = [2025, 2024, 2023];
@@ -50,18 +55,6 @@ export default function EducationFacultyDashboard() {
       screenBaseYear: themeParams.screen_base_year,
       schlNm: themeParams.schl_nm,
     });
-
-  const { title: panelTitle, subtitle: panelSubtitle } = useThemePanelSummary({
-    screenCode: themeParams.screen_code,
-    screenVer: themeParams.screen_ver,
-    screenBaseYear: themeParams.screen_base_year,
-    schlNm: themeParams.schl_nm,
-  });
-
-  const showSummaryJudgment = Boolean(
-    (panelTitle && panelTitle.trim()) ||
-    (panelSubtitle && panelSubtitle.trim()),
-  );
 
   useEffect(() => {
     if (!universityReady || !schlNm) return;
@@ -130,7 +123,7 @@ export default function EducationFacultyDashboard() {
         summaryJudgmentSubtitle={panelSubtitle}
       />
 
-      <StatusChips filters={filters} />
+      <StatusChips filters={statusChips} />
       <EducationFacultyKPICards kpiCards={kpiCards} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -148,7 +141,11 @@ export default function EducationFacultyDashboard() {
 
       <InsightsTableLayout
         insightsComponent={
-          <InsightsPanel title={insightTitle} items={dbInsights} loading={false} />
+          <InsightsPanel
+            title={insightTitle}
+            items={dbInsights}
+            loading={false}
+          />
         }
         tableComponent={<EducationFacultyTable tablePreview={sourceRefs} />}
       />

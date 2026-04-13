@@ -1,5 +1,5 @@
 export default function StatusChips({ filters }) {
-  if (!filters) return null;
+  if (!filters || (Array.isArray(filters) && filters.length === 0)) return null;
 
   const filterList = Array.isArray(filters) 
     ? filters 

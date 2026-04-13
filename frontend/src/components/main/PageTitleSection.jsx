@@ -5,6 +5,7 @@ export default function PageTitleSection({
   baseYearOptions,
   onBaseYearChange,
   showSummaryJudgment,
+  showSummaryJudgment = false,
   summaryJudgmentTitle,
   summaryJudgmentSubtitle,
 }) {
@@ -76,9 +77,7 @@ export default function PageTitleSection({
                 summarize
               </span>
               <div className="leading-tight min-w-0">
-                <div className="text-sm font-bold">
-                  {summaryJudgmentTitle}
-                </div>
+                <div className="text-sm font-bold">{summaryJudgmentTitle}</div>
                 {summaryJudgmentSubtitle ? (
                   <div className="text-[11px] font-medium text-white/80 mt-0.5 whitespace-pre-wrap break-words">
                     {summaryJudgmentSubtitle}

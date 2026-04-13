@@ -17,7 +17,6 @@ import {
 import { useThemeSourceRefs } from "../../hooks/useThemeSourceRefs";
 import { useThemeTextBlockLines } from "../../hooks/useThemeTextBlockLines";
 import { useThemeHeaderContext } from "../../hooks/useThemeHeaderContext";
-import { useThemePanelSummary } from "../../hooks/useThemePanelSummary";
 import { useUniversityContext } from "../../hooks/useUniversityContext";
 import InsightsPanel from "../main/InsightsPanel";
 
@@ -25,6 +24,12 @@ const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
 const INSIGHT_LINE_ROLE = "INSIGHT";
 
 export default function AdmissionDashboard() {
+  const {
+    schlNm,
+    ready: universityReady,
+    statusChips,
+  } = useUniversityContext();
+  const { pageTitle, pageSubtitle, baseYear } = admissionData;
   const { schlNm, ready: universityReady } = useUniversityContext();
   const { pageTitle, pageSubtitle, baseYear, filters } = admissionData;
   const BASE_YEAR_OPTIONS = [2025, 2024, 2023];
@@ -59,18 +64,6 @@ export default function AdmissionDashboard() {
       screenBaseYear: params.screen_base_year,
       schlNm: params.schl_nm,
     });
-
-  const { title: panelTitle, subtitle: panelSubtitle } = useThemePanelSummary({
-    screenCode: params.screen_code,
-    screenVer: params.screen_ver,
-    screenBaseYear: params.screen_base_year,
-    schlNm: params.schl_nm,
-  });
-
-  const showSummaryJudgment = Boolean(
-    (panelTitle && panelTitle.trim()) ||
-    (panelSubtitle && panelSubtitle.trim()),
-  );
 
   const { title: insightTitle, items: dbInsights } = useThemeTextBlockLines({
     screenCode: params.screen_code,
@@ -172,7 +165,7 @@ export default function AdmissionDashboard() {
         summaryJudgmentSubtitle={panelSubtitle}
       />
 
-      <StatusChips filters={filters} />
+      <StatusChips filters={statusChips} />
       <AdmissionKPICards kpiCards={kpiCards} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
@@ -190,7 +183,11 @@ export default function AdmissionDashboard() {
 
       <InsightsTableLayout
         insightsComponent={
-          <InsightsPanel title={insightTitle} items={dbInsights} loading={false} />
+          <InsightsPanel
+            title={insightTitle}
+            items={dbInsights}
+            loading={false}
+          />
         }
         tableComponent={<AdmissionTable refs={sourceRefs} />}
       />
