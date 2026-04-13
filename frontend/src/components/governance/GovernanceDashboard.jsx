@@ -3,6 +3,7 @@ import PageTitleSection from "../main/PageTitleSection";
 import StatusChips from "../main/StatusChips";
 import AdmissionTable from "../admission/AdmissionTable";
 import InsightsTableLayout from "../main/InsightsTableLayout";
+import InsightsPanel from "../main/InsightsPanel";
 import { useEffect, useMemo, useState } from "react";
 import { getThemeDetailGrid, getThemeTextBlocks } from "../../services/api";
 import { useThemeSourceRefs } from "../../hooks/useThemeSourceRefs";
@@ -10,7 +11,7 @@ import { useThemeHeaderContext } from "../../hooks/useThemeHeaderContext";
 import { useThemePanelSummary } from "../../hooks/useThemePanelSummary";
 import { useUniversityContext } from "../../hooks/useUniversityContext";
 import { mapDetailGridRowToGovernanceKpiCard } from "../../utils/mapThemeDetailGridToGovernanceKpiCards";
-import { GovernanceKPICards, GovernanceInsights } from "./index";
+import { GovernanceKPICards } from "./index";
 
 const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
 const INSIGHT_LINE_ROLE = "INSIGHT";
@@ -136,7 +137,7 @@ export default function GovernanceDashboard() {
 
       <InsightsTableLayout
         insightsComponent={
-          <GovernanceInsights
+          <InsightsPanel
             title={insightTitle}
             items={insightItems}
             loading={insightsLoading}
