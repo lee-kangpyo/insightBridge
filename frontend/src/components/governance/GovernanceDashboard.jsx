@@ -175,12 +175,11 @@ export default function GovernanceDashboard() {
           items={insightItems}
           loading={insightsLoading}
         />
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-8">
           <GovernanceComplianceTable complianceItems={complianceItems} />
+          <AdmissionTable refs={sourceRefs} />
         </div>
       </div>
-
-      <AdmissionTable refs={sourceRefs} />
     </div>
   );
 }

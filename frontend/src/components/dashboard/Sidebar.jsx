@@ -26,7 +26,7 @@ export default function Sidebar({ open, onClose }) {
             </div>
             <div className="flex flex-col">
               <span className="text-lg font-black leading-tight text-[#002045] dark:text-blue-300">
-                Scholar Metric
+                EZ Dashboard
               </span>
               <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
                 Academic Intel

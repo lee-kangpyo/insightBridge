@@ -99,6 +99,7 @@ export default function AdmissionDashboard() {
           label: row.metricName,
           value: row.myValueDisplay,
           unit: "",
+          year: row.metricYear,
           regionalAvg: row.regionAvgDisplay,
           nationalAvg: row.nationalAvgDisplay,
           accentColorHex: row.accentColorHex,

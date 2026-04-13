@@ -1,4 +1,4 @@
-import LargeKpiCard from "./LargeKpiCard";
+import KPICard from "./KPICard";
 import SmallKpiCard from "./SmallKpiCard";
 
 export default function KpiBentoGrid({ largeKpis, smallKpis }) {
@@ -6,9 +6,19 @@ export default function KpiBentoGrid({ largeKpis, smallKpis }) {
 
   return (
     <section className="mb-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
         {largeKpis?.map((kpi) => (
-          <LargeKpiCard key={kpi.id} {...kpi} />
+          <KPICard
+            key={kpi.id}
+            label={kpi.label}
+            value={kpi.value}
+            year={kpi.year}
+            accentColor={kpi.accentColor}
+            accentColorHex={kpi.accentColorHex}
+            regionalComparison={kpi.regionalComparison}
+            nationalComparison={kpi.nationalComparison}
+            isMainDashboard={true}
+          />
         ))}
         {smallKpis?.map((kpi) => (
           <SmallKpiCard key={kpi.id} {...kpi} />
