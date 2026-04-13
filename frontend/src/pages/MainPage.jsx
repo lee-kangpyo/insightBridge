@@ -6,7 +6,6 @@ import StrengthWeaknessMatrix from "../components/main/StrengthWeaknessMatrix";
 import InsightsPanel from "../components/main/InsightsPanel";
 import RiskStrengthTable from "../components/main/RiskStrengthTable";
 import OverviewDetailGridTable from "../components/main/OverviewDetailGridTable";
-import sampleData from "../data/main_page_samples.json";
 import { useEffect, useMemo, useState } from "react";
 import {
   getOverviewKpis,
@@ -71,7 +70,7 @@ export default function MainPage() {
   });
 
   const pageTitle = useMemo(() => {
-    const raw = (headerTitle || sampleData.meta?.dashboardTitle || "").trim();
+    const raw = (headerTitle || "").trim();
     if (!raw) return "";
     return applySchoolPrefix(schlNm, raw) || raw;
   }, [headerTitle, schlNm]);
@@ -173,10 +172,8 @@ export default function MainPage() {
     <MainLayout>
       <div className="max-w-[1600px] mx-auto px-8 py-6 space-y-8">
         <PageTitleSection
-          title={headerTitle || sampleData.meta?.dashboardTitle}
-          subtitle={
-            headerSubtitle || sampleData.meta?.institutionalDashboardLabel
-          }
+          title={pageTitle || headerTitle}
+          subtitle={headerSubtitle}
           baseYear={selectedBaseYear}
           baseYearOptions={BASE_YEAR_OPTIONS}
           onBaseYearChange={setSelectedBaseYear}
@@ -184,7 +181,7 @@ export default function MainPage() {
           summaryJudgmentTitle={summaryJudgmentTitle}
           summaryJudgmentSubtitle={summaryJudgmentSubtitle}
         />
-        <StatusChips filters={sampleData.filters} />
+        <StatusChips filters={statusChips} />
         <KpiBentoGrid
           baseYear={selectedBaseYear}
           largeKpis={largeKpis}

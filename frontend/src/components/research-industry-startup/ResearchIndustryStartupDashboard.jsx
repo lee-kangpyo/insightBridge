@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import researchData from "../../data/research-industry-startup-data.json";
 import PageTitleSection from "../main/PageTitleSection";
 import StatusChips from "../main/StatusChips";
 import InsightsTableLayout from "../main/InsightsTableLayout";
@@ -22,6 +21,7 @@ import { useUniversityContext } from "../../hooks/useUniversityContext";
 
 const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
 const INSIGHT_LINE_ROLE = "INSIGHT";
+const DEFAULT_BASE_YEAR = 2025;
 
 export default function ResearchIndustryStartupDashboard() {
   const {
@@ -29,9 +29,8 @@ export default function ResearchIndustryStartupDashboard() {
     ready: universityReady,
     statusChips,
   } = useUniversityContext();
-  const { baseYear } = researchData;
   const BASE_YEAR_OPTIONS = [2025, 2024, 2023];
-  const [selectedBaseYear, setSelectedBaseYear] = useState(baseYear ?? 2025);
+  const [selectedBaseYear, setSelectedBaseYear] = useState(DEFAULT_BASE_YEAR);
 
   const [kpiCards, setKpiCards] = useState([]);
 

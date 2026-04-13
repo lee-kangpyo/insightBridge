@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import educationFacultyData from "../../data/education-faculty-data.json";
 import PageTitleSection from "../main/PageTitleSection";
 import StatusChips from "../main/StatusChips";
 import InsightsTableLayout from "../main/InsightsTableLayout";
@@ -24,12 +23,12 @@ import { useUniversityContext } from "../../hooks/useUniversityContext";
 
 const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
 const INSIGHT_LINE_ROLE = "INSIGHT";
+const DEFAULT_BASE_YEAR = 2025;
 
 export default function EducationFacultyDashboard() {
   const { schlNm, ready: universityReady, statusChips } = useUniversityContext();
-  const { baseYear } = educationFacultyData;
   const BASE_YEAR_OPTIONS = [2025, 2024, 2023];
-  const [selectedBaseYear, setSelectedBaseYear] = useState(baseYear ?? 2025);
+  const [selectedBaseYear, setSelectedBaseYear] = useState(DEFAULT_BASE_YEAR);
 
   const [kpiCards, setKpiCards] = useState([]);
 
