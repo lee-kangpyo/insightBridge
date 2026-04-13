@@ -1,3 +1,5 @@
+import EmptyState from "../common/EmptyState";
+
 export default function InsightsPanel({ title, items, loading }) {
   const resolvedTitle = (title || "인사이트").trim() || "인사이트";
   if (loading) {
@@ -15,7 +17,17 @@ export default function InsightsPanel({ title, items, loading }) {
     );
   }
 
-  if (!items?.length) return null;
+  const rows = Array.isArray(items) ? items : [];
+  if (!rows.length) {
+    return (
+      <EmptyState
+        title="미공시"
+        description="인사이트 데이터가 미공시입니다."
+        minHeight={260}
+        icon="lightbulb"
+      />
+    );
+  }
 
   return (
     <div className="bg-primary p-8 rounded-xl shadow-[0_12px_32px_rgba(24,28,30,0.06)] text-white relative overflow-hidden">
@@ -27,7 +39,7 @@ export default function InsightsPanel({ title, items, loading }) {
         {resolvedTitle}
       </h3>
       <ul className="space-y-4 text-sm leading-relaxed relative z-10">
-        {items.map((item, index) => (
+        {rows.map((item, index) => (
           <li key={index} className="flex gap-3 items-start">
             <span className="text-secondary-fixed font-bold shrink-0">•</span>
             <span

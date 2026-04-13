@@ -1,7 +1,8 @@
 import { AnimatedPercentBarFill } from "../common/AnimatedPercentBarFill";
+import EmptyState from "../common/EmptyState";
 
 export default function EnrollmentRateChart({ title, subtitle, enrollmentRates }) {
-  if (!enrollmentRates?.length) return null;
+  const rows = Array.isArray(enrollmentRates) ? enrollmentRates : [];
 
   return (
     <div className="bg-surface-container-low p-8 rounded-lg relative overflow-hidden group">
@@ -18,22 +19,31 @@ export default function EnrollmentRateChart({ title, subtitle, enrollmentRates }
           <span className="material-symbols-outlined">more_horiz</span>
         </button>
       </div>
-      <div className="space-y-6">
-        {enrollmentRates.map((rate, index) => (
-          <div key={index} className="space-y-2">
-            <div className="flex justify-between text-xs font-bold mb-1">
-              <span className="text-slate-600">{rate.type}</span>
-              <span className="text-primary">{rate.currentYear}%</span>
+      {rows.length ? (
+        <div className="space-y-6">
+          {rows.map((rate, index) => (
+            <div key={index} className="space-y-2">
+              <div className="flex justify-between text-xs font-bold mb-1">
+                <span className="text-slate-600">{rate.type}</span>
+                <span className="text-primary">{rate.currentYear}%</span>
+              </div>
+              <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+                <AnimatedPercentBarFill
+                  percent={rate.currentYear}
+                  className="h-full rounded-full bg-secondary"
+                />
+              </div>
             </div>
-            <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
-              <AnimatedPercentBarFill
-                percent={rate.currentYear}
-                className="h-full rounded-full bg-secondary"
-              />
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          title="미공시"
+          description="전형별 최종등록률 데이터가 미공시입니다."
+          minHeight={240}
+          icon="bar_chart"
+        />
+      )}
       <div className="mt-8 flex gap-4">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-primary" />

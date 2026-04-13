@@ -1,12 +1,25 @@
 import KPICard from '../main/KPICard';
+import EmptyState from "../common/EmptyState";
 
 export default function FinanceKPICards({ kpiCards }) {
-  if (!kpiCards?.length) return null;
+  const rows = Array.isArray(kpiCards) ? kpiCards : [];
+  if (!rows.length) {
+    return (
+      <section className="mb-8">
+        <EmptyState
+          title="미공시"
+          description="재정 KPI 데이터가 미공시입니다."
+          minHeight={220}
+          icon="analytics"
+        />
+      </section>
+    );
+  }
 
   return (
     <section className="mb-8">
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6">
-        {kpiCards.map((card) => (
+        {rows.map((card) => (
           <KPICard
             key={card.id}
             label={card.label}

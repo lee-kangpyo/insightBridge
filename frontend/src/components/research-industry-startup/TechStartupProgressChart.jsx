@@ -1,4 +1,5 @@
 import { AnimatedPercentBarFill } from '../common/AnimatedPercentBarFill';
+import EmptyState from "../common/EmptyState";
 
 /**
  * @param {object} props
@@ -29,7 +30,20 @@ export default function TechStartupProgressChart({
         : [];
 
   if (!Array.isArray(rows) || rows.length === 0) {
-    return null;
+    return (
+      <div className="bg-surface-container-lowest rounded-lg p-8 shadow-sm border border-outline-variant/10">
+        <div className="mb-8">
+          <h3 className="text-xl font-bold font-headline text-primary">{heading}</h3>
+          {sub ? <p className="mt-1 text-xs text-on-surface-variant">{sub}</p> : null}
+        </div>
+        <EmptyState
+          title="미공시"
+          description="기술이전 및 창업 성과 지표 데이터가 미공시입니다."
+          minHeight={220}
+          icon="stacked_line_chart"
+        />
+      </div>
+    );
   }
 
   return (

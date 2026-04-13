@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { normalizeResearchFundSources } from '../../utils/normalizeResearchFundSources';
 import { AnimatedPercentBarFill } from '../common/AnimatedPercentBarFill';
+import EmptyState from "../common/EmptyState";
 
 const BAR_COLORS = {
   '교내 연구비': 'bg-primary',
@@ -40,7 +41,7 @@ export default function ResearchFundStructureChart({
     return normalizeResearchFundSources(latest?.sources);
   }, [latest, overrideSources]);
 
-  if (rows.length === 0) return null;
+  const hasRows = rows.length > 0;
 
   const showDbBanner = overrideSources !== undefined && bannerYear != null;
   const banner = showDbBanner
@@ -66,29 +67,38 @@ export default function ResearchFundStructureChart({
           </p>
         ) : null}
       </div>
-      <div className="space-y-6">
-        {rows.map((item) => {
-          const pct = Math.min(100, Math.max(0, Number(item.percentage) || 0));
-          const barClass = BAR_COLORS[item.name] || 'bg-secondary';
-          return (
-            <div key={item.name} className="space-y-2">
-              <div className="flex justify-between items-center text-sm">
-                <span className="font-medium text-on-surface-variant">{item.name}</span>
-                <span className="font-bold text-secondary">
-                  {pct}
-                  <span className="text-xs font-normal text-outline">%</span>
-                </span>
+      {hasRows ? (
+        <div className="space-y-6">
+          {rows.map((item) => {
+            const pct = Math.min(100, Math.max(0, Number(item.percentage) || 0));
+            const barClass = BAR_COLORS[item.name] || 'bg-secondary';
+            return (
+              <div key={item.name} className="space-y-2">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="font-medium text-on-surface-variant">{item.name}</span>
+                  <span className="font-bold text-secondary">
+                    {pct}
+                    <span className="text-xs font-normal text-outline">%</span>
+                  </span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-surface-container">
+                  <AnimatedPercentBarFill
+                    percent={pct}
+                    className={`h-full shrink-0 rounded-full ${barClass}`}
+                  />
+                </div>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-surface-container">
-                <AnimatedPercentBarFill
-                  percent={pct}
-                  className={`h-full shrink-0 rounded-full ${barClass}`}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      ) : (
+        <EmptyState
+          title="미공시"
+          description="연구비 재원 구조 데이터가 미공시입니다."
+          minHeight={240}
+          icon="donut_small"
+        />
+      )}
     </div>
   );
 }

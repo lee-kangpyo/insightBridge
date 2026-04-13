@@ -1,7 +1,8 @@
 import { AnimatedPercentBarFill } from "../common/AnimatedPercentBarFill";
+import EmptyState from "../common/EmptyState";
 
 export default function OpportunityBalanceChart({ title, subtitle, opportunityBalance }) {
-  if (!opportunityBalance?.length) return null;
+  const rows = Array.isArray(opportunityBalance) ? opportunityBalance : [];
 
   return (
     <div className="bg-surface-container-low p-8 rounded-lg">
@@ -23,27 +24,36 @@ export default function OpportunityBalanceChart({ title, subtitle, opportunityBa
           </button>
         </div>
       </div>
-      <div className="flex flex-col h-[200px] justify-between">
-        {opportunityBalance.map((item, index) => (
-          <div key={index} className="flex items-center gap-4">
-            <span className="text-xs font-bold text-slate-600 w-24">{item.category}</span>
-            <div className="flex-1 h-8 bg-surface-container rounded-lg overflow-hidden flex flex-row min-w-0">
-              <AnimatedPercentBarFill
-                percent={item.ratio}
-                className="h-full shrink-0 bg-primary"
-              />
-              <div className="h-full min-w-0 flex-1 bg-secondary opacity-20" />
+      {rows.length ? (
+        <div className="flex flex-col h-[200px] justify-between">
+          {rows.map((item, index) => (
+            <div key={index} className="flex items-center gap-4">
+              <span className="text-xs font-bold text-slate-600 w-24">{item.category}</span>
+              <div className="flex-1 h-8 bg-surface-container rounded-lg overflow-hidden flex flex-row min-w-0">
+                <AnimatedPercentBarFill
+                  percent={item.ratio}
+                  className="h-full shrink-0 bg-primary"
+                />
+                <div className="h-full min-w-0 flex-1 bg-secondary opacity-20" />
+              </div>
+              <span className="text-xs font-bold text-primary min-w-[3rem] text-right">
+                {typeof item.bar_ratio_display_text === "string" && item.bar_ratio_display_text.trim()
+                  ? item.bar_ratio_display_text.trim()
+                  : typeof item.barRatioDisplayText === "string" && item.barRatioDisplayText.trim()
+                    ? item.barRatioDisplayText.trim()
+                    : ""}
+              </span>
             </div>
-            <span className="text-xs font-bold text-primary min-w-[3rem] text-right">
-              {typeof item.bar_ratio_display_text === "string" && item.bar_ratio_display_text.trim()
-                ? item.bar_ratio_display_text.trim()
-                : typeof item.barRatioDisplayText === "string" && item.barRatioDisplayText.trim()
-                  ? item.barRatioDisplayText.trim()
-                  : ""}
-            </span>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          title="미공시"
+          description="기회균형 선발 구성 데이터가 미공시입니다."
+          minHeight={240}
+          icon="view_timeline"
+        />
+      )}
     </div>
   );
 }

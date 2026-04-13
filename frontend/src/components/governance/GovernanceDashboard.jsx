@@ -20,6 +20,9 @@ export default function GovernanceDashboard() {
   const { schlNm, ready: universityReady } = useUniversityContext();
   const { meta, filters } = governanceData;
 
+  const BASE_YEAR_OPTIONS = [2025, 2024, 2023];
+  const [selectedBaseYear, setSelectedBaseYear] = useState(meta?.baseYear ?? 2025);
+
   const [kpiCards, setKpiCards] = useState([]);
   const [insightsLoading, setInsightsLoading] = useState(true);
   const [insightTitle, setInsightTitle] = useState(null);
@@ -29,10 +32,10 @@ export default function GovernanceDashboard() {
     () => ({
       screen_code: "governance",
       screen_ver: "v0.1",
-      screen_base_year: meta.baseYear,
+      screen_base_year: selectedBaseYear,
       schl_nm: schlNm,
     }),
-    [meta.baseYear, schlNm],
+    [selectedBaseYear, schlNm],
   );
 
   const { title: headerTitle, subtitle: headerSubtitle } =
@@ -126,7 +129,9 @@ export default function GovernanceDashboard() {
       <PageTitleSection
         title={headerTitle}
         subtitle={headerSubtitle}
-        baseYear={meta.baseYear}
+        baseYear={selectedBaseYear}
+        baseYearOptions={BASE_YEAR_OPTIONS}
+        onBaseYearChange={setSelectedBaseYear}
         showSummaryJudgment={showSummaryJudgment}
         summaryJudgmentTitle={panelTitle}
         summaryJudgmentSubtitle={panelSubtitle}
