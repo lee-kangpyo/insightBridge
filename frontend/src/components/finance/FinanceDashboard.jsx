@@ -17,6 +17,7 @@ import {
   mapThemeItemsToFinanceRevenueTop,
   mapThemeItemsToFinanceTuitionBars,
 } from "../../utils/mapThemeItemsToFinanceCharts";
+import { AnimatedPercentBarFill } from "../common/AnimatedPercentBarFill";
 
 const BAR_FILL = {
   primary: "#002c5a",
@@ -194,11 +195,11 @@ export default function FinanceDashboard() {
                     <span>{item.field}</span>
                     <span>{item.amount.toLocaleString()}원</span>
                   </div>
-                  <div className="h-2 w-full bg-surface-variant rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full"
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-surface-variant">
+                    <AnimatedPercentBarFill
+                      percent={item.percentage}
+                      className="h-full shrink-0 rounded-full"
                       style={{
-                        width: `${item.percentage}%`,
                         backgroundColor:
                           item.colorHex ||
                           BAR_FILL[item.colorToken || item.color] ||

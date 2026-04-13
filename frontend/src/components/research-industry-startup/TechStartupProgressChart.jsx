@@ -1,3 +1,5 @@
+import { AnimatedPercentBarFill } from '../common/AnimatedPercentBarFill';
+
 /**
  * @param {object} props
  * @param {Array<{label:string,current:number,target:number,unit:string}>} [props.startupProgress] — 샘플/폴백
@@ -59,8 +61,11 @@ export default function TechStartupProgressChart({
                   )}
                 </span>
               </div>
-              <div className="h-2 bg-surface-container rounded-full overflow-hidden">
-                <div className="h-full bg-secondary rounded-full" style={{ width: `${pct}%` }} />
+              <div className="h-2 overflow-hidden rounded-full bg-surface-container">
+                <AnimatedPercentBarFill
+                  percent={pct}
+                  className="h-full shrink-0 rounded-full bg-secondary"
+                />
               </div>
             </div>
           );

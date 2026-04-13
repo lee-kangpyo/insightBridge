@@ -1,3 +1,5 @@
+import { AnimatedPercentBarFill } from "../common/AnimatedPercentBarFill";
+
 export default function OpportunityBalanceChart({ title, subtitle, opportunityBalance }) {
   if (!opportunityBalance?.length) return null;
 
@@ -25,15 +27,12 @@ export default function OpportunityBalanceChart({ title, subtitle, opportunityBa
         {opportunityBalance.map((item, index) => (
           <div key={index} className="flex items-center gap-4">
             <span className="text-xs font-bold text-slate-600 w-24">{item.category}</span>
-            <div className="flex-1 h-8 bg-surface-container rounded-lg overflow-hidden flex">
-              <div
-                className="bg-primary h-full"
-                style={{ width: `${item.ratio}%` }}
+            <div className="flex-1 h-8 bg-surface-container rounded-lg overflow-hidden flex flex-row min-w-0">
+              <AnimatedPercentBarFill
+                percent={item.ratio}
+                className="h-full shrink-0 bg-primary"
               />
-              <div
-                className="bg-secondary h-full opacity-20"
-                style={{ width: `${100 - item.ratio}%` }}
-              />
+              <div className="h-full min-w-0 flex-1 bg-secondary opacity-20" />
             </div>
             <span className="text-xs font-bold text-primary min-w-[3rem] text-right">
               {typeof item.bar_ratio_display_text === "string" && item.bar_ratio_display_text.trim()

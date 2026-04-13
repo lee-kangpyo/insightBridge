@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { normalizeResearchFundSources } from '../../utils/normalizeResearchFundSources';
+import { AnimatedPercentBarFill } from '../common/AnimatedPercentBarFill';
 
 const BAR_COLORS = {
   '교내 연구비': 'bg-primary',
@@ -78,8 +79,11 @@ export default function ResearchFundStructureChart({
                   <span className="text-xs font-normal text-outline">%</span>
                 </span>
               </div>
-              <div className="h-2 bg-surface-container rounded-full overflow-hidden">
-                <div className={`h-full rounded-full ${barClass}`} style={{ width: `${pct}%` }} />
+              <div className="h-2 overflow-hidden rounded-full bg-surface-container">
+                <AnimatedPercentBarFill
+                  percent={pct}
+                  className={`h-full shrink-0 rounded-full ${barClass}`}
+                />
               </div>
             </div>
           );

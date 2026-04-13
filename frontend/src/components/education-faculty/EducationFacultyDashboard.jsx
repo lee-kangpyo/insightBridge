@@ -9,22 +9,22 @@ import {
   SemesterFullTimeRatioChart,
   CourseSizeDistributionChart,
   EducationFacultyTable,
-} from './index';
-import { getThemeDetailGrid } from '../../services/api';
-import { useThemeSourceRefs } from '../../hooks/useThemeSourceRefs';
-import { useThemeChartBlockMeta } from '../../hooks/useThemeChartBlockMeta';
+} from "./index";
+import { getThemeDetailGrid } from "../../services/api";
+import { useThemeSourceRefs } from "../../hooks/useThemeSourceRefs";
+import { useThemeChartBlockMeta } from "../../hooks/useThemeChartBlockMeta";
 import {
   mapThemeItemsToCourseDistribution,
   mapThemeItemsToSemesterRatios,
-} from '../../utils/mapThemeChartItemsToEducationBars';
-import { useThemeTextBlockLines } from '../../hooks/useThemeTextBlockLines';
-import { useThemeHeaderContext } from '../../hooks/useThemeHeaderContext';
-import { useThemePanelSummary } from '../../hooks/useThemePanelSummary';
-import { useUniversityContext } from '../../hooks/useUniversityContext';
+} from "../../utils/mapThemeChartItemsToEducationBars";
+import { useThemeTextBlockLines } from "../../hooks/useThemeTextBlockLines";
+import { useThemeHeaderContext } from "../../hooks/useThemeHeaderContext";
+import { useThemePanelSummary } from "../../hooks/useThemePanelSummary";
+import { useUniversityContext } from "../../hooks/useUniversityContext";
 
 const EDUCATION_SCREEN_BASE_YEAR = 2025;
-const INSIGHT_BLOCK_CODE = 'SAMPLE_INSIGHT';
-const INSIGHT_LINE_ROLE = 'INSIGHT';
+const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
+const INSIGHT_LINE_ROLE = "INSIGHT";
 
 export default function EducationFacultyDashboard() {
   const { schlNm, ready: universityReady } = useUniversityContext();
@@ -34,20 +34,21 @@ export default function EducationFacultyDashboard() {
 
   const themeParams = useMemo(
     () => ({
-      screen_code: 'education',
-      screen_ver: 'v0.1',
+      screen_code: "education",
+      screen_ver: "v0.1",
       screen_base_year: EDUCATION_SCREEN_BASE_YEAR,
       schl_nm: schlNm,
     }),
     [schlNm],
   );
 
-  const { title: headerTitle, subtitle: headerSubtitle } = useThemeHeaderContext({
-    screenCode: themeParams.screen_code,
-    screenVer: themeParams.screen_ver,
-    screenBaseYear: themeParams.screen_base_year,
-    schlNm: themeParams.schl_nm,
-  });
+  const { title: headerTitle, subtitle: headerSubtitle } =
+    useThemeHeaderContext({
+      screenCode: themeParams.screen_code,
+      screenVer: themeParams.screen_ver,
+      screenBaseYear: themeParams.screen_base_year,
+      schlNm: themeParams.schl_nm,
+    });
 
   const { title: panelTitle, subtitle: panelSubtitle } = useThemePanelSummary({
     screenCode: themeParams.screen_code,
@@ -57,7 +58,8 @@ export default function EducationFacultyDashboard() {
   });
 
   const showSummaryJudgment = Boolean(
-    (panelTitle && panelTitle.trim()) || (panelSubtitle && panelSubtitle.trim()),
+    (panelTitle && panelTitle.trim()) ||
+    (panelSubtitle && panelSubtitle.trim()),
   );
 
   useEffect(() => {
@@ -71,7 +73,7 @@ export default function EducationFacultyDashboard() {
           id: row.metricCode,
           label: row.metricName,
           value: row.myValueDisplay,
-          unit: '',
+          unit: "",
           year: row.metricYear,
           regionalAvg: row.regionAvgDisplay,
           nationalAvg: row.nationalAvgDisplay,
@@ -103,12 +105,13 @@ export default function EducationFacultyDashboard() {
     schlNm: themeParams.schl_nm,
   });
 
-  const { chartLeft, chartRight, leftBlockItems, rightBlockItems } = useThemeChartBlockMeta({
-    screenCode: themeParams.screen_code,
-    screenVer: themeParams.screen_ver,
-    screenBaseYear: themeParams.screen_base_year,
-    schlNm: themeParams.schl_nm,
-  });
+  const { chartLeft, chartRight, leftBlockItems, rightBlockItems } =
+    useThemeChartBlockMeta({
+      screenCode: themeParams.screen_code,
+      screenVer: themeParams.screen_ver,
+      screenBaseYear: themeParams.screen_base_year,
+      schlNm: themeParams.schl_nm,
+    });
 
   const semesterFromDb = mapThemeItemsToSemesterRatios(leftBlockItems);
   const courseFromDb = mapThemeItemsToCourseDistribution(rightBlockItems);

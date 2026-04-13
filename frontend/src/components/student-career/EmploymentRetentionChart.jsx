@@ -1,3 +1,5 @@
+import { AnimatedPercentBarFill } from '../common/AnimatedPercentBarFill';
+
 export default function EmploymentRetentionChart({ employmentRetention }) {
   if (!employmentRetention?.length) return null;
 
@@ -13,10 +15,11 @@ export default function EmploymentRetentionChart({ employmentRetention }) {
                 <span className="text-xs font-bold text-on-surface">{item.stage}</span>
                 <span className="text-[10px] text-outline">총계</span>
               </div>
-              <div className="h-5 w-full bg-surface-container-highest rounded-md overflow-hidden">
-                <div
-                  className="h-full bg-secondary rounded-md transition-all duration-500"
-                  style={{ width: `${item.rate}%`, opacity }}
+              <div className="h-5 w-full overflow-hidden rounded-md bg-surface-container-highest">
+                <AnimatedPercentBarFill
+                  percent={item.rate}
+                  className="h-full shrink-0 rounded-md bg-secondary"
+                  style={{ opacity }}
                 />
               </div>
               <span className="text-sm font-bold text-on-surface text-right">{item.rate}%</span>

@@ -1,3 +1,5 @@
+import { AnimatedPercentBarFill } from '../common/AnimatedPercentBarFill';
+
 export default function DropoutReasonChart({ dropoutReasons }) {
   if (!dropoutReasons?.length) return null;
 
@@ -16,10 +18,11 @@ export default function DropoutReasonChart({ dropoutReasons }) {
               <span className="font-medium text-slate-500">{item.reason}</span>
               <span className="font-semibold text-slate-600">{item.count}</span>
             </div>
-              <div className="h-2 w-full bg-surface-container-highest/70 rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full"
-                  style={{ width: `${item.percentage}%`, backgroundColor: '#E03130' }}
+              <div className="h-2 w-full overflow-hidden rounded-full bg-surface-container-highest/70">
+                <AnimatedPercentBarFill
+                  percent={item.percentage}
+                  className="h-full shrink-0 rounded-full"
+                  style={{ backgroundColor: '#E03130' }}
                 />
               </div>
           </div>

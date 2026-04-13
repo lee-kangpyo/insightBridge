@@ -1,3 +1,5 @@
+import { AnimatedPercentBarFill } from '../common/AnimatedPercentBarFill';
+
 const progressColors = {
   secondary: 'bg-secondary',
   tertiary: 'bg-tertiary',
@@ -19,11 +21,11 @@ export default function ProgressMetricGrid({ metrics }) {
                 {metric.current} <span className="text-[10px] text-outline font-normal">/ 목표 {metric.target}</span>
               </span>
             </div>
-            <div className="w-full bg-surface-container-highest rounded-full h-2">
-              <div
-                className={`${progressColors[metric.color] || 'bg-secondary'} h-2 rounded-full`}
-                style={{ width: `${metric.percentage}%` }}
-              ></div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-surface-container-highest">
+              <AnimatedPercentBarFill
+                percent={metric.percentage}
+                className={`h-full shrink-0 rounded-full ${progressColors[metric.color] || 'bg-secondary'}`}
+              />
             </div>
           </div>
         ))}

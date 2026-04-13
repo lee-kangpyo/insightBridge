@@ -55,7 +55,7 @@ export default function MainPage() {
 
   const showSummaryJudgment = Boolean(
     (summaryJudgmentTitle && summaryJudgmentTitle.trim()) ||
-      (summaryJudgmentSubtitle && summaryJudgmentSubtitle.trim()),
+    (summaryJudgmentSubtitle && summaryJudgmentSubtitle.trim()),
   );
 
   const { title: insightTitle, items: dbInsights } = useOverviewTextBlockLines({
@@ -167,18 +167,17 @@ export default function MainPage() {
     <MainLayout>
       <div className="max-w-[1600px] mx-auto px-8 py-6 space-y-8">
         <PageTitleSection
-          title={pageTitle}
-          subtitle={headerSubtitle || sampleData.meta?.institutionalDashboardLabel}
+          title={headerTitle || sampleData.meta?.dashboardTitle}
+          subtitle={
+            headerSubtitle || sampleData.meta?.institutionalDashboardLabel
+          }
           baseYear={sampleData.meta?.baseYear}
           showSummaryJudgment={showSummaryJudgment}
           summaryJudgmentTitle={summaryJudgmentTitle}
           summaryJudgmentSubtitle={summaryJudgmentSubtitle}
         />
         <StatusChips filters={sampleData.filters} />
-        <KpiBentoGrid
-          largeKpis={largeKpis}
-          smallKpis={smallKpis}
-        />
+        <KpiBentoGrid largeKpis={largeKpis} smallKpis={smallKpis} />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <StrengthWeaknessMatrix matrix={matrix} />
           <InsightsPanel title="인사이트" items={dbInsights} loading={false} />

@@ -1,3 +1,5 @@
+import { AnimatedPercentBarFill } from "../common/AnimatedPercentBarFill";
+
 export default function EnrollmentRateChart({ title, subtitle, enrollmentRates }) {
   if (!enrollmentRates?.length) return null;
 
@@ -24,9 +26,9 @@ export default function EnrollmentRateChart({ title, subtitle, enrollmentRates }
               <span className="text-primary">{rate.currentYear}%</span>
             </div>
             <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
-              <div
-                className="bg-secondary h-full rounded-full transition-all duration-1000"
-                style={{ width: `${rate.currentYear}%` }}
+              <AnimatedPercentBarFill
+                percent={rate.currentYear}
+                className="h-full rounded-full bg-secondary"
               />
             </div>
           </div>
