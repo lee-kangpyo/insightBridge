@@ -6,10 +6,37 @@ class QueryRequest(BaseModel):
     question: str
 
 
+class ChartConfig(BaseModel):
+    type: str  # "line" | "bar" | "pie" | "heatmap" etc.
+    x: Optional[str] = None
+    y: Optional[str] = None
+    title: Optional[str] = None
+
+
 class QueryResponse(BaseModel):
     data: Optional[list[dict[str, Any]]] = None
     sql: Optional[str] = None
     message: Optional[str] = None
+    chart_config: Optional[ChartConfig] = None
+
+
+class CandidateEvent(BaseModel):
+    index: int
+    sql: str
+    data: list[dict[str, Any]]
+    chart_config: Optional[ChartConfig] = None
+    evaluation: Optional[str] = None
+
+
+class DoneEvent(BaseModel):
+    best_index: int
+    reason: Optional[str] = None
+
+
+class RefineRequest(BaseModel):
+    original_question: str
+    feedback: str
+    previous_candidates: list[dict[str, Any]] = []
 
 
 class SchoolItem(BaseModel):
