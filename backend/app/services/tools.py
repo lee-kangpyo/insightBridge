@@ -93,11 +93,12 @@ async def get_columns(table_name: str) -> str:
 
 
 @tool
-def execute_sql(sql: str) -> str:
+def execute_sql(sql: str, chart_config: str = "") -> str:
     """생성된 SQL을 반환합니다. 실제 SQL 실행은 API 레벨에서 처리됩니다.
 
     Args:
         sql: 실행할 SQL 쿼리 문자열
+        chart_config: (선택) 차트 시각화 설정 JSON 문자열. 예: {"type":"bar","x":"col1","y":"col2","title":"제목"}
     """
     logger.info("[tool] execute_sql 호출: SQL 미리보기=%s", _preview(sql.strip()))
     return sql

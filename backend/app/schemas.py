@@ -20,25 +20,6 @@ class QueryResponse(BaseModel):
     chart_config: Optional[ChartConfig] = None
 
 
-class CandidateEvent(BaseModel):
-    index: int
-    sql: str
-    data: list[dict[str, Any]]
-    chart_config: Optional[ChartConfig] = None
-    evaluation: Optional[str] = None
-
-
-class DoneEvent(BaseModel):
-    best_index: int
-    reason: Optional[str] = None
-
-
-class RefineRequest(BaseModel):
-    original_question: str
-    feedback: str
-    previous_candidates: list[dict[str, Any]] = []
-
-
 class SchoolItem(BaseModel):
     school_name: str
     school_code: str

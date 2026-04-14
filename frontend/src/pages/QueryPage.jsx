@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { queryStream, refineQuery } from '../services/api';
-import { CandidateTabs, BentoGridSkeleton } from '../components/bento';
-import { RefineBar } from '../components/bento/RefineBar';
+import { query } from '../services/api';
+import { BentoGrid, BentoGridSkeleton } from '../components/bento';
 import { Search } from 'lucide-react';
 
 function QueryPage() {
@@ -20,10 +19,7 @@ function QueryPage() {
 
     setIsStreaming(true);
     setError(null);
-    setCandidates([]);
-    setBestIndex(-1);
-    setActiveTab(0);
-    setCurrentQuestion(question);
+    setResult(null);
 
     await queryStream(
       question,
@@ -93,14 +89,14 @@ function QueryPage() {
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               placeholder="예: 월별 매출을 보여줘"
-              className="w-full px-5 py-4 pr-12 text-base bg-surface-container-lowest border border-outline rounded-xl
-                         text-on-surface placeholder:text-on-surface-variant
+              className="w-full px-5 py-4 pr-12 text-base bg-surface-container-lowest border border-outline rounded-xl 
+                         text-on-surface placeholder:text-on-surface-variant 
                          focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary
                          transition-all duration-200"
             />
             <button
               type="submit"
-              disabled={isStreaming || !question.trim()}
+              disabled={loading}
               className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-lg bg-primary text-on-primary
                          hover:bg-primary-fixed-dim disabled:opacity-50 disabled:cursor-not-allowed
                          transition-all duration-200"
@@ -116,27 +112,15 @@ function QueryPage() {
           </div>
         )}
 
-        {isStreaming && !hasResults ? (
+        {loading ? (
           <BentoGridSkeleton />
-        ) : (
-          <>
-            <CandidateTabs
-              candidates={candidates}
-              bestIndex={bestIndex}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-              isStreaming={isStreaming}
-            />
-
-            {hasResults && (
-              <RefineBar
-                onRefine={handleRefine}
-                isLoading={isRefining}
-                disabled={isStreaming}
-              />
-            )}
-          </>
-        )}
+        ) : result ? (
+          <BentoGrid
+            sql={result.sql}
+            data={result.data}
+            chartConfig={result.chart_config}
+          />
+        ) : null}
       </div>
     </div>
   );

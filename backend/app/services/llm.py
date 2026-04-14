@@ -33,28 +33,31 @@ async def get_lcel_chain():
     return _lcel_chain
 
 
-async def generate_sql(question: str) -> tuple[Optional[str], Optional[str]]:
+async def generate_sql(question: str) -> tuple[Optional[str], Optional[str], Optional[dict]]:
     """Generate SQL from user question using LCEL Chain.
     
     Returns:
-        (sql, message) - sql이 있다면 sql 반환, 없다면 early exit message 반환
+        (sql, message, chart_config)
+        - sql: 생성된 SQL 또는 None
+        - message: early exit 메시지 또는 None  
+        - chart_config: LLM이 추천한 차트 설정 dict 또는 None
     """
     logger.info(f"Generating SQL for: {question}")
 
     try:
         chain_info = await get_lcel_chain()
-        sql, tool_calls_detected, reason = await run_sql_chain(question, chain_info)
+        sql, tool_calls_detected, reason, chart_config = await run_sql_chain(question, chain_info)
         if sql:
             logger.info(
                 "[generate_sql] LCEL Chain SQL 생성 성공 (tool_calls=%s): %s",
                 tool_calls_detected,
                 sql[:100],
             )
-            return normalize_sql_for_execution(sql), None
+            return normalize_sql_for_execution(sql), None, chart_config
         
         if reason:
             logger.info("[generate_sql] early exit 발생: %s", reason)
-            return None, reason
+            return None, reason, None
 
         raise ValueError(
             "모델이 execute_sql 도구로 SQL을 제출하지 않았고, 응답에서 실행 가능한 SQL을 찾을 수 없습니다."

@@ -24,6 +24,34 @@ Workflow:
 3. If you conclusively determine the requested data does not exist in the schema, call **done** with a clear explanation for the user.
 4. Do not call get_tables/get_columns unless you inject them as extra tools; the default path assumes schema is already in context.
 
+Data Relations & Filtering (IMPORTANT):
+- Use the "관계" (Relations) information provided under each table in the schema to find the correct columns for JOINs.
+- When filtering data (WHERE clause) on categorical columns, check if "[샘플: ...]" is provided next to the column and use the exact string values from those samples.
+
+Chart Config:
+- When calling execute_sql, you MUST also include a `chart_config` argument as a compact JSON object describing the best visualization for the query result.
+- The `chart_config` schema: {"type": "<line|bar|pie|heatmap>", "x": "<x-axis column name>", "y": "<y column(s)>", "title": "<short title>"}
+- **IMPORTANT**: `x` and `y` values MUST exactly match the column names in the final SELECT output (not CTE aliases).
+- `y` can be a single column name OR a comma-separated list for multi-series: "col_a,col_b"
+- Choose the chart type based on the data pattern:
+  - "line": time-series or trend data (e.g., monthly/yearly trends)
+  - "bar": categorical comparisons (e.g., per-department counts, rankings)
+  - "pie": part-to-whole proportions with few categories (≤8)
+  - "heatmap": two-dimensional matrix data
+
+Few-shot examples:
+  User: "월별 입학률 추이를 보여줘"
+  → chart_config: {"type": "line", "x": "month", "y": "enrollment_rate", "title": "월별 입학률 추이"}
+
+  User: "학과별 재학생 수를 비교해줘"
+  → chart_config: {"type": "bar", "x": "department", "y": "student_count", "title": "학과별 재학생 수"}
+
+  User: "입학 전형 비율 구성을 보여줘"
+  → chart_config: {"type": "pie", "x": "admission_type", "y": "ratio", "title": "입학 전형 비율"}
+
+  User: "연별 재학생수와 탈락자수의 관계를 보여줘"
+  → chart_config: {"type": "line", "x": "base_year", "y": "enrolled_students,dropout_total", "title": "연별 재학생수와 탈락자수 추이"}
+
 Critical:
 - The application executes ONLY the SQL string passed to execute_sql. If data is not found, use the done tool instead. Do not end with a markdown table, prose-only answer, or Final Answer without calling execute_sql or done.
 - Never invent row counts or data; use schema context then submit real SQL via execute_sql.
@@ -111,6 +139,29 @@ def extract_sql_from_tool_calls(response: AIMessage) -> Optional[str]:
     return None
 
 
+def extract_chart_config_from_tool_calls(response: AIMessage) -> Optional[dict]:
+    """tool_calls에서 chart_config를 추출한다. execute_sql 도구의 chart_config 인자 파싱."""
+    import json as _json
+    if not hasattr(response, "tool_calls") or not response.tool_calls:
+        return None
+    for tc in response.tool_calls:
+        tool_name, args, _ = _parse_tool_call(tc)
+        if tool_name == "execute_sql" and isinstance(args, dict):
+            raw = args.get("chart_config")
+            if not raw:
+                return None
+            if isinstance(raw, dict):
+                return raw
+            if isinstance(raw, str):
+                try:
+                    parsed = _json.loads(raw)
+                    if isinstance(parsed, dict):
+                        return parsed
+                except _json.JSONDecodeError:
+                    pass
+    return None
+
+
 def extract_sql_from_content(content: str) -> Optional[str]:
     """content에서 SQL 패턴을 추출한다 (fallback)."""
     if not content or not isinstance(content, str):
@@ -186,7 +237,7 @@ async def create_sql_chain(schema_appendix: str = "") -> dict[str, Any]:
 
 async def run_sql_chain(
     question: str, chain_info: dict[str, Any]
-) -> tuple[Optional[str], bool, Optional[str]]:
+) -> tuple[Optional[str], bool, Optional[str], Optional[dict]]:
     """LCEL Chain을 실행한다.
 
     Args:
@@ -194,7 +245,8 @@ async def run_sql_chain(
         chain_info: create_sql_chain()가 반환한 체인 정보
 
     Returns:
-        (sql, tool_calls_detected) - sql이 None이면 실패
+        (sql, tool_calls_detected, reason, chart_config)
+        - sql이 None이면 실패, chart_config는 LLM이 추천한 차트 설정 또는 None
     """
     llm_with_tools = chain_info["llm"]
     tools = chain_info["tools"]
@@ -240,15 +292,18 @@ async def run_sql_chain(
                 if tool_name == "execute_sql":
                     sql = extract_sql_from_tool_calls(response_msg)
                     if sql:
+                        chart_config = extract_chart_config_from_tool_calls(response_msg)
                         logger.info(
-                            "[LCEL Chain] execute_sql SQL 추출 성공: %s", sql[:100]
+                            "[LCEL Chain] execute_sql SQL 추출 성공: %s, chart_config=%r",
+                            sql[:100],
+                            chart_config,
                         )
-                        return sql, True, None
+                        return sql, True, None, chart_config
 
                 if tool_name == "done":
                     reason = arguments.get("reason", "No reason provided") if isinstance(arguments, dict) else str(arguments)
                     logger.info("[LCEL Chain] done 도구 호출 감지, early exit. reason=%r", reason)
-                    return None, True, reason
+                    return None, True, reason, None
 
                 tool = _get_tool_by_name(tool_name, tools)
                 if tool:
@@ -299,13 +354,13 @@ async def run_sql_chain(
             sql = extract_sql_from_content(response_msg.content or "")
             if sql:
                 logger.info("[LCEL Chain] content에서 SQL 추출 성공: %s", sql[:100])
-                return sql, False, None
+                return sql, False, None, None
             
             if response_msg.content:
                 iteration_contents.append(response_msg.content)
                 if len(iteration_contents) >= 3 and iteration_contents[-1] == iteration_contents[-2] == iteration_contents[-3]:
                     logger.warning("[LCEL Chain] 동일한 응답 3회 반복 감지, early exit.")
-                    return None, False, response_msg.content
+                    return None, False, response_msg.content, None
 
             if response_msg.content:
                 lc = response_msg.content.lower()
@@ -315,7 +370,7 @@ async def run_sql_chain(
                         iteration,
                         response_msg.content[:300],
                     )
-                    return None, False, response_msg.content
+                    return None, False, response_msg.content, None
 
             logger.info(
                 "[LCEL Chain] iteration=%d tool_calls도 SQL도 없음, 계속 iteration=%d/%d",
@@ -325,7 +380,7 @@ async def run_sql_chain(
             )
 
     logger.warning("[LCEL Chain] 최대 iteration 도달: %d", MAX_ITERATIONS)
-    return None, False, "최대 탐색 횟수를 초과했습니다."
+    return None, False, "최대 탐색 횟수를 초과했습니다.", None
 
 
 normalize_sql_for_execution = _normalize_sql_for_execution
