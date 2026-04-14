@@ -95,3 +95,113 @@ export const getOverviewTextBlocks = async (params) => {
   return response.data;
 };
 
+async function parseSseStream(response, onEvent) {
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const parts = buffer.split('\n\n');
+    buffer = parts.pop(); // keep incomplete last part
+
+    for (const part of parts) {
+      if (!part.trim()) continue;
+      let eventType = 'message';
+      let dataStr = '';
+
+      for (const line of part.split('\n')) {
+        if (line.startsWith('event: ')) {
+          eventType = line.slice(7).trim();
+        } else if (line.startsWith('data: ')) {
+          dataStr = line.slice(6).trim();
+        }
+      }
+
+      if (dataStr) {
+        try {
+          const data = JSON.parse(dataStr);
+          onEvent(eventType, data);
+        } catch {
+          // skip malformed JSON
+        }
+      }
+    }
+  }
+}
+
+export const queryStream = async (question, onCandidate, onDone, onError) => {
+  const token = localStorage.getItem('auth_token');
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/query`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ question }),
+      }
+    );
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: response.statusText }));
+      onError?.(new Error(err.detail || 'Query failed'));
+      return;
+    }
+
+    await parseSseStream(response, (eventType, data) => {
+      if (eventType === 'candidate') onCandidate?.(data);
+      else if (eventType === 'done') onDone?.(data);
+      else if (eventType === 'error') onError?.(new Error(data.error || 'Stream error'));
+    });
+  } catch (err) {
+    onError?.(err);
+  }
+};
+
+export const refineQuery = async (
+  originalQuestion,
+  feedback,
+  previousCandidates,
+  onCandidate,
+  onDone,
+  onError
+) => {
+  const token = localStorage.getItem('auth_token');
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/query/refine`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          original_question: originalQuestion,
+          feedback,
+          previous_candidates: previousCandidates,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: response.statusText }));
+      onError?.(new Error(err.detail || 'Refine failed'));
+      return;
+    }
+
+    await parseSseStream(response, (eventType, data) => {
+      if (eventType === 'candidate') onCandidate?.(data);
+      else if (eventType === 'done') onDone?.(data);
+      else if (eventType === 'error') onError?.(new Error(data.error || 'Stream error'));
+    });
+  } catch (err) {
+    onError?.(err);
+  }
+};
