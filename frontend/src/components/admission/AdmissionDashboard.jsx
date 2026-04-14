@@ -1,4 +1,3 @@
-import admissionData from "../../data/admission-data.json";
 import PageTitleSection from "../main/PageTitleSection";
 import StatusChips from "../main/StatusChips";
 import InsightsTableLayout from "../main/InsightsTableLayout";
@@ -17,15 +16,18 @@ import {
 import { useThemeSourceRefs } from "../../hooks/useThemeSourceRefs";
 import { useThemeTextBlockLines } from "../../hooks/useThemeTextBlockLines";
 import { useThemeHeaderContext } from "../../hooks/useThemeHeaderContext";
+import { useThemePanelSummary } from "../../hooks/useThemePanelSummary";
 import { useUniversityContext } from "../../hooks/useUniversityContext";
 import InsightsPanel from "../main/InsightsPanel";
 
 const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
 const INSIGHT_LINE_ROLE = "INSIGHT";
+const DEFAULT_BASE_YEAR = 2025;
 
 export default function AdmissionDashboard() {
   const { schlNm, ready: universityReady, statusChips } = useUniversityContext();
-  const { pageTitle, pageSubtitle, baseYear } = admissionData;
+  const BASE_YEAR_OPTIONS = [2025, 2024, 2023];
+  const [selectedBaseYear, setSelectedBaseYear] = useState(DEFAULT_BASE_YEAR);
 
   const [kpiCards, setKpiCards] = useState([]);
   const [dbEnrollmentRates, setDbEnrollmentRates] = useState([]);
@@ -43,10 +45,10 @@ export default function AdmissionDashboard() {
     () => ({
       screen_code: "admission",
       screen_ver: "v0.1",
-      screen_base_year: 2025,
+      screen_base_year: selectedBaseYear,
       schl_nm: schlNm,
     }),
-    [schlNm],
+    [schlNm, selectedBaseYear],
   );
 
   const { title: headerTitle, subtitle: headerSubtitle } =
@@ -56,6 +58,17 @@ export default function AdmissionDashboard() {
       screenBaseYear: params.screen_base_year,
       schlNm: params.schl_nm,
     });
+
+  const { title: panelTitle, subtitle: panelSubtitle } = useThemePanelSummary({
+    screenCode: params.screen_code,
+    screenVer: params.screen_ver,
+    screenBaseYear: params.screen_base_year,
+    schlNm: params.schl_nm,
+  });
+
+  const showSummaryJudgment = Boolean(
+    (panelTitle && panelTitle.trim()) || (panelSubtitle && panelSubtitle.trim()),
+  );
 
   const { title: insightTitle, items: dbInsights } = useThemeTextBlockLines({
     screenCode: params.screen_code,
@@ -146,7 +159,16 @@ export default function AdmissionDashboard() {
 
   return (
     <div className="max-w-[1600px] mx-auto px-8 py-6 space-y-8">
-      <PageTitleSection title={headerTitle} subtitle={headerSubtitle} baseYear={baseYear} />
+      <PageTitleSection
+        title={headerTitle}
+        subtitle={headerSubtitle}
+        baseYear={selectedBaseYear}
+        baseYearOptions={BASE_YEAR_OPTIONS}
+        onBaseYearChange={setSelectedBaseYear}
+        showSummaryJudgment={showSummaryJudgment}
+        summaryJudgmentTitle={panelTitle}
+        summaryJudgmentSubtitle={panelSubtitle}
+      />
 
       <StatusChips filters={statusChips} />
       <AdmissionKPICards kpiCards={kpiCards} />
@@ -166,7 +188,11 @@ export default function AdmissionDashboard() {
 
       <InsightsTableLayout
         insightsComponent={
-          <InsightsPanel title={insightTitle} items={dbInsights} loading={false} />
+          <InsightsPanel
+            title={insightTitle}
+            items={dbInsights}
+            loading={false}
+          />
         }
         tableComponent={<AdmissionTable refs={sourceRefs} />}
       />

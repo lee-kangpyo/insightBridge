@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import financeData from "../../data/finance-data.json";
 import PageTitleSection from "../main/PageTitleSection";
 import StatusChips from "../main/StatusChips";
 import InsightsTableLayout from "../main/InsightsTableLayout";
@@ -11,12 +10,14 @@ import { useThemeSourceRefs } from "../../hooks/useThemeSourceRefs";
 import { useThemeChartBlockMeta } from "../../hooks/useThemeChartBlockMeta";
 import { useThemeTextBlockLines } from "../../hooks/useThemeTextBlockLines";
 import { useThemeHeaderContext } from "../../hooks/useThemeHeaderContext";
+import { useThemePanelSummary } from "../../hooks/useThemePanelSummary";
 import { useUniversityContext } from "../../hooks/useUniversityContext";
 import {
   mapThemeItemsToFinanceRevenueTop,
   mapThemeItemsToFinanceTuitionBars,
 } from "../../utils/mapThemeItemsToFinanceCharts";
-import { AnimatedPercentBarFill } from "../common/AnimatedPercentBarFill";
+import ThemeBarRatioFill from "../common/ThemeBarRatioFill";
+import { formatBarRatioNumPercent } from "../../utils/parseBarRatioDisplayTextPercent";
 
 const BAR_FILL = {
   primary: "#002c5a",
@@ -34,13 +35,14 @@ const REVENUE_BORDER = {
   "border-primary-fixed-dim": BAR_FILL["primary-fixed-dim"],
 };
 
-const FINANCE_SCREEN_BASE_YEAR = 2025;
 const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
 const INSIGHT_LINE_ROLE = "INSIGHT";
+const DEFAULT_BASE_YEAR = 2025;
 
 export default function FinanceDashboard() {
   const { schlNm, ready: universityReady, statusChips } = useUniversityContext();
-  const { meta, tuitionByField, revenueStructure } = financeData;
+  const BASE_YEAR_OPTIONS = [2025, 2024, 2023];
+  const [selectedBaseYear, setSelectedBaseYear] = useState(DEFAULT_BASE_YEAR);
 
   const [kpiCards, setKpiCards] = useState([]);
 
@@ -48,18 +50,30 @@ export default function FinanceDashboard() {
     () => ({
       screen_code: "finance",
       screen_ver: "v0.1",
-      screen_base_year: FINANCE_SCREEN_BASE_YEAR,
+      screen_base_year: selectedBaseYear,
       schl_nm: schlNm,
     }),
-    [schlNm],
+    [schlNm, selectedBaseYear],
   );
 
-  const { title: headerTitle, subtitle: headerSubtitle } = useThemeHeaderContext({
+  const { title: headerTitle, subtitle: headerSubtitle } =
+    useThemeHeaderContext({
+      screenCode: themeParams.screen_code,
+      screenVer: themeParams.screen_ver,
+      screenBaseYear: themeParams.screen_base_year,
+      schlNm: themeParams.schl_nm,
+    });
+
+  const { title: panelTitle, subtitle: panelSubtitle } = useThemePanelSummary({
     screenCode: themeParams.screen_code,
     screenVer: themeParams.screen_ver,
     screenBaseYear: themeParams.screen_base_year,
     schlNm: themeParams.schl_nm,
   });
+
+  const showSummaryJudgment = Boolean(
+    (panelTitle && panelTitle.trim()) || (panelSubtitle && panelSubtitle.trim()),
+  );
 
   const {
     title: insightTitle,
@@ -81,8 +95,13 @@ export default function FinanceDashboard() {
     schlNm: themeParams.schl_nm,
   });
 
-  const { chartLeft, chartRight, leftBlockItems, rightBlockItems, chartBlocksStatus } =
-    useThemeChartBlockMeta({
+  const {
+    chartLeft,
+    chartRight,
+    leftBlockItems,
+    rightBlockItems,
+    chartBlocksStatus,
+  } = useThemeChartBlockMeta({
     screenCode: themeParams.screen_code,
     screenVer: themeParams.screen_ver,
     screenBaseYear: themeParams.screen_base_year,
@@ -90,11 +109,9 @@ export default function FinanceDashboard() {
     blockCode: "CHART_BLOCK",
   });
 
-  const tuitionBlockTitle =
-    chartLeft.title?.trim() || "계열별 등록금 수준";
+  const tuitionBlockTitle = chartLeft.title?.trim() || "계열별 등록금 수준";
   const tuitionBlockSubtitle = chartLeft.subtitle?.trim() || "";
-  const revenueBlockTitle =
-    chartRight.title?.trim() || "세입 구조 상위 항목";
+  const revenueBlockTitle = chartRight.title?.trim() || "세입 구조 상위 항목";
   const revenueBlockSubtitle = chartRight.subtitle?.trim() || "";
 
   const tuitionFromDb = useMemo(() => {
@@ -142,7 +159,12 @@ export default function FinanceDashboard() {
       <PageTitleSection
         title={headerTitle}
         subtitle={headerSubtitle}
-        baseYear={meta.baseYear}
+        baseYear={selectedBaseYear}
+        baseYearOptions={BASE_YEAR_OPTIONS}
+        onBaseYearChange={setSelectedBaseYear}
+        showSummaryJudgment={showSummaryJudgment}
+        summaryJudgmentTitle={panelTitle}
+        summaryJudgmentSubtitle={panelSubtitle}
       />
 
       <StatusChips filters={statusChips} />
@@ -178,20 +200,20 @@ export default function FinanceDashboard() {
                 <div key={index} className="space-y-2">
                   <div className="flex justify-between text-xs font-semibold text-on-surface-variant">
                     <span>{item.field}</span>
-                    <span>{item.amount.toLocaleString()}원</span>
+                    <span className="text-primary">
+                      {formatBarRatioNumPercent(item.bar_ratio_num)}
+                    </span>
                   </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-surface-variant">
-                    <AnimatedPercentBarFill
-                      percent={item.percentage}
-                      className="h-full shrink-0 rounded-full"
-                      style={{
-                        backgroundColor:
-                          item.colorHex ||
-                          BAR_FILL[item.colorToken || item.color] ||
-                          BAR_FILL.primary,
-                      }}
-                    />
-                  </div>
+                  <ThemeBarRatioFill
+                    percent={item.barPercent}
+                    barRatioDisplayText={item.bar_ratio_display_text}
+                    fillStyle={{
+                      backgroundColor:
+                        item.colorHex ||
+                        BAR_FILL[item.colorToken || item.color] ||
+                        BAR_FILL.primary,
+                    }}
+                  />
                 </div>
               ))
             )}
@@ -235,8 +257,15 @@ export default function FinanceDashboard() {
                   }}
                 >
                   <span className="text-sm font-medium">{item.item}</span>
-                  <span className="text-sm font-extrabold text-secondary">
-                    {item.percentage}%
+                  <span className="text-sm font-extrabold text-secondary text-right">
+                    <span className="block">
+                      {formatBarRatioNumPercent(item.bar_ratio_num)}
+                    </span>
+                    {item.bar_ratio_display_text ? (
+                      <span className="mt-0.5 block text-[10px] font-semibold text-on-surface-variant">
+                        {item.bar_ratio_display_text}
+                      </span>
+                    ) : null}
                   </span>
                 </div>
               ))

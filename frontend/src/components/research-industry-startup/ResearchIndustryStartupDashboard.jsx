@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
-import researchData from '../../data/research-industry-startup-data.json';
-import PageTitleSection from '../main/PageTitleSection';
-import StatusChips from '../main/StatusChips';
-import InsightsTableLayout from '../main/InsightsTableLayout';
-import InsightsPanel from '../main/InsightsPanel';
+import { useEffect, useMemo, useState } from "react";
+import PageTitleSection from "../main/PageTitleSection";
+import StatusChips from "../main/StatusChips";
+import InsightsTableLayout from "../main/InsightsTableLayout";
+import InsightsPanel from "../main/InsightsPanel";
 import {
   ResearchIndustryStartupKPICards,
   ResearchFundStructureChart,
@@ -17,15 +16,21 @@ import { mapThemeItemsToResearchFundSources } from "../../utils/mapThemeItemsToR
 import { mapThemeItemsToResearchStartupProgress } from "../../utils/mapThemeItemsToResearchStartupProgress";
 import { useThemeTextBlockLines } from "../../hooks/useThemeTextBlockLines";
 import { useThemeHeaderContext } from "../../hooks/useThemeHeaderContext";
+import { useThemePanelSummary } from "../../hooks/useThemePanelSummary";
 import { useUniversityContext } from "../../hooks/useUniversityContext";
 
-const RESEARCH_SCREEN_BASE_YEAR = 2025;
 const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
 const INSIGHT_LINE_ROLE = "INSIGHT";
+const DEFAULT_BASE_YEAR = 2025;
 
 export default function ResearchIndustryStartupDashboard() {
-  const { schlNm, ready: universityReady, statusChips } = useUniversityContext();
-  const { pageTitle, pageSubtitle, baseYear } = researchData;
+  const {
+    schlNm,
+    ready: universityReady,
+    statusChips,
+  } = useUniversityContext();
+  const BASE_YEAR_OPTIONS = [2025, 2024, 2023];
+  const [selectedBaseYear, setSelectedBaseYear] = useState(DEFAULT_BASE_YEAR);
 
   const [kpiCards, setKpiCards] = useState([]);
 
@@ -33,10 +38,10 @@ export default function ResearchIndustryStartupDashboard() {
     () => ({
       screen_code: "research",
       screen_ver: "v0.1",
-      screen_base_year: RESEARCH_SCREEN_BASE_YEAR,
+      screen_base_year: selectedBaseYear,
       schl_nm: schlNm,
     }),
-    [schlNm],
+    [schlNm, selectedBaseYear],
   );
 
   const { title: headerTitle, subtitle: headerSubtitle } =
@@ -46,6 +51,17 @@ export default function ResearchIndustryStartupDashboard() {
       screenBaseYear: themeParams.screen_base_year,
       schlNm: themeParams.schl_nm,
     });
+
+  const { title: panelTitle, subtitle: panelSubtitle } = useThemePanelSummary({
+    screenCode: themeParams.screen_code,
+    screenVer: themeParams.screen_ver,
+    screenBaseYear: themeParams.screen_base_year,
+    schlNm: themeParams.schl_nm,
+  });
+
+  const showSummaryJudgment = Boolean(
+    (panelTitle && panelTitle.trim()) || (panelSubtitle && panelSubtitle.trim()),
+  );
 
   useEffect(() => {
     if (!universityReady || !schlNm) return;
@@ -110,7 +126,16 @@ export default function ResearchIndustryStartupDashboard() {
 
   return (
     <div className="max-w-[1600px] mx-auto px-8 py-6 space-y-8">
-      <PageTitleSection title={headerTitle} subtitle={headerSubtitle} baseYear={baseYear} />
+      <PageTitleSection
+        title={headerTitle}
+        subtitle={headerSubtitle}
+        baseYear={selectedBaseYear}
+        baseYearOptions={BASE_YEAR_OPTIONS}
+        onBaseYearChange={setSelectedBaseYear}
+        showSummaryJudgment={showSummaryJudgment}
+        summaryJudgmentTitle={panelTitle}
+        summaryJudgmentSubtitle={panelSubtitle}
+      />
 
       <StatusChips filters={statusChips} />
       <ResearchIndustryStartupKPICards kpiCards={kpiCards} />
@@ -120,9 +145,7 @@ export default function ResearchIndustryStartupDashboard() {
           <ResearchFundStructureChart
             overrideSources={fundSourcesFromDb}
             bannerYear={
-              fundSourcesFromDb.length > 0
-                ? RESEARCH_SCREEN_BASE_YEAR
-                : undefined
+              fundSourcesFromDb.length > 0 ? selectedBaseYear : undefined
             }
             title={chartLeft.title}
             subtitle={chartLeft.subtitle}
@@ -137,9 +160,15 @@ export default function ResearchIndustryStartupDashboard() {
 
       <InsightsTableLayout
         insightsComponent={
-          <InsightsPanel title={insightTitle} items={dbInsights} loading={false} />
+          <InsightsPanel
+            title={insightTitle}
+            items={dbInsights}
+            loading={false}
+          />
         }
-        tableComponent={<ResearchIndustryStartupTable tablePreview={sourceRefs} />}
+        tableComponent={
+          <ResearchIndustryStartupTable tablePreview={sourceRefs} />
+        }
       />
     </div>
   );

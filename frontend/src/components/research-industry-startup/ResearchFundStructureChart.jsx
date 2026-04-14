@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { normalizeResearchFundSources } from '../../utils/normalizeResearchFundSources';
-import { AnimatedPercentBarFill } from '../common/AnimatedPercentBarFill';
+import ThemeBarRatioFill from '../common/ThemeBarRatioFill';
+import EmptyState from "../common/EmptyState";
 
 const BAR_COLORS = {
   '교내 연구비': 'bg-primary',
@@ -13,12 +14,11 @@ const BAR_COLORS = {
 
 /**
  * @param {object} props
- * @param {Array} [props.overrideSources] — undefined: 샘플 fundStructure 사용. 배열(빈 배열 포함): API/DB 행만 사용(빈 배열이면 차트 없음).
- * @param {string|number} [props.bannerYear] — override 사용 시 상단 연도(샘플 JSON 연도와 섞이지 않게)
- * @param {string} [props.bannerTotalText] — override 사용 시 상단 합계 문구
+ * @param {Array} props.overrideSources — DB/API 행만 (빈 배열이면 미공시)
+ * @param {string|number} [props.bannerYear]
+ * @param {string} [props.bannerTotalText]
  */
 export default function ResearchFundStructureChart({
-  fundStructure,
   title,
   subtitle,
   overrideSources,
@@ -28,25 +28,16 @@ export default function ResearchFundStructureChart({
   const heading = title?.trim() ? title : '연구비 재원 구조';
   const sub = subtitle?.trim() ? subtitle : '';
 
-  const latest = useMemo(() => {
-    if (!Array.isArray(fundStructure) || fundStructure.length === 0) return null;
-    return [...fundStructure].sort((a, b) => Number(b.year) - Number(a.year))[0];
-  }, [fundStructure]);
-
   const rows = useMemo(() => {
-    if (overrideSources !== undefined) {
-      return normalizeResearchFundSources(overrideSources);
-    }
-    return normalizeResearchFundSources(latest?.sources);
-  }, [latest, overrideSources]);
+    if (!Array.isArray(overrideSources)) return [];
+    return normalizeResearchFundSources(overrideSources);
+  }, [overrideSources]);
 
-  if (rows.length === 0) return null;
+  const hasRows = rows.length > 0;
 
-  const showDbBanner = overrideSources !== undefined && bannerYear != null;
-  const banner = showDbBanner
-    ? { year: String(bannerYear), total: bannerTotalText ?? '' }
-    : latest
-      ? { year: String(latest.year), total: latest.total }
+  const banner =
+    bannerYear != null
+      ? { year: String(bannerYear), total: bannerTotalText ?? '' }
       : null;
 
   return (
@@ -66,29 +57,33 @@ export default function ResearchFundStructureChart({
           </p>
         ) : null}
       </div>
-      <div className="space-y-6">
-        {rows.map((item) => {
-          const pct = Math.min(100, Math.max(0, Number(item.percentage) || 0));
-          const barClass = BAR_COLORS[item.name] || 'bg-secondary';
-          return (
-            <div key={item.name} className="space-y-2">
-              <div className="flex justify-between items-center text-sm">
-                <span className="font-medium text-on-surface-variant">{item.name}</span>
-                <span className="font-bold text-secondary">
-                  {pct}
-                  <span className="text-xs font-normal text-outline">%</span>
-                </span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-surface-container">
-                <AnimatedPercentBarFill
+      {hasRows ? (
+        <div className="space-y-6">
+          {rows.map((item) => {
+            const pct = Math.min(100, Math.max(0, Number(item.percentage) || 0));
+            const barClass = BAR_COLORS[item.name] || 'bg-secondary';
+            return (
+              <div key={item.name} className="space-y-2">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="font-medium text-on-surface-variant">{item.name}</span>
+                </div>
+                <ThemeBarRatioFill
                   percent={pct}
-                  className={`h-full shrink-0 rounded-full ${barClass}`}
+                  barRatioDisplayText={item.bar_ratio_display_text}
+                  fillClassName={barClass}
                 />
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      ) : (
+        <EmptyState
+          title="미공시"
+          description="연구비 재원 구조 데이터가 미공시입니다."
+          minHeight={240}
+          icon="donut_small"
+        />
+      )}
     </div>
   );
 }

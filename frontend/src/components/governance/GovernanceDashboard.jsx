@@ -1,4 +1,3 @@
-import governanceData from "../../data/governance-data.json";
 import PageTitleSection from "../main/PageTitleSection";
 import StatusChips from "../main/StatusChips";
 import AdmissionTable from "../admission/AdmissionTable";
@@ -14,10 +13,13 @@ import { GovernanceKPICards } from "./index";
 
 const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
 const INSIGHT_LINE_ROLE = "INSIGHT";
+const DEFAULT_BASE_YEAR = 2025;
 
 export default function GovernanceDashboard() {
   const { schlNm, ready: universityReady, statusChips } = useUniversityContext();
-  const { meta } = governanceData;
+
+  const BASE_YEAR_OPTIONS = [2025, 2024, 2023];
+  const [selectedBaseYear, setSelectedBaseYear] = useState(DEFAULT_BASE_YEAR);
 
   const [kpiCards, setKpiCards] = useState([]);
   const [insightsLoading, setInsightsLoading] = useState(true);
@@ -28,10 +30,10 @@ export default function GovernanceDashboard() {
     () => ({
       screen_code: "governance",
       screen_ver: "v0.1",
-      screen_base_year: meta.baseYear,
+      screen_base_year: selectedBaseYear,
       schl_nm: schlNm,
     }),
-    [meta.baseYear, schlNm],
+    [selectedBaseYear, schlNm],
   );
 
   const { title: headerTitle, subtitle: headerSubtitle } =
@@ -114,7 +116,9 @@ export default function GovernanceDashboard() {
       <PageTitleSection
         title={headerTitle}
         subtitle={headerSubtitle}
-        baseYear={meta.baseYear}
+        baseYear={selectedBaseYear}
+        baseYearOptions={BASE_YEAR_OPTIONS}
+        onBaseYearChange={setSelectedBaseYear}
       />
 
       <StatusChips filters={statusChips} />

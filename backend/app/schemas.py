@@ -283,8 +283,10 @@ class ThemeChartItem(BaseModel):
     displayText: str
     noteText: str
     colorHex: str
-    # 막대 비율 표시/파싱용 (예: "3.5%") — DB `bar_ratio_display_text`
-    barRatioDisplayText: Optional[str] = None
+    # 비율 표시용 숫자(%) — DB `bar_ratio_num`
+    bar_ratio_num: Optional[float] = None
+    # 막대 렌더링용 비율 값(문자열) — DB `bar_ratio_display_text`
+    bar_ratio_display_text: Optional[str] = None
 
 
 class ThemeChartBlock(BaseModel):
@@ -331,8 +333,8 @@ class ThemeSourceRefsResponse(BaseModel):
 
 class AdmissionEnrollmentRateItem(BaseModel):
     type: str
-    currentYear: float
-    previousYear: Optional[float] = None
+    bar_ratio_num: Optional[float] = None
+    bar_ratio_display_text: Optional[str] = None
 
 
 class AdmissionEnrollmentRatesResponse(BaseModel):
@@ -343,10 +345,7 @@ class AdmissionEnrollmentRatesResponse(BaseModel):
 
 class AdmissionOpportunityBalanceItem(BaseModel):
     category: str
-    # 막대 너비(0~100): `bar_ratio_display_text`에서만 파싱, 실패 시 0
-    ratio: float
-    previousRatio: Optional[float] = None
-    # DB `bar_ratio_display_text` 원문(우측 표시 + 비율 파싱 소스)
+    bar_ratio_num: Optional[float] = None
     bar_ratio_display_text: Optional[str] = None
 
 

@@ -175,6 +175,7 @@ async def get_theme_chart_blocks(
       item_display_text,
       item_note_text,
       item_color_hex,
+      bar_ratio_num,
       bar_ratio_display_text
     FROM public.tq_screen_chart_item
     WHERE screen_code=$1
@@ -197,6 +198,7 @@ async def get_theme_chart_blocks(
         block_code = r["block_code"]
         brt = r.get("bar_ratio_display_text")
         brt_s = str(brt).strip() if brt is not None else ""
+        brn = r.get("bar_ratio_num")
         items_by_block.setdefault(block_code, []).append(
             ThemeChartItem(
                 order=int(r["item_order"]),
@@ -205,7 +207,8 @@ async def get_theme_chart_blocks(
                 displayText=r["item_display_text"],
                 noteText=r["item_note_text"],
                 colorHex=r["item_color_hex"],
-                barRatioDisplayText=brt_s if brt_s else None,
+                bar_ratio_num=float(brn) if brn is not None else None,
+                bar_ratio_display_text=brt_s if brt_s else None,
             )
         )
 

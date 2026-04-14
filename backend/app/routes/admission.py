@@ -28,22 +28,6 @@ def _try_parse_float(v: object):
         return None
 
 
-def _ratio_percent_from_bar_ratio_display_text(v: object) -> float | None:
-    """`bar_ratio_display_text`에 담긴 막대 비율(%) 숫자만 추출. 예: '45.2%', '45,2', '45'."""
-    if v is None:
-        return None
-    s = str(v).strip()
-    if not s:
-        return None
-    s = s.replace("%", "").replace(",", ".").strip()
-    # 앞쪽 숫자만 (예: "약 12.3" → 실패 시 None)
-    try:
-        x = float(s)
-    except ValueError:
-        return None
-    return max(0.0, min(100.0, x))
-
-
 @router.get(
     "/api/admission/enrollment-rates", response_model=AdmissionEnrollmentRatesResponse
 )
@@ -61,9 +45,7 @@ async def get_admission_enrollment_rates(
     # - **필수 필터**: screen_code, screen_ver, screen_base_year, schl_nm, block_code
     # - **아이템 매핑 규칙**
     #   - type = item_label
-    #   - currentYear = item_value_num (등록률 %, 0~100 기대)
-    #   - previousYear = item_note_text (선택, 숫자 파싱)
-    #   - displayText = item_display_text (표시 텍스트)
+    #   - bar_ratio_num = 비율 표시(%), bar_ratio_display_text = 막대 렌더용(프론트 파싱)
     sql_block = """
     SELECT
       block_title,
@@ -80,9 +62,8 @@ async def get_admission_enrollment_rates(
     SELECT
       item_order,
       item_label,
-      item_value_num,
-      item_display_text,
-      item_note_text
+      bar_ratio_num,
+      bar_ratio_display_text
     FROM public.tq_screen_chart_item
     WHERE screen_code=$1
       AND screen_ver=$2
@@ -109,17 +90,25 @@ async def get_admission_enrollment_rates(
             title=title, subtitle=subtitle, items=[]
         )
 
+    def _brt_only(row) -> str | None:
+        v = row.get("bar_ratio_display_text")
+        if v is None:
+            return None
+        s = str(v).strip()
+        return s if s else None
+
     items: list[AdmissionEnrollmentRateItem] = []
     for r in rows:
-        current = _try_parse_float(r["item_value_num"])
-        if current is None:
+        label = r["item_label"]
+        if not label:
             continue
 
+        brn = _try_parse_float(r.get("bar_ratio_num"))
         items.append(
             AdmissionEnrollmentRateItem(
-                type=r["item_label"],
-                currentYear=current,
-                previousYear=_try_parse_float(r["item_note_text"]),
+                type=label,
+                bar_ratio_num=float(brn) if brn is not None else None,
+                bar_ratio_display_text=_brt_only(dict(r)),
             )
         )
 
@@ -143,9 +132,7 @@ async def get_admission_opportunity_balance(
     # - **원천 테이블**: tq_screen_chart_block(제목/부제), tq_screen_chart_item(항목)
     # - **아이템 매핑 규칙**
     #   - category = item_label
-    #   - ratio = 막대 너비(%) — `bar_ratio_display_text`에서만 파싱, 실패 시 0 (item_value_num 미사용)
-    #   - previousRatio = item_note_text (선택, 숫자 파싱)
-    #   - bar_ratio_display_text = DB 원문(우측 표시 + 막대 비율 파싱 소스)
+    #   - bar_ratio_num / bar_ratio_display_text = DB 그대로 (표시 vs 막대는 프론트)
     sql_block = """
     SELECT
       block_title,
@@ -162,9 +149,7 @@ async def get_admission_opportunity_balance(
     SELECT
       item_order,
       item_label,
-      item_value_num,
-      item_note_text,
-      item_display_text,
+      bar_ratio_num,
       bar_ratio_display_text
     FROM public.tq_screen_chart_item
     WHERE screen_code=$1
@@ -192,7 +177,7 @@ async def get_admission_opportunity_balance(
             title=title, subtitle=subtitle, items=[]
         )
 
-    def _bar_ratio_display_text_only(row: dict) -> str | None:
+    def _brt_only(row: dict) -> str | None:
         v = row.get("bar_ratio_display_text")
         if v is None:
             return None
@@ -202,15 +187,12 @@ async def get_admission_opportunity_balance(
     items: list[AdmissionOpportunityBalanceItem] = []
     for r in rows:
         d = dict(r)
-        parsed = _ratio_percent_from_bar_ratio_display_text(d.get("bar_ratio_display_text"))
-        ratio = 0.0 if parsed is None else parsed
-
+        brn = _try_parse_float(d.get("bar_ratio_num"))
         items.append(
             AdmissionOpportunityBalanceItem(
                 category=d["item_label"],
-                ratio=ratio,
-                previousRatio=_try_parse_float(d.get("item_note_text")),
-                bar_ratio_display_text=_bar_ratio_display_text_only(d),
+                bar_ratio_num=float(brn) if brn is not None else None,
+                bar_ratio_display_text=_brt_only(d),
             )
         )
 

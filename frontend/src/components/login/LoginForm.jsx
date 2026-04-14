@@ -3,7 +3,6 @@ import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const SHOW_CREDENTIAL_RECOVERY_LINK =
   (import.meta.env.VITE_SHOW_CREDENTIAL_RECOVERY_LINK ?? 'false') === 'true';
 const REMEMBERED_EMAIL_KEY = 'remembered_email';

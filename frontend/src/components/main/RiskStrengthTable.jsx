@@ -1,3 +1,5 @@
+import EmptyState from "../common/EmptyState";
+
 function Legend({ items }) {
   if (!items?.length) return null;
 
@@ -33,51 +35,62 @@ function Cell({ cell, align = "left" }) {
 }
 
 export default function RiskStrengthTable({ data, legend }) {
-  if (!data?.length) return null;
+  const rows = Array.isArray(data) ? data : [];
 
   return (
     <div className="bg-surface-container-lowest p-6 rounded-xl shadow-[0_8px_32px_rgba(24,28,30,0.04)]">
       <h3 className="text-lg font-bold text-primary mb-6 flex items-center gap-2">
         <span>종합 리스크/우위 분석</span>
       </h3>
-      <table className="w-full text-left">
-        <thead>
-          <tr className="bg-surface-container-highest/50 text-[10px] font-bold text-outline uppercase tracking-wider">
-            <th className="px-4 py-3 rounded-tl-lg">지표명</th>
-            <th className="px-4 py-3">지역 대비</th>
-            <th className="px-4 py-3">전국 대비</th>
-            <th className="px-4 py-3 rounded-tr-lg">종합 판정</th>
-          </tr>
-        </thead>
-        <tbody className="text-sm">
-          {data.map((row, index) => (
-            <tr
-              key={row.indicator?.code || row.indicator}
-              className={`hover:bg-surface-container-low transition-colors ${index > 0 ? "border-t border-outline-variant/10" : ""}`}
-            >
-              <td className="px-4 py-4 font-semibold text-primary">
-                {row.indicator?.name || row.indicator}
-              </td>
-              <td className="px-4 py-4">
-                <Cell cell={row.regional} align="right" />
-              </td>
-              <td className="px-4 py-4">
-                <Cell cell={row.national} align="right" />
-              </td>
-              <td className="px-4 py-4">
-                <div
-                  className="inline-flex min-w-[7rem] max-w-full justify-center items-center px-3 py-2 rounded-md border border-outline-variant/20 text-[12px] font-bold text-black text-center leading-tight"
-                  style={{ backgroundColor: row.overall?.colorHex }}
-                  title={row.overall?.statusName}
+      {rows.length ? (
+        <>
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-surface-container-highest/50 text-[10px] font-bold text-outline uppercase tracking-wider">
+                <th className="px-4 py-3 rounded-tl-lg">지표명</th>
+                <th className="px-4 py-3">지역 대비</th>
+                <th className="px-4 py-3">전국 대비</th>
+                <th className="px-4 py-3 rounded-tr-lg">종합 판정</th>
+              </tr>
+            </thead>
+            <tbody className="text-sm">
+              {rows.map((row, index) => (
+                <tr
+                  key={row.indicator?.code || row.indicator}
+                  className={`hover:bg-surface-container-low transition-colors ${index > 0 ? "border-t border-outline-variant/10" : ""}`}
                 >
-                  {row.overall?.displayText || row.overallStatus}
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <Legend items={legend} />
+                  <td className="px-4 py-4 font-semibold text-primary">
+                    {row.indicator?.name || row.indicator}
+                  </td>
+                  <td className="px-4 py-4">
+                    <Cell cell={row.regional} align="right" />
+                  </td>
+                  <td className="px-4 py-4">
+                    <Cell cell={row.national} align="right" />
+                  </td>
+                  <td className="px-4 py-4">
+                    <div
+                      className="inline-flex min-w-[7rem] max-w-full justify-center items-center px-3 py-2 rounded-md border border-outline-variant/20 text-[12px] font-bold text-black text-center leading-tight"
+                      style={{ backgroundColor: row.overall?.colorHex }}
+                      title={row.overall?.statusName}
+                    >
+                      {row.overall?.displayText || row.overallStatus}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <Legend items={legend} />
+        </>
+      ) : (
+        <EmptyState
+          title="미공시"
+          description="리스크/우위 분석 데이터가 미공시입니다."
+          minHeight={260}
+          icon="table_chart"
+        />
+      )}
     </div>
   );
 }
