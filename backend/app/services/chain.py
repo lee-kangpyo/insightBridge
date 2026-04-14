@@ -2,6 +2,7 @@ import logging
 import re
 from typing import Any, AsyncGenerator, Optional
 
+import pandas as pd
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.messages import AIMessage
 from langchain_core.messages import ToolMessage
@@ -9,6 +10,7 @@ from langchain_core.tools import BaseTool
 
 from .chat_models import create_chat_model
 from .tools import execute_sql, get_full_schema, get_columns_batch, done
+from ..database import fetch_df
 
 logger = logging.getLogger(__name__)
 
@@ -331,10 +333,6 @@ async def run_sql_chain_multi(
                        "chart_config": dict|None, "evaluation": str})
         ("done", {"best_index": int, "reason": str})
     """
-    import pandas as pd
-
-    from ..database import fetch_df
-
     llm_with_tools = chain_info["llm"]
     tools = chain_info["tools"]
     system_message = chain_info["prompt"]
@@ -356,7 +354,7 @@ async def run_sql_chain_multi(
         )
 
         response = await llm_with_tools.ainvoke(messages)
-        response_msg = (
+        response_msg: AIMessage = (
             response if isinstance(response, AIMessage) else AIMessage(content=str(response))
         )
 
@@ -398,6 +396,7 @@ async def run_sql_chain_multi(
                     break
 
                 sql = _normalize_sql_for_execution(sql)
+                chart_config = extract_chart_config_from_tool_calls(response_msg)
 
                 try:
                     df = await fetch_df(sql)
@@ -422,7 +421,7 @@ async def run_sql_chain_multi(
                         {
                             "sql": sql,
                             "data": data_records,
-                            "chart_config": None,
+                            "chart_config": chart_config,
                             "evaluation": result_summary,
                             "_null_ratio": null_r,
                         }
@@ -441,7 +440,7 @@ async def run_sql_chain_multi(
                             "index": candidate_idx,
                             "sql": sql,
                             "data": data_records,
-                            "chart_config": None,
+                            "chart_config": chart_config,
                             "evaluation": result_summary,
                         },
                     )
