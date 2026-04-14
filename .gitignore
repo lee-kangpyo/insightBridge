@@ -18,6 +18,7 @@ node_modules/
 
 # IDE
 .cursor/
+.gemini/
 .vscode/
 .idea/
 
@@ -29,3 +30,6 @@ Thumbs.db
 *.log
 docs/
 openspec/
+
+# Git worktrees
+.worktrees/
