@@ -1,7 +1,18 @@
-from pydantic_settings import BaseSettings
+from pathlib import Path
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# 이 파일 기준 backend/.env — uvicorn cwd가 레포 루트여도 동일하게 로드
+_ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=str(_ENV_PATH),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
     database_url: str
     openai_api_key: str
     openai_base_url: str = "https://api.openai.com/v1"
@@ -14,9 +25,6 @@ class Settings(BaseSettings):
     smtp_port: int
     smtp_user: str
     smtp_password: str
-
-    class Config:
-        env_file = ".env"
 
 
 settings = Settings()

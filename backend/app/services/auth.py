@@ -171,7 +171,7 @@ async def send_verification_email(email: str) -> Optional[str]:
 
 async def verify_and_mark_code_used(email: str, code: str) -> tuple[bool, str]:
     query = """
-        SELECT id FROM email_verifications
+        SELECT 1 FROM email_verifications
         WHERE email = $1 AND code = $2 AND used = FALSE AND expires_at > NOW()
         LIMIT 1
     """
@@ -179,7 +179,7 @@ async def verify_and_mark_code_used(email: str, code: str) -> tuple[bool, str]:
 
     if df.empty:
         check_used_query = """
-            SELECT id FROM email_verifications
+            SELECT 1 FROM email_verifications
             WHERE email = $1 AND code = $2 AND used = TRUE
             LIMIT 1
         """

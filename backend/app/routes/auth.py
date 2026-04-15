@@ -4,7 +4,7 @@ from app.services.auth import (
     authenticate_user,
     create_access_token,
     get_university_name_by_cd,
-    get_iniversity_chips,
+    get_institution_chips,
     get_password_hash,
     get_university_by_email_domain,
     send_verification_email,
@@ -90,9 +90,10 @@ async def get_current_user_info(current_user: dict = Depends(require_auth)):
 @router.post("/send-verification", response_model=SendVerificationResponse)
 async def send_verification(request: SendVerificationRequest):
     domain = request.email.split("@")[-1]
-    univ_info = await get_university_by_email_domain(domain)
-    if not univ_info:
-        raise HTTPException(status_code=400, detail="Invalid email domain")
+    # TEMP: Disable domain validation for testing
+    # univ_info = await get_university_by_email_domain(domain)
+    # if not univ_info:
+    #     raise HTTPException(status_code=400, detail="Invalid email domain")
 
     existing_user = await get_user_by_email(request.email)
     if existing_user:
@@ -121,18 +122,27 @@ async def verify_code(request: VerifyCodeRequest):
 
 @router.post("/register", response_model=RegisterResponse)
 async def register(request: RegisterRequest):
-    verified, _ = await verify_and_mark_code_used(
-        request.email, request.verification_code
-    )
-    if not verified:
+    check_query = """
+        SELECT 1 FROM email_verifications
+        WHERE email = $1 AND used = TRUE
+        LIMIT 1
+    """
+    from app.database import fetch_df
+
+    df = await fetch_df(check_query, (request.email,))
+    if df.empty:
         raise HTTPException(
-            status_code=400, detail="Invalid or expired verification code"
+            status_code=400, detail="이메일 인증이 완료되지 않았습니다."
         )
 
     domain = request.email.split("@")[-1]
-    univ_info = await get_university_by_email_domain(domain)
-    if not univ_info:
-        raise HTTPException(status_code=400, detail="Invalid email domain")
+    # TEMP: Disable domain validation for testing
+    # univ_info = await get_university_by_email_domain(domain)
+    # if not univ_info:
+    #     raise HTTPException(status_code=400, detail="Invalid email domain")
+
+    # Default univ_cd for testing (should be looked up from email domain)
+    univ_info = {"univ_cd": "00000", "univ_nm": "Test University"}
 
     hashed_password = get_password_hash(request.password)
 

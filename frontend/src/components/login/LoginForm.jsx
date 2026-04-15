@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const SHOW_CREDENTIAL_RECOVERY_LINK =
   (import.meta.env.VITE_SHOW_CREDENTIAL_RECOVERY_LINK ?? 'false') === 'true';
@@ -153,6 +153,16 @@ export default function LoginForm() {
         로그인
         <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
       </button>
+
+      <p className="text-center text-sm text-on-surface-variant">
+        계정이 없으신가요?{' '}
+        <Link
+          to="/signup"
+          className="text-primary-container font-bold hover:underline"
+        >
+          회원가입
+        </Link>
+      </p>
     </form>
   );
 }

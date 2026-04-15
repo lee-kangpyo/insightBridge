@@ -18,7 +18,7 @@ const step2Schema = z.object({
   phone: z
     .string()
     .min(1, '휴대전화 번호를 입력해주세요.')
-    .regex(/^010-\d{4}-\d{4}$/, '010-XXXX-XXXX 형식으로 입력해주세요.'),
+    .regex(/^010-\d{3,4}-\d{4}$/, '010-XXXX-XXXX 형식으로 입력해주세요.'),
 });
 
 export default function Step2Form({ initialData, onComplete, onBack }) {
@@ -29,6 +29,7 @@ export default function Step2Form({ initialData, onComplete, onBack }) {
     handleSubmit,
     formState: { errors },
     setValue,
+    watch,
   } = useForm({
     resolver: zodResolver(step2Schema),
     defaultValues: {
@@ -37,6 +38,8 @@ export default function Step2Form({ initialData, onComplete, onBack }) {
       phone: initialData?.phone || '',
     },
   });
+
+  const watchPhone = watch('phone', '');
 
   const onSubmit = (data) => {
     setError('');
@@ -48,9 +51,12 @@ export default function Step2Form({ initialData, onComplete, onBack }) {
   };
 
   const formatPhone = (value) => {
-    const digits = value.replace(/\D/g, '').slice(0, 10);
+    const digits = value.replace(/\D/g, '').slice(0, 11);
     if (digits.length <= 3) return digits;
-    if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    if (digits.length === 10) {
+      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+    }
     return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
   };
 
@@ -110,10 +116,16 @@ export default function Step2Form({ initialData, onComplete, onBack }) {
           id="phone"
           type="tel"
           inputMode="numeric"
+          autoComplete="tel"
           {...register('phone', {
             onChange: (e) => {
-              const formatted = formatPhone(e.target.value);
-              setValue('phone', formatted);
+              const rawValue = e.target.value;
+              if (rawValue.length < watchPhone.length) {
+                setValue('phone', rawValue, { shouldValidate: true });
+                return;
+              }
+              const formatted = formatPhone(rawValue);
+              setValue('phone', formatted, { shouldValidate: true });
             },
           })}
           placeholder="010-0000-0000"
