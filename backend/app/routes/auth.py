@@ -92,10 +92,10 @@ async def get_current_user_info(current_user: dict = Depends(require_auth)):
 @router.post("/send-verification", response_model=SendVerificationResponse)
 async def send_verification(request: SendVerificationRequest):
     domain = request.email.split("@")[-1]
-    # TEMP: Disable domain validation for testing
-    # univ_info = await get_university_by_email_domain(domain)
-    # if not univ_info:
-    #     raise HTTPException(status_code=400, detail="Invalid email domain")
+    if settings.domain_validation_enabled:
+        univ_info = await get_university_by_email_domain(domain)
+        if not univ_info:
+            raise HTTPException(status_code=400, detail="허용되지 않은 이메일 도메인입니다.")
 
     existing_user = await get_user_by_email(request.email)
     if existing_user:
@@ -138,13 +138,11 @@ async def register(request: RegisterRequest):
         )
 
     domain = request.email.split("@")[-1]
-    # TEMP: Disable domain validation for testing
-    # univ_info = await get_university_by_email_domain(domain)
-    # if not univ_info:
-    #     raise HTTPException(status_code=400, detail="Invalid email domain")
-
-    # Default univ_cd for testing (should be looked up from email domain)
-    univ_info = {"univ_cd": "00000", "univ_nm": "Test University"}
+    univ_info = None
+    if settings.domain_validation_enabled:
+        univ_info = await get_university_by_email_domain(domain)
+        if not univ_info:
+            raise HTTPException(status_code=400, detail="허용되지 않은 이메일 도메인입니다.")
 
     hashed_password = get_password_hash(request.password)
 
@@ -166,7 +164,7 @@ async def register(request: RegisterRequest):
             request.email,
             hashed_password,
             request.name,
-            univ_info["univ_cd"],
+            univ_info["univ_cd"] if univ_info else "00000",
             mobile1,
             mobile2,
             mobile3,

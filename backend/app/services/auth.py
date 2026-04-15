@@ -1,11 +1,14 @@
 import smtplib
 import bcrypt
+import logging
 from email.mime.text import MIMEText
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from app.config import settings
 from app.database import fetch_df, get_pool
+
+logger = logging.getLogger(__name__)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -101,23 +104,6 @@ async def get_institution_chips(schl_nm: str) -> dict:
     }
 
 
-def send_verification_email(to_email: str, code: str) -> bool:
-    try:
-        msg = MIMEText(f"Your verification code is: {code}", "plain")
-        msg["Subject"] = "InsightBridge Verification Code"
-        msg["From"] = settings.smtp_user
-        msg["To"] = to_email
-
-        with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
-            server.starttls()
-            server.login(settings.smtp_user, settings.smtp_password)
-            server.send_message(msg)
-
-        return True
-    except Exception:
-        return False
-
-
 async def get_university_by_email_domain(domain: str) -> Optional[dict]:
     query = "SELECT univ_cd, univ_nm FROM ts_univ_info WHERE email_domain = $1"
     df = await fetch_df(query, (domain,))
@@ -165,7 +151,10 @@ async def send_verification_email(email: str) -> Optional[str]:
             server.send_message(msg)
 
         return code
-    except Exception:
+    except Exception as e:
+        logger.error(
+            f"Failed to send verification email to {email}: {type(e).__name__}: {e}"
+        )
         return None
 
 

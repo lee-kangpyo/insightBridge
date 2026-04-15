@@ -13,6 +13,8 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    domain_validation_enabled: bool = True
+
     database_url: str
     openai_api_key: str
     openai_base_url: str = "https://api.openai.com/v1"

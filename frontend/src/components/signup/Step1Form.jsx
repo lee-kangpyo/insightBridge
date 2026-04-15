@@ -4,6 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import api from "../../services/api";
 
+const domainValidationEnabled = import.meta.env.VITE_DOMAIN_VALIDATION_ENABLED !== "false";
+
 const step1Schema = z
   .object({
     email: z
@@ -12,8 +14,9 @@ const step1Schema = z
       .email("유효한 이메일 형식이 아닙니다.")
       .refine(
         (val) => {
+          if (!domainValidationEnabled) return true;
           const domain = val.split("@")[1] || "";
-          return domain.includes(".ac.kr") || domain.includes("edu") || true;
+          return domain.includes(".ac.kr") || domain.includes("edu");
         },
         { message: "대학교 이메일 도메인이어야 합니다." },
       ),
