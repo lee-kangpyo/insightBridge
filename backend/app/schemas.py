@@ -410,3 +410,39 @@ class TokenPayload(BaseModel):
     sub: str
     univ_nm: str
     exp: int
+
+
+class SendVerificationRequest(BaseModel):
+    email: str
+
+
+class SendVerificationResponse(BaseModel):
+    success: bool
+
+
+class VerifyCodeRequest(BaseModel):
+    email: str
+    code: str
+
+
+class VerifyCodeResponse(BaseModel):
+    verified: bool
+
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    name: str
+    phone: str
+    mobile_co_cd: str
+    dept_nm: str
+    grade_nm: str
+    pos_nm: str
+    verification_code: str
+
+
+class RegisterResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    univ_nm: Optional[str] = None
+    institution_chips: Optional[InstitutionChips] = None

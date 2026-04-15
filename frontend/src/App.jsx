@@ -14,6 +14,7 @@ import QueryPage from "./pages/QueryPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import SupportPage from "./pages/SupportPage";
 import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
 
 function App() {
   return (
@@ -113,6 +114,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+      <Route path="/signup" element={<SignupPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

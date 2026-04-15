@@ -31,8 +31,21 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  const loginWithToken = useCallback((email, tokenData) => {
+    const { access_token, univ_nm, institution_chips } = tokenData;
+
+    localStorage.setItem("auth_token", access_token);
+    localStorage.setItem(
+      "auth_user",
+      JSON.stringify({ email, univ_nm, institution_chips }),
+    );
+
+    setToken(access_token);
+    setUser({ email, univ_nm, institution_chips });
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider value={{ user, token, login, logout, loginWithToken }}>
       {children}
     </AuthContext.Provider>
   );
