@@ -7,7 +7,7 @@ const STORAGE_USER_KEY = 'auth_user';
 export type MenuItem = {
   menu_id: number;
   menu_nm: string;
-  children: MenuItem[];
+  children?: MenuItem[];
   [key: string]: unknown;
 };
 
@@ -50,13 +50,21 @@ function readStoredUser(): AuthUser | null {
 }
 
 function writeStoredAuth(token: string, user: AuthUser) {
-  localStorage.setItem(STORAGE_TOKEN_KEY, token);
-  localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(user));
+  try {
+    localStorage.setItem(STORAGE_TOKEN_KEY, token);
+    localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(user));
+  } catch {
+    // ignore storage write failures (quota/privacy mode)
+  }
 }
 
 function clearStoredAuth() {
-  localStorage.removeItem(STORAGE_TOKEN_KEY);
-  localStorage.removeItem(STORAGE_USER_KEY);
+  try {
+    localStorage.removeItem(STORAGE_TOKEN_KEY);
+    localStorage.removeItem(STORAGE_USER_KEY);
+  } catch {
+    // ignore storage failures
+  }
 }
 
 const initialToken = readStoredToken();
@@ -71,15 +79,15 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
     const res = await api.post('/api/auth/login', { email, password });
     const { access_token, univ_nm, institution_chips } = res.data ?? {};
 
-    if (!access_token || typeof access_token !== 'string') {
+    if (!access_token || typeof access_token !== 'string' || access_token.trim().length === 0) {
       throw new Error('Login failed: missing access_token');
     }
 
     const user: AuthUser = { email, univ_nm, institution_chips };
-    writeStoredAuth(access_token, user);
+    writeStoredAuth(access_token.trim(), user);
 
     set({
-      token: access_token,
+      token: access_token.trim(),
       user,
     });
   },
@@ -108,7 +116,13 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
     }
 
     const { token: currentToken, user: currentUser } = get();
-    if (currentToken === token && currentUser === user) return;
+    if (currentToken === token) {
+      try {
+        if (JSON.stringify(currentUser) === JSON.stringify(user)) return;
+      } catch {
+        // ignore stringify issues and continue to set
+      }
+    }
     set({ token, user });
   },
 }));
