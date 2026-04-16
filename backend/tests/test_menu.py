@@ -34,7 +34,47 @@ class TestGetUserMenus:
 
             assert "menu_tree" in result
             assert isinstance(result["menu_tree"], list)
-            assert len(result["menu_tree"]) == 2
+            assert len(result["menu_tree"]) == 1
+            assert len(result["menu_tree"][0]["children"]) == 1
+
+
+class TestTreeifyMenus:
+    def test_treeify_menus(self):
+        from app.services.menu import treeify
+
+        flat_menus = [
+            {"menu_id": 1, "menu_nm": "종합현황", "parent_menu_id": 0},
+            {"menu_id": 9, "menu_nm": "서브1", "parent_menu_id": 1},
+            {"menu_id": 10, "menu_nm": "서브2", "parent_menu_id": 1},
+        ]
+
+        result = treeify(flat_menus)
+
+        assert len(result) == 1
+        assert result[0]["menu_id"] == 1
+        assert result[0]["menu_nm"] == "종합현황"
+        assert len(result[0]["children"]) == 2
+        child_ids = {c["menu_id"] for c in result[0]["children"]}
+        assert child_ids == {9, 10}
+
+    def test_treeify_menus_orphaned_children(self):
+        from app.services.menu import treeify
+
+        flat_menus = [
+            {"menu_id": 1, "menu_nm": "Root", "parent_menu_id": 0},
+            {"menu_id": 2, "menu_nm": "Orphan", "parent_menu_id": 999},
+        ]
+
+        result = treeify(flat_menus)
+
+        assert len(result) == 1
+        assert result[0]["menu_id"] == 1
+
+    def test_treeify_menus_empty(self):
+        from app.services.menu import treeify
+
+        result = treeify([])
+        assert result == []
 
 
 class TestMenuServiceEndpoint:

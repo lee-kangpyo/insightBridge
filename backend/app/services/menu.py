@@ -3,6 +3,25 @@ import pandas as pd
 from app.database import fetch_df
 
 
+def treeify(flat_menus: list) -> list:
+    if not flat_menus:
+        return []
+
+    menu_map: dict = {}
+    for menu in flat_menus:
+        menu_map[menu["menu_id"]] = {**menu, "children": []}
+
+    roots = []
+    for menu_id, menu in menu_map.items():
+        parent_id = menu.get("parent_menu_id")
+        if parent_id is None or parent_id == 0:
+            roots.append(menu)
+        elif parent_id in menu_map:
+            menu_map[parent_id]["children"].append(menu)
+
+    return roots
+
+
 def _sanitize_menu_record(record: dict) -> dict:
     result = {}
     for key, value in record.items():
@@ -31,4 +50,4 @@ async def get_user_menus(user_cd: int) -> dict:
             _sanitize_menu_record(row) for row in df.to_dict(orient="records")
         ]
 
-    return {"menu_tree": flat_menus}
+    return {"menu_tree": treeify(flat_menus)}
