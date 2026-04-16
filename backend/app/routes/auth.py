@@ -31,6 +31,30 @@ from app.schemas import (
 router = APIRouter()
 
 
+def _set_auth_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        key=settings.auth_cookie_name,
+        value=token,
+        httponly=True,
+        samesite=settings.auth_cookie_samesite,
+        max_age=settings.auth_cookie_max_age,
+        secure=settings.auth_cookie_secure,
+        path="/",
+    )
+
+
+def _clear_auth_cookie(response: Response) -> None:
+    response.set_cookie(
+        key=settings.auth_cookie_name,
+        value="",
+        httponly=True,
+        samesite=settings.auth_cookie_samesite,
+        max_age=0,
+        secure=settings.auth_cookie_secure,
+        path="/",
+    )
+
+
 @router.post("/token", response_model=OAuth2TokenResponse)
 async def login_for_access_token(
     response: Response,
@@ -51,14 +75,7 @@ async def login_for_access_token(
         data={"sub": str(user["user_cd"]), "univ_nm": univ_nm}
     )
 
-    response.set_cookie(
-        key="auth_token",
-        value=access_token,
-        httponly=True,
-        samesite="lax",
-        max_age=3600,
-        secure=not settings.debug,
-    )
+    _set_auth_cookie(response, access_token)
 
     chips = await get_institution_chips(univ_nm)
 
@@ -86,14 +103,7 @@ async def login(request: LoginRequest, response: Response):
         data={"sub": str(user["user_cd"]), "univ_nm": univ_nm}
     )
 
-    response.set_cookie(
-        key="auth_token",
-        value=access_token,
-        httponly=True,
-        samesite="lax",
-        max_age=3600,
-        secure=not settings.debug,
-    )
+    _set_auth_cookie(response, access_token)
 
     chips = await get_institution_chips(univ_nm)
 
@@ -106,14 +116,7 @@ async def login(request: LoginRequest, response: Response):
 
 @router.post("/logout")
 async def logout(response: Response):
-    response.set_cookie(
-        key="auth_token",
-        value="",
-        httponly=True,
-        samesite="lax",
-        max_age=0,
-        secure=not settings.debug,
-    )
+    _clear_auth_cookie(response)
     return {"message": "Logged out successfully"}
 
 
@@ -216,14 +219,7 @@ async def register(request: RegisterRequest, response: Response):
         data={"sub": str(user_cd), "univ_nm": univ_info["univ_nm"]}
     )
 
-    response.set_cookie(
-        key="auth_token",
-        value=access_token,
-        httponly=True,
-        samesite="lax",
-        max_age=3600,
-        secure=not settings.debug,
-    )
+    _set_auth_cookie(response, access_token)
 
     chips = await get_institution_chips(univ_info["univ_nm"])
 

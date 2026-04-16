@@ -30,7 +30,7 @@ export default function LoginForm() {
         localStorage.removeItem(REMEMBERED_EMAIL_KEY);
       }
       await login(email, password);
-      navigate('/');
+      navigate('/', { replace: true });
     } catch (err) {
       setError(err.response?.data?.detail || '로그인에 실패했습니다.');
     } finally {

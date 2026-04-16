@@ -17,6 +17,12 @@ class Settings(BaseSettings):
     debug: bool = False
     allowed_origins: list[str] = ["*"]
 
+    # 쿠키 기반 인증 설정
+    auth_cookie_name: str = "auth_token"
+    auth_cookie_secure: bool = True
+    auth_cookie_samesite: str = "lax"
+    auth_cookie_max_age: int = 3600
+
     database_url: str
     openai_api_key: str
     openai_base_url: str = "https://api.openai.com/v1"

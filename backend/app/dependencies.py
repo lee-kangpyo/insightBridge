@@ -2,6 +2,7 @@ from typing import Optional
 from fastapi import Depends, HTTPException, status, Cookie
 from fastapi.security import OAuth2PasswordBearer
 from app.services.auth import decode_access_token
+from app.config import settings
 
 # auto_error=False to allow checking cookie if header is missing
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token", auto_error=False)
@@ -9,7 +10,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token", auto_error=Fals
 
 async def get_current_user(
     token: Optional[str] = Depends(oauth2_scheme),
-    auth_token: Optional[str] = Cookie(None),
+    auth_token: Optional[str] = Cookie(None, alias=settings.auth_cookie_name),
 ) -> dict:
     # Use cookie if header token is missing
     final_token = auth_token or token

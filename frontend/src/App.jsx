@@ -15,11 +15,19 @@ import NotFoundPage from "./pages/NotFoundPage";
 import SupportPage from "./pages/SupportPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
+import PublicRoute from "./components/PublicRoute";
 
 function App() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/login"
+        element={
+          <PublicRoute>
+            <LoginPage />
+          </PublicRoute>
+        }
+      />
       <Route
         path="/"
         element={
