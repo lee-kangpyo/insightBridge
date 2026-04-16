@@ -7,9 +7,10 @@ class QueryRequest(BaseModel):
 
 
 class ChartConfig(BaseModel):
-    type: str  # "line" | "bar" | "pie" | "heatmap" etc.
+    type: str  # "line" | "bar" | "pie" | "heatmap" | "area" | "stacked_bar" | "scatter" | "donut" | "treemap" etc.
     x: Optional[str] = None
     y: Optional[str] = None
+    group: Optional[str] = None
     title: Optional[str] = None
 
 
