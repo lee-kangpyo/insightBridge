@@ -16,6 +16,7 @@ export default function SignupPage() {
     name: '',
     phone: '',
     mobile_co_cd: '',
+    role: '',
     dept_nm: '',
     grade_nm: '',
     pos_nm: '',
@@ -47,6 +48,7 @@ export default function SignupPage() {
   };
 
   const handleStep3Complete = async (data) => {
+    updateFormData('role', data.role);
     updateFormData('dept_nm', data.dept_nm);
     updateFormData('grade_nm', data.grade_nm);
     updateFormData('pos_nm', data.pos_nm);
@@ -61,6 +63,7 @@ export default function SignupPage() {
         name: formData.name,
         phone: formData.phone,
         mobile_co_cd: formData.mobile_co_cd,
+        role: data.role,
         dept_nm: data.dept_nm,
         grade_nm: data.grade_nm,
         pos_nm: data.pos_nm,
@@ -118,7 +121,7 @@ export default function SignupPage() {
                 )}
                 {step === 3 && (
                   <Step3Form
-                    initialData={{ dept_nm: formData.dept_nm, grade_nm: formData.grade_nm, pos_nm: formData.pos_nm }}
+                    initialData={{ role: formData.role, dept_nm: formData.dept_nm, grade_nm: formData.grade_nm, pos_nm: formData.pos_nm }}
                     onComplete={handleStep3Complete}
                     onBack={() => setStep(2)}
                     loading={loading}
