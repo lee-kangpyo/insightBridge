@@ -86,6 +86,11 @@ const logout = useCallback(() => {
     setUserMenus(menus);
   }, []);
 
+  const loginWithToken = useCallback(async (token) => {
+    localStorage.setItem("auth_token", token);
+    setToken(token);
+  }, []);
+
   return (
     <AuthContext.Provider value={{ user, token, login, logout, loginWithToken, userMenus, setMenus }}>
       {children}
