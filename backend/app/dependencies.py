@@ -1,12 +1,27 @@
-from fastapi import Depends, HTTPException, status
+from typing import Optional
+from fastapi import Depends, HTTPException, status, Cookie
 from fastapi.security import OAuth2PasswordBearer
 from app.services.auth import decode_access_token
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
+# auto_error=False to allow checking cookie if header is missing
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token", auto_error=False)
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
-    payload = decode_access_token(token)
+async def get_current_user(
+    token: Optional[str] = Depends(oauth2_scheme),
+    auth_token: Optional[str] = Cookie(None),
+) -> dict:
+    # Use cookie if header token is missing
+    final_token = auth_token or token
+
+    if not final_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    payload = decode_access_token(final_token)
 
     if payload is None:
         raise HTTPException(

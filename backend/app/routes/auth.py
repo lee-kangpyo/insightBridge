@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Response
 from fastapi.security import OAuth2PasswordRequestForm
+from app.config import settings
 from app.services.auth import (
     authenticate_user,
     create_access_token,
@@ -32,6 +33,7 @@ router = APIRouter()
 
 @router.post("/token", response_model=OAuth2TokenResponse)
 async def login_for_access_token(
+    response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
 ):
     """OAuth2 password flow for Swagger UI Authorize (username = email)."""
@@ -49,6 +51,15 @@ async def login_for_access_token(
         data={"sub": str(user["user_cd"]), "univ_nm": univ_nm}
     )
 
+    response.set_cookie(
+        key="auth_token",
+        value=access_token,
+        httponly=True,
+        samesite="lax",
+        max_age=3600,
+        secure=not settings.debug,
+    )
+
     chips = await get_institution_chips(univ_nm)
 
     return OAuth2TokenResponse(
@@ -60,7 +71,7 @@ async def login_for_access_token(
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login(request: LoginRequest):
+async def login(request: LoginRequest, response: Response):
     user = await authenticate_user(request.email, request.password)
 
     if not user:
@@ -75,6 +86,15 @@ async def login(request: LoginRequest):
         data={"sub": str(user["user_cd"]), "univ_nm": univ_nm}
     )
 
+    response.set_cookie(
+        key="auth_token",
+        value=access_token,
+        httponly=True,
+        samesite="lax",
+        max_age=3600,
+        secure=not settings.debug,
+    )
+
     chips = await get_institution_chips(univ_nm)
 
     return LoginResponse(
@@ -82,6 +102,19 @@ async def login(request: LoginRequest):
         univ_nm=univ_nm,
         institution_chips=InstitutionChips(**chips),
     )
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    response.set_cookie(
+        key="auth_token",
+        value="",
+        httponly=True,
+        samesite="lax",
+        max_age=0,
+        secure=not settings.debug,
+    )
+    return {"message": "Logged out successfully"}
 
 
 @router.get("/me")
@@ -123,7 +156,7 @@ async def verify_code(request: VerifyCodeRequest):
 
 
 @router.post("/register", response_model=RegisterResponse)
-async def register(request: RegisterRequest):
+async def register(request: RegisterRequest, response: Response):
     check_query = """
         SELECT 1 FROM email_verifications
         WHERE email = $1 AND used = TRUE
@@ -181,6 +214,15 @@ async def register(request: RegisterRequest):
     user_cd = df.iloc[0]["user_cd"]
     access_token = create_access_token(
         data={"sub": str(user_cd), "univ_nm": univ_info["univ_nm"]}
+    )
+
+    response.set_cookie(
+        key="auth_token",
+        value=access_token,
+        httponly=True,
+        samesite="lax",
+        max_age=3600,
+        secure=not settings.debug,
     )
 
     chips = await get_institution_chips(univ_info["univ_nm"])

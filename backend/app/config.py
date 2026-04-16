@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     )
 
     domain_validation_enabled: bool = True
+    debug: bool = False
+    allowed_origins: list[str] = ["*"]
 
     database_url: str
     openai_api_key: str

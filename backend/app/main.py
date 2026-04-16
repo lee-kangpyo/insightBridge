@@ -4,6 +4,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routes import overview, query, rankings, insights, theme, admission, auth
 from .database import close_pool
+from .middleware.csrf import CSRFMiddleware
+from .config import settings
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -25,10 +27,15 @@ async def startup():
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+app.add_middleware(
+    CSRFMiddleware,
+    allowed_origins=settings.allowed_origins,
 )
 
 app.include_router(query.router)
