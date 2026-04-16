@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
-import { useAuth } from "./useAuth";
+import { useEffect, useState } from 'react';
+import { useAuthStore } from '../stores/authStore';
 import { getUserMenus } from "../services/api";
 
 export function useUserMenus() {
-  const { user, setUserMenus } = useAuth();
+  const user = useAuthStore((s) => s.user);
+  const setUserMenus = useAuthStore((s) => s.setUserMenus);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -14,8 +15,11 @@ export function useUserMenus() {
       setLoading(true);
       try {
         const data = await getUserMenus();
-        if (!cancelled && data.menu_tree) {
+        if (cancelled) return;
+        if (Array.isArray(data?.menu_tree)) {
           setUserMenus(data.menu_tree);
+        } else {
+          setUserMenus([]);
         }
       } catch {
         if (!cancelled) {

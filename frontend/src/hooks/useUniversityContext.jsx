@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useAuth } from './useAuth';
+import { useAuthStore } from '../stores/authStore';
 
 const STATUS_CHIP_LABELS = [
   { key: 'schl_tp', label: '학교종류' },
@@ -9,7 +9,7 @@ const STATUS_CHIP_LABELS = [
 ];
 
 export function useUniversityContext() {
-  const { user } = useAuth();
+  const user = useAuthStore((s) => s.user);
 
   const result = useMemo(() => {
     const univNm = user?.univ_nm;

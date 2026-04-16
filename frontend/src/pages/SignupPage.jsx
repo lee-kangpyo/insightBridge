@@ -5,7 +5,7 @@ import Step1Form from '../components/signup/Step1Form';
 import Step2Form from '../components/signup/Step2Form';
 import Step3Form from '../components/signup/Step3Form';
 import api from '../services/api';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthStore } from '../stores/authStore';
 
 export default function SignupPage() {
   const [step, setStep] = useState(1);
@@ -26,7 +26,7 @@ export default function SignupPage() {
   const [error, setError] = useState('');
 
   const navigate = useNavigate();
-  const { loginWithToken } = useAuth();
+  const loginWithToken = useAuthStore((s) => s.loginWithToken);
 
   const updateFormData = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));

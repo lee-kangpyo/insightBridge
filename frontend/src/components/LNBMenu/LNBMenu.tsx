@@ -1,8 +1,10 @@
-import { useAuth } from '../../hooks/useAuth';
+import { useAuthStore } from '../../stores/authStore';
 import MenuItem from './MenuItem';
+import { useUserMenus } from '../../hooks/useUserMenus';
 
 export default function LNBMenu() {
-  const { userMenus } = useAuth();
+  const userMenus = useAuthStore((s) => s.userMenus);
+  useUserMenus();
 
   return (
     <nav className="w-56 bg-surface border-r border-outline-variant h-full overflow-y-auto">
