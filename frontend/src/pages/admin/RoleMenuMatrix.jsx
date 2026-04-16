@@ -1,20 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getRoles, getMenus, toggleRoleMenu } from '../services/adminApi';
 
-const HARDCODED_MENUS = [
-  { id: 1, name: 'Dashboard', path: '/dashboard' },
-  { id: 2, name: 'Main', path: '/main' },
-  { id: 3, name: 'Admission', path: '/admission' },
-  { id: 4, name: 'Student Career', path: '/student-career' },
-  { id: 5, name: 'Education Faculty', path: '/education-faculty' },
-  { id: 6, name: 'Research', path: '/research' },
-  { id: 7, name: 'Finance', path: '/finance' },
-  { id: 8, name: 'Governance', path: '/governance' },
-  { id: 9, name: 'Campus', path: '/campus' },
-  { id: 10, name: 'Query', path: '/insights' },
-  { id: 11, name: 'Support', path: '/support' },
-];
-
 export default function RoleMenuMatrix() {
   const [roles, setRoles] = useState([]);
   const [menus, setMenus] = useState([]);
@@ -31,15 +17,15 @@ export default function RoleMenuMatrix() {
       setLoading(true);
       const [rolesData, menusData] = await Promise.all([
         getRoles(),
-        getMenus().catch(() => HARDCODED_MENUS),
+        getMenus(),
       ]);
       setRoles(rolesData);
-      setMenus(menusData.length > 0 ? menusData : HARDCODED_MENUS);
+      setMenus(menusData);
       const initialMap = {};
       menusData.forEach(menu => {
-        initialMap[menu.id] = {};
+        initialMap[menu.menu_id] = {};
         rolesData.forEach(role => {
-          initialMap[menu.id][role.id] = menu.role_ids?.includes(role.id) || false;
+          initialMap[menu.menu_id][role.grp_id] = menu.role_ids?.includes(role.grp_id) || false;
         });
       });
       setRoleMenuMap(initialMap);
@@ -101,8 +87,8 @@ export default function RoleMenuMatrix() {
               <tr className="bg-primary text-white">
                 <th className="px-4 py-3 text-left font-semibold min-w-[200px]">Menu</th>
                 {roles.map(role => (
-                  <th key={role.id} className="px-4 py-3 text-center font-semibold min-w-[120px]">
-                    {role.name || role.group_name || `Role ${role.id}`}
+                  <th key={role.grp_id} className="px-4 py-3 text-center font-semibold min-w-[120px]">
+                    {role.grp_nm || `Role ${role.grp_id}`}
                   </th>
                 ))}
               </tr>
@@ -110,19 +96,19 @@ export default function RoleMenuMatrix() {
             <tbody>
               {menus.map((menu, index) => (
                 <tr
-                  key={menu.id}
+                  key={menu.menu_id}
                   className={`border-t border-outline ${index % 2 === 0 ? 'bg-surface' : 'bg-surface-variant/50'}`}
                 >
                   <td className="px-4 py-3 font-medium text-on-surface">
-                    {menu.name}
-                    <span className="block text-sm text-slate-500">{menu.path}</span>
+                    {menu.menu_nm}
+                    <span className="block text-sm text-slate-500">{menu.menu_path}</span>
                   </td>
                   {roles.map(role => (
-                    <td key={role.id} className="px-4 py-3 text-center">
+                    <td key={role.grp_id} className="px-4 py-3 text-center">
                       <input
                         type="checkbox"
-                        checked={roleMenuMap[menu.id]?.[role.id] || false}
-                        onChange={() => handleToggle(menu.id, role.id, roleMenuMap[menu.id]?.[role.id])}
+                        checked={roleMenuMap[menu.menu_id]?.[role.grp_id] || false}
+                        onChange={() => handleToggle(menu.menu_id, role.grp_id, roleMenuMap[menu.menu_id]?.[role.grp_id])}
                         className="w-5 h-5 rounded border-outline text-primary focus:ring-primary cursor-pointer"
                       />
                     </td>
