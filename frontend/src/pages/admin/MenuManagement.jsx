@@ -115,7 +115,7 @@ function MenuTreeNode({ node, level = 0, selectedId, onSelect, searchTerm }) {
   );
 }
 
-function MenuTree({ selectedId, onSelect, searchTerm }) {
+function MenuTree({ selectedId, onSelect, searchTerm, onSearchChange }) {
   return (
     <aside className="w-full lg:w-[350px] shrink-0 bg-surface-container-lowest rounded-lg p-6 flex flex-col gap-5 relative group">
       <div className="absolute inset-0 rounded-lg shadow-[0_8px_32px_rgba(24,28,30,0.04)] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
@@ -133,12 +133,12 @@ function MenuTree({ selectedId, onSelect, searchTerm }) {
             placeholder="메뉴 항목 검색..."
             type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => onSearchChange(e.target.value)}
           />
         </div>
         <button
           className="bg-secondary text-on-secondary px-4 py-2 rounded-md text-sm font-medium hover:bg-primary-container transition-colors"
-          onClick={() => setSearchTerm(searchTerm)}
+          onClick={() => onSearchChange(searchTerm)}
         >
           검색
         </button>
@@ -173,12 +173,6 @@ function MenuDetailForm({ node, formData, onChange, onSave }) {
       </div>
     );
   }
-
-  const getBreadcrumb = () => {
-    const parts = [node.name];
-    let current = node;
-    return parts.join(' > ');
-  };
 
   return (
     <div className="flex-1 bg-surface-container-lowest rounded-lg flex flex-col relative overflow-hidden shadow-[0_8px_32px_rgba(24,28,30,0.02)]">
@@ -410,7 +404,12 @@ export default function MenuManagement() {
         description="시스템 탐색 계층 구조를 구성하고, 라우팅 경로를 정의하며, 교육기관 플랫폼 전체의 컴포넌트 가시성을 관리합니다."
       />
       <div className="flex flex-col lg:flex-row gap-8 items-start">
-        <MenuTree selectedId={selectedNode?.id} onSelect={handleNodeSelect} searchTerm={searchTerm} />
+        <MenuTree
+          selectedId={selectedNode?.id}
+          onSelect={handleNodeSelect}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+        />
         <MenuDetailForm
           node={selectedNode}
           formData={formData}
