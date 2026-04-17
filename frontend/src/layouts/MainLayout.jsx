@@ -1,7 +1,8 @@
+import { Outlet } from 'react-router-dom';
 import MainPageHeader from '../components/main/MainPageHeader';
 import { LNBMenu } from '../components/LNBMenu';
 
-export default function MainLayout({ children }) {
+export default function MainLayout() {
   return (
     <div className="min-h-screen bg-surface text-on-surface">
       <MainPageHeader />
@@ -10,7 +11,7 @@ export default function MainLayout({ children }) {
           <LNBMenu />
         </aside>
         <main className="flex-1 w-full max-w-[1920px] mx-auto h-full overflow-y-auto">
-          {children}
+          <Outlet />
         </main>
       </div>
     </div>

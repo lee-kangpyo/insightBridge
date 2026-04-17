@@ -1,10 +1,10 @@
-import MainLayout from '../layouts/MainLayout';
+import FullWidthLayout from '../layouts/FullWidthLayout';
 import { AdmissionDashboard } from '../components/admission';
 
 export default function AdmissionPage() {
   return (
-    <MainLayout>
+    <FullWidthLayout>
       <AdmissionDashboard />
-    </MainLayout>
+    </FullWidthLayout>
   );
 }

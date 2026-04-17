@@ -1,10 +1,10 @@
-import MainLayout from '../layouts/MainLayout';
+import FullWidthLayout from '../layouts/FullWidthLayout';
 import FinanceDashboard from '../components/finance/FinanceDashboard';
 
 export default function FinancePage() {
   return (
-    <MainLayout>
+    <FullWidthLayout>
       <FinanceDashboard />
-    </MainLayout>
+    </FullWidthLayout>
   );
 }

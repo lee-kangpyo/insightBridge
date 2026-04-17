@@ -1,10 +1,10 @@
-import MainLayout from '../layouts/MainLayout';
+import FullWidthLayout from '../layouts/FullWidthLayout';
 import { StudentCareerDashboard } from '../components/student-career';
 
 export default function StudentCareerPage() {
   return (
-    <MainLayout>
+    <FullWidthLayout>
       <StudentCareerDashboard />
-    </MainLayout>
+    </FullWidthLayout>
   );
 }

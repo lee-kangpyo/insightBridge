@@ -2,8 +2,10 @@ import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RequireSysAdmRoute from "./components/RequireSysAdmRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
+import MainLayout from "./layouts/MainLayout";
 import DashboardPage from "./pages/DashboardPage";
 import MainPage from "./pages/MainPage";
+import StatsPage from "./pages/StatsPage";
 import AdmissionPage from "./pages/AdmissionPage";
 import StudentCareerPage from "./pages/StudentCareerPage";
 import EducationFacultyPage from "./pages/EducationFacultyPage";
@@ -19,6 +21,7 @@ import SignupPage from "./pages/SignupPage";
 import PublicRoute from "./components/PublicRoute";
 import RoleMenuMatrix from "./pages/admin/RoleMenuMatrix";
 import UserRoleManager from "./pages/admin/UserRoleManager";
+import MenuManagement from "./pages/admin/MenuManagement";
 
 function App() {
   return (
@@ -36,6 +39,14 @@ function App() {
         element={
           <ProtectedRoute>
             <MainPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/stats"
+        element={
+          <ProtectedRoute>
+            <StatsPage />
           </ProtectedRoute>
         }
       />
@@ -126,21 +137,18 @@ function App() {
         }
       />
       <Route
-        path="/admin/role-menu"
+        path="/admin"
         element={
           <RequireSysAdmRoute>
-            <RoleMenuMatrix />
+            <MainLayout />
           </RequireSysAdmRoute>
         }
-      />
-      <Route
-        path="/admin/users"
-        element={
-          <RequireSysAdmRoute>
-            <UserRoleManager />
-          </RequireSysAdmRoute>
-        }
-      />
+      >
+        <Route index element={<MenuManagement />} />
+        <Route path="role-menu" element={<RoleMenuMatrix />} />
+        <Route path="users" element={<UserRoleManager />} />
+        <Route path="menus" element={<MenuManagement />} />
+      </Route>
       <Route path="/signup" element={<SignupPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

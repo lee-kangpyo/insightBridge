@@ -14,7 +14,7 @@ function profileInitials(user) {
   return '?';
 }
 
-const NAV_TABS = [
+const BASE_NAV_TABS = [
   { label: '종합현황', path: '/' },
   { label: '입시/충원', path: '/admission' },
   { label: '학생/진로', path: '/student-career' },
@@ -24,6 +24,16 @@ const NAV_TABS = [
   { label: '캠퍼스/복지/안전', path: '/campus' },
   { label: '거버넌스', path: '/governance' },
 ];
+
+const isSysAdm = (user) => user?.roles?.includes('SYS_ADM');
+
+const buildNavTabs = (user) => {
+  const tabs = [...BASE_NAV_TABS];
+  if (isSysAdm(user)) {
+    tabs.push({ label: '시스템 관리', path: '/admin' });
+  }
+  return tabs;
+};
 
 export default function MainPageHeader() {
   const location = useLocation();
@@ -53,8 +63,10 @@ export default function MainPageHeader() {
             className="hidden md:flex flex-wrap gap-1.5 items-center max-w-[min(100%,52rem)]"
             aria-label="주요 화면"
           >
-            {NAV_TABS.map((tab) => {
-              const isActive = location.pathname === tab.path;
+            {buildNavTabs(user).map((tab) => {
+              const isActive = tab.path === '/admin'
+                ? location.pathname.startsWith('/admin')
+                : location.pathname === tab.path;
               return (
                 <Link
                   key={tab.path}

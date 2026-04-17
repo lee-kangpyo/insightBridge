@@ -1,10 +1,10 @@
-import MainLayout from '../layouts/MainLayout';
+import FullWidthLayout from '../layouts/FullWidthLayout';
 import { GovernanceDashboard } from '../components/governance';
 
 export default function GovernancePage() {
   return (
-    <MainLayout>
+    <FullWidthLayout>
       <GovernanceDashboard />
-    </MainLayout>
+    </FullWidthLayout>
   );
 }

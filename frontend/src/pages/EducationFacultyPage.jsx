@@ -1,10 +1,10 @@
-import MainLayout from '../layouts/MainLayout';
+import FullWidthLayout from '../layouts/FullWidthLayout';
 import { EducationFacultyDashboard } from '../components/education-faculty';
 
 export default function EducationFacultyPage() {
   return (
-    <MainLayout>
+    <FullWidthLayout>
       <EducationFacultyDashboard />
-    </MainLayout>
+    </FullWidthLayout>
   );
 }

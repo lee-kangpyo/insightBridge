@@ -1,10 +1,10 @@
-import MainLayout from '../layouts/MainLayout';
+import FullWidthLayout from '../layouts/FullWidthLayout';
 import { ResearchIndustryStartupDashboard } from '../components/research-industry-startup';
 
 export default function ResearchIndustryStartupPage() {
   return (
-    <MainLayout>
+    <FullWidthLayout>
       <ResearchIndustryStartupDashboard />
-    </MainLayout>
+    </FullWidthLayout>
   );
 }
