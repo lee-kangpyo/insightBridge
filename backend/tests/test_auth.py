@@ -173,6 +173,27 @@ class TestSignupCreatesGroupUserMapping:
             await insert_grp_user(user_cd=1, grp_id=1)
             conn_mock.execute.assert_called_once()
 
+    @pytest.mark.asyncio
+    async def test_signup_creates_emp_group_user_mapping(self, mock_db_fetch_df):
+        from app.services.auth import get_grp_id_by_grp_cd, insert_grp_user
+        import pandas as pd
+        from unittest.mock import MagicMock, AsyncMock, patch
+
+        mock_db_fetch_df.side_effect = [
+            pd.DataFrame([{"grp_id": 2}]),
+        ]
+
+        grp_id = await get_grp_id_by_grp_cd("EMP")
+        assert grp_id == 2
+
+        pool_mock = MagicMock()
+        conn_mock = AsyncMock()
+        pool_mock.acquire.return_value.__aenter__.return_value = conn_mock
+
+        with patch("app.services.auth.get_pool", return_value=pool_mock):
+            await insert_grp_user(user_cd=2, grp_id=2)
+            conn_mock.execute.assert_called_once()
+
 
 class TestNormalizeChipValue:
     def test_normalize_null_returns_dash(self):

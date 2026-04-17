@@ -115,3 +115,50 @@ class TestToggleRoleMenu:
         with patch("app.services.admin.get_pool", return_value=pool_mock):
             await toggle_role_menu(menu_id=1, grp_id=2, enabled=False)
             conn_mock.execute.assert_called_once()
+
+
+class TestSysAdmAuthorization:
+    @pytest.mark.asyncio
+    async def test_admin_endpoints_require_sys_adm_role(self):
+        from fastapi.testclient import TestClient
+        from app.main import app
+        from app.services.auth import create_access_token
+
+        client = TestClient(app)
+
+        token_without_sys_adm = create_access_token(
+            data={"sub": "1", "univ_nm": "Test Univ", "roles": ["EMP"]}
+        )
+
+        # Test GET /api/admin/users without SYS_ADM role
+        response = client.get(
+            "/api/admin/users",
+            headers={"Authorization": f"Bearer {token_without_sys_adm}"},
+        )
+        assert response.status_code == 403
+        assert "SYS_ADM role required" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_admin_endpoints_allow_sys_adm_role(self):
+        from fastapi.testclient import TestClient
+        from app.main import app
+        from app.services.auth import create_access_token
+        from unittest.mock import patch, AsyncMock
+        import pandas as pd
+
+        client = TestClient(app)
+
+        token_with_sys_adm = create_access_token(
+            data={"sub": "1", "univ_nm": "Test Univ", "roles": ["SYS_ADM"]}
+        )
+
+        with patch("app.services.admin.fetch_df", new_callable=AsyncMock) as mock_fetch:
+            mock_fetch.return_value = pd.DataFrame([])
+
+            # Test that the endpoint doesn't return 403 for SYS_ADM users
+            response = client.get(
+                "/api/admin/users",
+                headers={"Authorization": f"Bearer {token_with_sys_adm}"},
+            )
+            # Should not be 403 (should succeed or fail with a different error, but not authz denial)
+            assert response.status_code != 403

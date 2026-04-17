@@ -74,8 +74,9 @@ async def login_for_access_token(
     if not univ_nm:
         raise HTTPException(status_code=404, detail="University not found")
 
+    roles = await get_user_roles(user["user_cd"])
     access_token = create_access_token(
-        data={"sub": str(user["user_cd"]), "univ_nm": univ_nm}
+        data={"sub": str(user["user_cd"]), "univ_nm": univ_nm, "roles": roles}
     )
 
     _set_auth_cookie(response, access_token)
@@ -102,14 +103,14 @@ async def login(request: LoginRequest, response: Response):
     if not univ_nm:
         raise HTTPException(status_code=404, detail="University not found")
 
+    roles = await get_user_roles(user["user_cd"])
     access_token = create_access_token(
-        data={"sub": str(user["user_cd"]), "univ_nm": univ_nm}
+        data={"sub": str(user["user_cd"]), "univ_nm": univ_nm, "roles": roles}
     )
 
     _set_auth_cookie(response, access_token)
 
     chips = await get_institution_chips(univ_nm)
-    roles = await get_user_roles(user["user_cd"])
 
     return LoginResponse(
         access_token=access_token,
@@ -225,13 +226,15 @@ async def register(request: RegisterRequest, response: Response):
 
     user_cd = df.iloc[0]["user_cd"]
 
+    roles = []
     if request.role:
         grp_id = await get_grp_id_by_grp_cd(request.role)
         if grp_id:
             await insert_grp_user(user_cd, grp_id)
+            roles = [request.role]
 
     access_token = create_access_token(
-        data={"sub": str(user_cd), "univ_nm": univ_info["univ_nm"]}
+        data={"sub": str(user_cd), "univ_nm": univ_info["univ_nm"], "roles": roles}
     )
 
     _set_auth_cookie(response, access_token)

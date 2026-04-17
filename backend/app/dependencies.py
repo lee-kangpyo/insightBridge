@@ -33,6 +33,7 @@ async def get_current_user(
 
     user_cd: str = payload.get("sub")
     univ_nm: str = payload.get("univ_nm")
+    roles: list[str] = payload.get("roles", [])
 
     if user_cd is None:
         raise HTTPException(
@@ -41,8 +42,17 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    return {"user_cd": user_cd, "univ_nm": univ_nm}
+    return {"user_cd": user_cd, "univ_nm": univ_nm, "roles": roles}
 
 
 async def require_auth(current_user: dict = Depends(get_current_user)) -> dict:
+    return current_user
+
+
+async def require_sys_adm(current_user: dict = Depends(get_current_user)) -> dict:
+    if "SYS_ADM" not in current_user.get("roles", []):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. SYS_ADM role required.",
+        )
     return current_user
