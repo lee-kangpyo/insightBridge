@@ -11,6 +11,12 @@ export const getMenus = async () => {
 };
 
 export const toggleRoleMenu = async (menuId, roleId, enabled) => {
+  if (menuId === null || menuId === undefined) {
+    throw new Error('toggleRoleMenu: menuId is required');
+  }
+  if (roleId === null || roleId === undefined || roleId === '') {
+    throw new Error('toggleRoleMenu: roleId is required');
+  }
   const response = await api.patch('/api/admin/role-menu', {
     menu_id: menuId,
     role_id: roleId,
