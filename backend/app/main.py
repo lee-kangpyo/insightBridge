@@ -2,7 +2,17 @@ import asyncio
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routes import overview, query, rankings, insights, theme, admission, auth
+from .routes import (
+    overview,
+    query,
+    rankings,
+    insights,
+    theme,
+    admission,
+    auth,
+    menu,
+    admin,
+)
 from .database import close_pool
 from .middleware.csrf import CSRFMiddleware
 from .config import settings
@@ -45,6 +55,8 @@ app.include_router(insights.router)
 app.include_router(theme.router)
 app.include_router(admission.router)
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(menu.router, prefix="/api", tags=["menu"])
+app.include_router(admin.router, prefix="/api", tags=["admin"])
 
 
 @app.on_event("shutdown")

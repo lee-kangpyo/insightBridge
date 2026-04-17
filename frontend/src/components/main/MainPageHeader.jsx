@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuthStore } from '../../stores/authStore';
 
 function profileInitials(user) {
   if (!user) return '?';
@@ -28,7 +28,8 @@ const NAV_TABS = [
 export default function MainPageHeader() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
   const [avatarFailed, setAvatarFailed] = useState(false);
   const avatarUrl = user?.avatar_url || user?.photo_url;
 

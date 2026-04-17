@@ -220,4 +220,9 @@ export const refineQuery = async (
   }
 };
 
+export const getUserMenus = async () => {
+  const response = await api.get('/api/users/me/menus');
+  return response.data;
+};
+
 export default api;

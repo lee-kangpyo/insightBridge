@@ -151,6 +151,29 @@ class TestSchemasExist:
         assert TokenPayload is not None
 
 
+class TestSignupCreatesGroupUserMapping:
+    @pytest.mark.asyncio
+    async def test_signup_creates_group_user_mapping(self, mock_db_fetch_df):
+        from app.services.auth import get_grp_id_by_grp_cd, insert_grp_user
+        import pandas as pd
+        from unittest.mock import MagicMock, AsyncMock, patch
+
+        mock_db_fetch_df.side_effect = [
+            pd.DataFrame([{"grp_id": 1}]),
+        ]
+
+        grp_id = await get_grp_id_by_grp_cd("STDNT")
+        assert grp_id == 1
+
+        pool_mock = MagicMock()
+        conn_mock = AsyncMock()
+        pool_mock.acquire.return_value.__aenter__.return_value = conn_mock
+
+        with patch("app.services.auth.get_pool", return_value=pool_mock):
+            await insert_grp_user(user_cd=1, grp_id=1)
+            conn_mock.execute.assert_called_once()
+
+
 class TestNormalizeChipValue:
     def test_normalize_null_returns_dash(self):
         from app.services.auth import _normalize_chip_value
@@ -226,6 +249,39 @@ class TestGetInstitutionChips:
         assert result["estb_gb"] == "-"
         assert result["region"] == "-"
         assert result["stts"] == "정상"
+
+
+class TestLoginReturnsRoles:
+    @pytest.mark.asyncio
+    async def test_login_returns_user_roles(self, mock_db_fetch_df):
+        from app.services.auth import get_user_roles
+        import pandas as pd
+
+        mock_db_fetch_df.return_value = pd.DataFrame(
+            [{"grp_cd": "STDNT"}, {"grp_cd": "CLUB"}]
+        )
+
+        roles = await get_user_roles(123)
+        assert roles == ["STDNT", "CLUB"]
+
+    @pytest.mark.asyncio
+    async def test_login_returns_empty_roles_for_user_with_no_groups(
+        self, mock_db_fetch_df
+    ):
+        from app.services.auth import get_user_roles
+        import pandas as pd
+
+        mock_db_fetch_df.return_value = pd.DataFrame([])
+
+        roles = await get_user_roles(999)
+        assert roles == []
+
+    @pytest.mark.asyncio
+    async def test_login_response_has_roles_field(self):
+        from app.schemas import LoginResponse
+
+        resp = LoginResponse(access_token="token", roles=["STDNT", "CLUB"])
+        assert resp.roles == ["STDNT", "CLUB"]
 
 
 class TestInstitutionChipsSchema:

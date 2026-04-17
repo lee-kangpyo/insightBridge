@@ -12,6 +12,9 @@ from app.services.auth import (
     verify_and_mark_code_used,
     get_user_by_email,
     get_groups,
+    get_grp_id_by_grp_cd,
+    insert_grp_user,
+    get_user_roles,
 )
 from app.schemas import InstitutionChips
 from app.dependencies import require_auth
@@ -106,11 +109,13 @@ async def login(request: LoginRequest, response: Response):
     _set_auth_cookie(response, access_token)
 
     chips = await get_institution_chips(univ_nm)
+    roles = await get_user_roles(user["user_cd"])
 
     return LoginResponse(
         access_token=access_token,
         univ_nm=univ_nm,
         institution_chips=InstitutionChips(**chips),
+        roles=roles,
     )
 
 
@@ -131,7 +136,9 @@ async def send_verification(request: SendVerificationRequest):
     if settings.domain_validation_enabled:
         univ_info = await get_university_by_email_domain(domain)
         if not univ_info:
-            raise HTTPException(status_code=400, detail="허용되지 않은 이메일 도메인입니다.")
+            raise HTTPException(
+                status_code=400, detail="허용되지 않은 이메일 도메인입니다."
+            )
 
     existing_user = await get_user_by_email(request.email)
     if existing_user:
@@ -178,7 +185,9 @@ async def register(request: RegisterRequest, response: Response):
     if settings.domain_validation_enabled:
         univ_info = await get_university_by_email_domain(domain)
         if not univ_info:
-            raise HTTPException(status_code=400, detail="허용되지 않은 이메일 도메인입니다.")
+            raise HTTPException(
+                status_code=400, detail="허용되지 않은 이메일 도메인입니다."
+            )
 
     hashed_password = get_password_hash(request.password)
 
@@ -215,6 +224,12 @@ async def register(request: RegisterRequest, response: Response):
         raise HTTPException(status_code=500, detail="Failed to create user")
 
     user_cd = df.iloc[0]["user_cd"]
+
+    if request.role:
+        grp_id = await get_grp_id_by_grp_cd(request.role)
+        if grp_id:
+            await insert_grp_user(user_cd, grp_id)
+
     access_token = create_access_token(
         data={"sub": str(user_cd), "univ_nm": univ_info["univ_nm"]}
     )

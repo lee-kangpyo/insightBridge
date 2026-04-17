@@ -1,12 +1,10 @@
 import { Navigate } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
+import { useAuthStore } from "../stores/authStore";
 
 export default function PublicRoute({ children, redirectTo = "/" }) {
-  const { user, loading } = useAuth();
+  const user = useAuthStore((s) => s.user);
 
-  if (loading) return null;
   if (user) return <Navigate to={redirectTo} replace />;
 
   return children;
 }
-

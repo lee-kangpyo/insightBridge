@@ -5,6 +5,7 @@ import { z } from 'zod';
 import api from '../../services/api';
 
 const step3Schema = z.object({
+  role: z.string().min(1, '역할을 선택해주세요.'),
   dept_nm: z.string().min(1, '부서명을 입력해주세요.'),
   grade_nm: z.string().min(1, '구분을 선택해주세요.'),
   pos_nm: z.string().optional(),
@@ -19,6 +20,7 @@ export default function Step3Form({ initialData, onComplete, onBack, loading }) 
   } = useForm({
     resolver: zodResolver(step3Schema),
     defaultValues: {
+      role: initialData?.role || '',
       dept_nm: initialData?.dept_nm || '',
       grade_nm: initialData?.grade_nm || '',
       pos_nm: initialData?.pos_nm || '',
@@ -26,6 +28,7 @@ export default function Step3Form({ initialData, onComplete, onBack, loading }) 
   });
 
   useEffect(() => {
+    if (initialData?.role) register('role');
     if (initialData?.dept_nm) register('dept_nm');
     if (initialData?.grade_nm) register('grade_nm');
     if (initialData?.pos_nm) register('pos_nm');
@@ -49,6 +52,33 @@ export default function Step3Form({ initialData, onComplete, onBack, loading }) 
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 w-full max-w-sm mx-auto" noValidate>
+      <div className="space-y-2">
+        <label
+          htmlFor="role"
+          className="block text-[0.75rem] uppercase tracking-wider font-bold text-on-surface-variant px-4 font-login-body"
+        >
+          역할
+        </label>
+        <div className="relative">
+          <select
+            id="role"
+            {...register('role')}
+            className="custom-input w-full h-12 px-6 placeholder:text-outline-variant text-on-surface outline-none font-login-body appearance-none bg-transparent"
+          >
+            <option value="">역할을 선택하세요</option>
+            <option value="STDNT">학생</option>
+            <option value="EMP">교직원</option>
+            <option value="PROF">교수</option>
+          </select>
+          <div className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none">
+            <span className="material-symbols-outlined text-[22px]">expand_more</span>
+          </div>
+        </div>
+        {errors.role && (
+          <p className="text-red-500 text-xs px-4 mt-1">{errors.role.message}</p>
+        )}
+      </div>
+
       <div className="space-y-2">
         <label
           htmlFor="dept_nm"
