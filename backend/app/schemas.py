@@ -452,5 +452,6 @@ class RegisterResponse(BaseModel):
 
 
 class GroupResponse(BaseModel):
+    grp_id: int
     grp_cd: str
     grp_nm: str
