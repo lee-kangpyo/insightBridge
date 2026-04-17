@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
+import RequireSysAdmRoute from "./components/RequireSysAdmRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
 import DashboardPage from "./pages/DashboardPage";
 import MainPage from "./pages/MainPage";
@@ -127,17 +128,17 @@ function App() {
       <Route
         path="/admin/role-menu"
         element={
-          <ProtectedRoute>
+          <RequireSysAdmRoute>
             <RoleMenuMatrix />
-          </ProtectedRoute>
+          </RequireSysAdmRoute>
         }
       />
       <Route
         path="/admin/users"
         element={
-          <ProtectedRoute>
+          <RequireSysAdmRoute>
             <UserRoleManager />
-          </ProtectedRoute>
+          </RequireSysAdmRoute>
         }
       />
       <Route path="/signup" element={<SignupPage />} />

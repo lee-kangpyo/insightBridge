@@ -15,6 +15,7 @@ export type AuthUser = {
   email?: string;
   univ_nm?: string;
   institution_chips?: unknown;
+  roles?: string[];
   [key: string]: unknown;
 };
 
@@ -81,13 +82,13 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
 
   async login(email, password) {
     const res = await api.post('/api/auth/login', { email, password });
-    const { access_token, univ_nm, institution_chips } = res.data ?? {};
+    const { access_token, univ_nm, institution_chips, roles } = res.data ?? {};
 
     if (!access_token || typeof access_token !== 'string' || access_token.trim().length === 0) {
       throw new Error('Login failed: missing access_token');
     }
 
-    const user: AuthUser = { email, univ_nm, institution_chips };
+    const user: AuthUser = { email, univ_nm, institution_chips, roles };
     writeStoredAuth(access_token.trim(), user);
 
     set({

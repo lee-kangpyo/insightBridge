@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getRoles, getMenus, toggleRoleMenu } from '../services/adminApi';
+import MainLayout from '../../layouts/MainLayout';
+import { getRoles, getMenus, toggleRoleMenu } from '../../services/adminApi';
 
 export default function RoleMenuMatrix() {
   const [roles, setRoles] = useState([]);
@@ -62,67 +63,71 @@ export default function RoleMenuMatrix() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-on-surface">Loading...</div>
-      </div>
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-on-surface">Loading...</div>
+        </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-surface px-6 py-8">
-      <div className="mx-auto max-w-6xl">
-        <h1 className="font-headline text-2xl font-bold text-on-surface mb-6">
-          역할-메뉴 권한 매트릭스
-        </h1>
+    <MainLayout>
+      <div className="px-6 py-8">
+        <div className="mx-auto max-w-6xl">
+          <h1 className="font-headline text-2xl font-bold text-on-surface mb-6">
+            역할-메뉴 권한 매트릭스
+          </h1>
 
-        {error && (
-          <div className="mb-4 p-4 bg-error/10 border border-error rounded-lg text-error">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div className="mb-4 p-4 bg-error/10 border border-error rounded-lg text-error">
+              {error}
+            </div>
+          )}
 
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse bg-surface-variant rounded-lg overflow-hidden shadow">
-            <thead>
-              <tr className="bg-primary text-white">
-                <th className="px-4 py-3 text-left font-semibold min-w-[200px]">Menu</th>
-                {roles.map(role => (
-                  <th key={role.grp_id} className="px-4 py-3 text-center font-semibold min-w-[120px]">
-                    {role.grp_nm || `Role ${role.grp_id}`}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {menus.map((menu, index) => (
-                <tr
-                  key={menu.menu_id}
-                  className={`border-t border-outline ${index % 2 === 0 ? 'bg-surface' : 'bg-surface-variant/50'}`}
-                >
-                  <td className="px-4 py-3 font-medium text-on-surface">
-                    {menu.menu_nm}
-                    <span className="block text-sm text-slate-500">{menu.menu_path}</span>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse bg-surface-variant rounded-lg overflow-hidden shadow">
+              <thead>
+                <tr className="bg-primary text-white">
+                  <th className="px-4 py-3 text-left font-semibold min-w-[200px]">Menu</th>
                   {roles.map(role => (
-                    <td key={role.grp_id} className="px-4 py-3 text-center">
-                      <input
-                        type="checkbox"
-                        checked={roleMenuMap[menu.menu_id]?.[role.grp_id] || false}
-                        onChange={() => handleToggle(menu.menu_id, role.grp_id, roleMenuMap[menu.menu_id]?.[role.grp_id])}
-                        className="w-5 h-5 rounded border-outline text-primary focus:ring-primary cursor-pointer"
-                      />
-                    </td>
+                    <th key={role.grp_id} className="px-4 py-3 text-center font-semibold min-w-[120px]">
+                      {role.grp_nm || `Role ${role.grp_id}`}
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {menus.map((menu, index) => (
+                  <tr
+                    key={menu.menu_id}
+                    className={`border-t border-outline ${index % 2 === 0 ? 'bg-surface' : 'bg-surface-variant/50'}`}
+                  >
+                    <td className="px-4 py-3 font-medium text-on-surface">
+                      {menu.menu_nm}
+                      <span className="block text-sm text-slate-500">{menu.menu_path}</span>
+                    </td>
+                    {roles.map(role => (
+                      <td key={role.grp_id} className="px-4 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={roleMenuMap[menu.menu_id]?.[role.grp_id] || false}
+                          onChange={() => handleToggle(menu.menu_id, role.grp_id, roleMenuMap[menu.menu_id]?.[role.grp_id])}
+                          className="w-5 h-5 rounded border-outline text-primary focus:ring-primary cursor-pointer"
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-        <div className="mt-4 text-sm text-slate-500">
-          총 {menus.length}개 메뉴 × {roles.length}개 역할 = {menus.length * roles.length}개 권한 설정
+          <div className="mt-4 text-sm text-slate-500">
+            총 {menus.length}개 메뉴 × {roles.length}개 역할 = {menus.length * roles.length}개 권한 설정
+          </div>
         </div>
       </div>
-    </div>
+    </MainLayout>
   );
 }
