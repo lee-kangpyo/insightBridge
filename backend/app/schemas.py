@@ -7,9 +7,10 @@ class QueryRequest(BaseModel):
 
 
 class ChartConfig(BaseModel):
-    type: str  # "line" | "bar" | "pie" | "heatmap" etc.
+    type: str  # "line" | "bar" | "pie" | "heatmap" | "area" | "stacked_bar" | "scatter" | "donut" | "treemap" etc.
     x: Optional[str] = None
     y: Optional[str] = None
+    group: Optional[str] = None
     title: Optional[str] = None
 
 
@@ -18,6 +19,25 @@ class QueryResponse(BaseModel):
     sql: Optional[str] = None
     message: Optional[str] = None
     chart_config: Optional[ChartConfig] = None
+
+
+class CandidateEvent(BaseModel):
+    index: int
+    sql: str
+    data: list[dict[str, Any]]
+    chart_config: Optional[ChartConfig] = None
+    evaluation: Optional[str] = None
+
+
+class DoneEvent(BaseModel):
+    best_index: int
+    reason: Optional[str] = None
+
+
+class RefineRequest(BaseModel):
+    original_question: str
+    feedback: str
+    previous_candidates: list[dict[str, Any]] = []
 
 
 class SchoolItem(BaseModel):
@@ -376,6 +396,7 @@ class LoginResponse(BaseModel):
     token_type: str = "bearer"
     univ_nm: Optional[str] = None
     institution_chips: Optional[InstitutionChips] = None
+    roles: Optional[list[str]] = None
 
 
 class OAuth2TokenResponse(BaseModel):
@@ -391,3 +412,46 @@ class TokenPayload(BaseModel):
     sub: str
     univ_nm: str
     exp: int
+
+
+class SendVerificationRequest(BaseModel):
+    email: str
+
+
+class SendVerificationResponse(BaseModel):
+    success: bool
+
+
+class VerifyCodeRequest(BaseModel):
+    email: str
+    code: str
+
+
+class VerifyCodeResponse(BaseModel):
+    verified: bool
+
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    name: str
+    phone: str
+    mobile_co_cd: str
+    dept_nm: str
+    grade_nm: str
+    pos_nm: str
+    verification_code: str
+    role: Optional[str] = "STDNT"
+
+
+class RegisterResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    univ_nm: Optional[str] = None
+    institution_chips: Optional[InstitutionChips] = None
+
+
+class GroupResponse(BaseModel):
+    grp_id: int
+    grp_cd: str
+    grp_nm: str

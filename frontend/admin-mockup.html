@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InsightBridge UI Mockup - Admin Tab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <style>
+        body { font-family: 'Pretendard', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div id="root">
+        <!-- Header -->
+        <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+            <div class="flex justify-between items-center px-8 h-16 max-w-[1920px] mx-auto">
+                <div class="flex items-center gap-8">
+                    <span class="text-lg font-bold text-blue-600">EZ Dashboard</span>
+                    <nav class="flex gap-2 items-center">
+                        <button onclick="switchTab('user')" id="tab-user" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-md">거버넌스</button>
+                        <button onclick="switchTab('admin')" id="tab-admin" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-all">시스템 관리 🆕</button>
+                    </nav>
+                </div>
+                <div class="flex items-center gap-4 text-slate-500">
+                    <span class="material-symbols-outlined">notifications</span>
+                    <span class="material-symbols-outlined">settings</span>
+                    <div class="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center text-[11px] font-bold text-blue-600">SYS</div>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex" style="height: calc(100vh - 4rem);">
+            <!-- Sidebar -->
+            <aside class="w-56 border-r border-slate-200 bg-white overflow-y-auto shrink-0">
+                <div id="sidebar-content" class="py-4">
+                    <!-- Default User Menus -->
+                    <div id="user-menus">
+                        <div class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">거버넌스 메뉴</div>
+                        <div class="px-4 py-2.5 flex items-center gap-2 hover:bg-slate-50 text-sm text-slate-700">종합 지표 분석</div>
+                        <div class="px-4 py-2.5 flex items-center gap-2 hover:bg-slate-50 text-sm text-slate-700">전략 과제 이행</div>
+                        <div class="px-4 py-2.5 flex items-center gap-2 hover:bg-slate-50 text-sm text-slate-700">대학 인증 관리</div>
+                    </div>
+                    <!-- Admin Menus (Hidden by default) -->
+                    <div id="admin-menus" class="hidden">
+                        <div class="px-4 py-2 text-[10px] font-bold text-orange-500 uppercase tracking-wider">시스템 관리자 전용</div>
+                        <div class="px-4 py-2.5 flex items-center gap-2 bg-orange-50 text-orange-700 border-r-4 border-orange-500 text-sm font-semibold">
+                             <span class="material-symbols-outlined text-sm">matrix</span> 역할 권한 매트릭스
+                        </div>
+                        <div class="px-4 py-2.5 flex items-center gap-2 hover:bg-slate-50 text-sm text-slate-700">
+                             <span class="material-symbols-outlined text-sm">group</span> 사용자 권한 관리
+                        </div>
+                        <div class="px-4 py-2.5 flex items-center gap-2 hover:bg-slate-50 text-sm text-slate-700">
+                             <span class="material-symbols-outlined text-sm">history</span> 시스템 로그
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="flex-1 p-8 overflow-y-auto">
+                <div id="content-admin" class="hidden">
+                    <h1 class="text-2xl font-bold mb-6">역할-메뉴 권한 매트릭스</h1>
+                    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                        <table class="w-full text-sm border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200">
+                                    <th class="p-3 text-left">메뉴명</th>
+                                    <th class="p-3 text-center">교수</th>
+                                    <th class="p-3 text-center">교직원</th>
+                                    <th class="p-3 text-center">학생</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b border-slate-100">
+                                    <td class="p-3">종합현황</td>
+                                    <td class="p-3 text-center"><input type="checkbox" checked></td>
+                                    <td class="p-3 text-center"><input type="checkbox" checked></td>
+                                    <td class="p-3 text-center"><input type="checkbox"></td>
+                                </tr>
+                                <tr class="border-b border-slate-100">
+                                    <td class="p-3">입시/충원</td>
+                                    <td class="p-3 text-center"><input type="checkbox" checked></td>
+                                    <td class="p-3 text-center"><input type="checkbox"></td>
+                                    <td class="p-3 text-center"><input type="checkbox"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="content-user">
+                    <h1 class="text-2xl font-bold mb-6">거버넌스 대시보드</h1>
+                    <div class="grid grid-cols-3 gap-6 mb-8">
+                        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="text-sm text-slate-500 mb-1">전체 충원율</div>
+                            <div class="text-3xl font-bold text-blue-600">98.5%</div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="text-sm text-slate-500 mb-1">재학생 유지율</div>
+                            <div class="text-3xl font-bold text-green-600">92.1%</div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="text-sm text-slate-500 mb-1">취업률</div>
+                            <div class="text-3xl font-bold text-orange-600">74.2%</div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(type) {
+            const userTab = document.getElementById('tab-user');
+            const adminTab = document.getElementById('tab-admin');
+            const userMenus = document.getElementById('user-menus');
+            const adminMenus = document.getElementById('admin-menus');
+            const userContent = document.getElementById('content-user');
+            const adminContent = document.getElementById('content-admin');
+
+            if (type === 'admin') {
+                adminTab.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-orange-500 text-white shadow-md";
+                userTab.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200";
+                userMenus.classList.add('hidden');
+                adminMenus.classList.remove('hidden');
+                userContent.classList.add('hidden');
+                adminContent.classList.remove('hidden');
+            } else {
+                userTab.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-md";
+                adminTab.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200";
+                userMenus.classList.remove('hidden');
+                adminMenus.classList.add('hidden');
+                userContent.classList.remove('hidden');
+                adminContent.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

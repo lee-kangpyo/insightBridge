@@ -1,6 +1,8 @@
 import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
+import RequireSysAdmRoute from "./components/RequireSysAdmRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
+import MainLayout from "./layouts/MainLayout";
 import DashboardPage from "./pages/DashboardPage";
 import MainPage from "./pages/MainPage";
 import AdmissionPage from "./pages/AdmissionPage";
@@ -14,16 +16,32 @@ import QueryPage from "./pages/QueryPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import SupportPage from "./pages/SupportPage";
 import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
+import PublicRoute from "./components/PublicRoute";
+import RoleMenuMatrix from "./pages/admin/RoleMenuMatrix";
+import UserRoleManager from "./pages/admin/UserRoleManager";
+import MenuManagement from "./pages/admin/MenuManagement";
+import GroupManagement from "./pages/admin/GroupManagement";
+import RoleAuthorityMenu from "./pages/admin/RoleAuthorityMenu";
 
 function App() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/login"
+        element={
+          <PublicRoute>
+            <LoginPage />
+          </PublicRoute>
+        }
+      />
       <Route
         path="/"
         element={
           <ProtectedRoute>
-            <MainPage />
+            <MainLayout>
+              <MainPage />
+            </MainLayout>
           </ProtectedRoute>
         }
       />
@@ -31,7 +49,9 @@ function App() {
         path="/admission"
         element={
           <ProtectedRoute>
-            <AdmissionPage />
+            <MainLayout>
+              <AdmissionPage />
+            </MainLayout>
           </ProtectedRoute>
         }
       />
@@ -39,7 +59,9 @@ function App() {
         path="/student-career"
         element={
           <ProtectedRoute>
-            <StudentCareerPage />
+            <MainLayout>
+              <StudentCareerPage />
+            </MainLayout>
           </ProtectedRoute>
         }
       />
@@ -47,7 +69,9 @@ function App() {
         path="/education-faculty"
         element={
           <ProtectedRoute>
-            <EducationFacultyPage />
+            <MainLayout>
+              <EducationFacultyPage />
+            </MainLayout>
           </ProtectedRoute>
         }
       />
@@ -55,7 +79,9 @@ function App() {
         path="/research"
         element={
           <ProtectedRoute>
-            <ResearchIndustryStartupPage />
+            <MainLayout>
+              <ResearchIndustryStartupPage />
+            </MainLayout>
           </ProtectedRoute>
         }
       />
@@ -63,7 +89,9 @@ function App() {
         path="/finance"
         element={
           <ProtectedRoute>
-            <FinancePage />
+            <MainLayout>
+              <FinancePage />
+            </MainLayout>
           </ProtectedRoute>
         }
       />
@@ -71,7 +99,9 @@ function App() {
         path="/governance"
         element={
           <ProtectedRoute>
-            <GovernancePage />
+            <MainLayout>
+              <GovernancePage />
+            </MainLayout>
           </ProtectedRoute>
         }
       />
@@ -79,7 +109,19 @@ function App() {
         path="/campus"
         element={
           <ProtectedRoute>
-            <CampusPage />
+            <MainLayout>
+              <CampusPage />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/support"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <SupportPage />
+            </MainLayout>
           </ProtectedRoute>
         }
       />
@@ -106,13 +148,21 @@ function App() {
         />
       )}
       <Route
-        path="/support"
+        path="/admin"
         element={
-          <ProtectedRoute>
-            <SupportPage />
-          </ProtectedRoute>
+          <RequireSysAdmRoute>
+            <MainLayout />
+          </RequireSysAdmRoute>
         }
-      />
+      >
+        <Route index element={<MenuManagement />} />
+        <Route path="role-menu" element={<RoleMenuMatrix />} />
+        <Route path="users" element={<UserRoleManager />} />
+        <Route path="menus" element={<MenuManagement />} />
+        <Route path="groups" element={<GroupManagement />} />
+        <Route path="role-authority-menu" element={<RoleAuthorityMenu />} />
+      </Route>
+      <Route path="/signup" element={<SignupPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

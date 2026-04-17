@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { query } from '../services/api';
-import { BentoGrid, BentoGridSkeleton } from '../components/bento';
+import { queryStream, refineQuery } from '../services/api';
+import { CandidateTabs, BentoGridSkeleton } from '../components/bento';
+import { RefineBar } from '../components/bento/RefineBar';
 import { Search } from 'lucide-react';
 
 function QueryPage() {
@@ -19,7 +20,10 @@ function QueryPage() {
 
     setIsStreaming(true);
     setError(null);
-    setResult(null);
+    setCandidates([]);
+    setBestIndex(-1);
+    setActiveTab(0);
+    setCurrentQuestion(question);
 
     await queryStream(
       question,
@@ -96,7 +100,7 @@ function QueryPage() {
             />
             <button
               type="submit"
-              disabled={loading}
+              disabled={isStreaming || !question.trim()}
               className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-lg bg-primary text-on-primary
                          hover:bg-primary-fixed-dim disabled:opacity-50 disabled:cursor-not-allowed
                          transition-all duration-200"
@@ -112,15 +116,27 @@ function QueryPage() {
           </div>
         )}
 
-        {loading ? (
+        {isStreaming && !hasResults ? (
           <BentoGridSkeleton />
-        ) : result ? (
-          <BentoGrid
-            sql={result.sql}
-            data={result.data}
-            chartConfig={result.chart_config}
-          />
-        ) : null}
+        ) : (
+          <>
+            <CandidateTabs
+              candidates={candidates}
+              bestIndex={bestIndex}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              isStreaming={isStreaming}
+            />
+
+            {hasResults && (
+              <RefineBar
+                onRefine={handleRefine}
+                isLoading={isRefining}
+                disabled={isStreaming}
+              />
+            )}
+          </>
+        )}
       </div>
     </div>
   );

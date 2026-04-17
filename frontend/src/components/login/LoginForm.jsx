@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuthStore } from '../../stores/authStore';
 
 const SHOW_CREDENTIAL_RECOVERY_LINK =
   (import.meta.env.VITE_SHOW_CREDENTIAL_RECOVERY_LINK ?? 'false') === 'true';
@@ -15,7 +14,7 @@ export default function LoginForm() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { login } = useAuth();
+  const login = useAuthStore((s) => s.login);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -30,7 +29,7 @@ export default function LoginForm() {
         localStorage.removeItem(REMEMBERED_EMAIL_KEY);
       }
       await login(email, password);
-      navigate('/');
+      navigate('/', { replace: true });
     } catch (err) {
       setError(err.response?.data?.detail || '로그인에 실패했습니다.');
     } finally {
@@ -153,6 +152,16 @@ export default function LoginForm() {
         로그인
         <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
       </button>
+
+      <p className="text-center text-sm text-on-surface-variant">
+        계정이 없으신가요?{' '}
+        <Link
+          to="/signup"
+          className="text-primary-container font-bold hover:underline"
+        >
+          회원가입
+        </Link>
+      </p>
     </form>
   );
 }

@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LNB Menu Empty State - Option A</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        font-family: "Noto Sans KR", sans-serif;
+      }
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 min-h-screen p-8">
+    <div class="max-w-5xl mx-auto">
+      <h1 class="text-2xl font-bold text-gray-800 mb-2">
+        Option A: Minimal Soft - 구성 변화
+      </h1>
+      <p class="text-gray-500 mb-8">메뉴가 없을 때 표시될 상태</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Variation 1: Icon + 세로 텍스트 -->
+        <div class="flex flex-col">
+          <div
+            class="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider"
+          >
+            Variation 1: 세로 중앙 정렬
+          </div>
+          <div class="bg-white rounded-2xl shadow-sm flex flex-col h-[450px]">
+            <div
+              class="h-14 bg-slate-50 border-b border-slate-200 flex items-center px-6"
+            >
+              <span class="font-bold text-primary">EZ Dashboard</span>
+            </div>
+            <div class="flex flex-1 overflow-hidden">
+              <div
+                class="w-56 bg-slate-50 border-r border-slate-200 flex flex-col items-center justify-center"
+              >
+                <div
+                  class="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center mb-4"
+                >
+                  <span class="material-symbols-outlined text-xl text-slate-500"
+                    >menu_book</span
+                  >
+                </div>
+                <p class="text-sm font-medium text-slate-700 mb-1">메뉴 없음</p>
+                <p class="text-xs text-slate-400 text-center px-4">
+                  관리자에게<br />문의하세요
+                </p>
+              </div>
+              <div class="flex-1 bg-white p-8">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">종합 현황</h2>
+                <div
+                  class="bg-slate-100 rounded-xl h-32 flex items-center justify-center text-slate-400 text-sm"
+                >
+                  메인 콘텐츠 영역
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Variation 2: 좌측 리스트 스타일 -->
+        <div class="flex flex-col">
+          <div
+            class="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider"
+          >
+            Variation 2: 빈 상태 리스트
+          </div>
+          <div class="bg-white rounded-2xl shadow-sm flex flex-col h-[450px]">
+            <div
+              class="h-14 bg-slate-50 border-b border-slate-200 flex items-center px-6"
+            >
+              <span class="font-bold text-primary">EZ Dashboard</span>
+            </div>
+            <div class="flex flex-1 overflow-hidden">
+              <div class="w-56 bg-white border-r border-slate-200 p-4">
+                <div class="flex items-center gap-3 py-3 px-2">
+                  <div
+                    class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center"
+                  >
+                    <span
+                      class="material-symbols-outlined text-base text-slate-400"
+                      >inbox</span
+                    >
+                  </div>
+                  <div>
+                    <p class="text-xs font-medium text-slate-500">메뉴</p>
+                    <p class="text-[10px] text-slate-400">없음</p>
+                  </div>
+                </div>
+                <div
+                  class="mt-4 mx-2 border-t border-dashed border-slate-200 pt-4"
+                >
+                  <p class="text-[10px] text-slate-400 text-center">
+                    할당된 메뉴가 없습니다
+                  </p>
+                </div>
+              </div>
+              <div class="flex-1 bg-white p-8">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">종합 현황</h2>
+                <div
+                  class="bg-slate-100 rounded-xl h-32 flex items-center justify-center text-slate-400 text-sm"
+                >
+                  메인 콘텐츠 영역
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Variation 3: 컴팩트 바 -->
+        <div class="flex flex-col">
+          <div
+            class="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider"
+          >
+            Variation 3: 상단 컴팩트 바
+          </div>
+          <div class="bg-white rounded-2xl shadow-sm flex flex-col h-[450px]">
+            <div
+              class="h-14 bg-slate-50 border-b border-slate-200 flex items-center px-6"
+            >
+              <span class="font-bold text-primary">EZ Dashboard</span>
+            </div>
+            <div class="flex flex-1 overflow-hidden">
+              <div
+                class="w-56 bg-slate-50 border-r border-slate-200 flex flex-col"
+              >
+                <div
+                  class="px-4 py-3 border-b border-slate-200 flex items-center gap-2"
+                >
+                  <span
+                    class="material-symbols-outlined text-base text-slate-500"
+                    >menu</span
+                  >
+                  <span class="text-xs font-medium text-slate-600"
+                    >Navigation</span
+                  >
+                </div>
+                <div class="flex-1 flex items-center justify-center">
+                  <div class="text-center px-6">
+                    <div
+                      class="w-10 h-10 rounded-xl bg-slate-200 flex items-center justify-center mx-auto mb-3"
+                    >
+                      <span
+                        class="material-symbols-outlined text-lg text-slate-400"
+                        >block</span
+                      >
+                    </div>
+                    <p class="text-xs font-medium text-slate-600 mb-1">Empty</p>
+                    <p class="text-[10px] text-slate-400">메뉴 없음</p>
+                  </div>
+                </div>
+              </div>
+              <div class="flex-1 bg-white p-8">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">종합 현황</h2>
+                <div
+                  class="bg-slate-100 rounded-xl h-32 flex items-center justify-center text-slate-400 text-sm"
+                >
+                  메인 콘텐츠 영역
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Variation 4: 좌측 세로 Dividerr -->
+        <div class="flex flex-col">
+          <div
+            class="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider"
+          >
+            Variation 4: Dividerr 라인
+          </div>
+          <div class="bg-white rounded-2xl shadow-sm flex flex-col h-[450px]">
+            <div
+              class="h-14 bg-slate-50 border-b border-slate-200 flex items-center px-6"
+            >
+              <span class="font-bold text-primary">EZ Dashboard</span>
+            </div>
+            <div class="flex flex-1 overflow-hidden">
+              <div class="w-56 bg-white relative">
+                <div
+                  class="absolute right-0 top-1/4 bottom-1/4 w-px bg-slate-200"
+                ></div>
+                <div
+                  class="p-4 flex flex-col items-center justify-center h-full"
+                >
+                  <div
+                    class="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4"
+                  >
+                    <span
+                      class="material-symbols-outlined text-2xl text-slate-400"
+                      >menu_book</span
+                    >
+                  </div>
+                  <p class="text-sm font-semibold text-slate-700 mb-1">
+                    메뉴 없음
+                  </p>
+                  <p class="text-xs text-slate-400 mb-3">
+                    할당된 메뉴가 없습니다
+                  </p>
+                  <button
+                    class="text-xs text-slate-500 hover:text-slate-700 underline"
+                  >
+                    관리자 문의
+                  </button>
+                </div>
+              </div>
+              <div class="flex-1 bg-white p-8">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">종합 현황</h2>
+                <div
+                  class="bg-slate-100 rounded-xl h-32 flex items-center justify-center text-slate-400 text-sm"
+                >
+                  메인 콘텐츠 영역
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

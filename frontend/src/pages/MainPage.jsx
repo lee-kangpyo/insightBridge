@@ -1,4 +1,4 @@
-import MainLayout from "../layouts/MainLayout";
+
 import PageTitleSection from "../components/main/PageTitleSection";
 import StatusChips from "../components/main/StatusChips";
 import KpiBentoGrid from "../components/main/KpiBentoGrid";
@@ -160,8 +160,7 @@ export default function MainPage() {
   }, [universityReady, schlNm, selectedBaseYear]);
 
   return (
-    <MainLayout>
-      <div className="max-w-[1600px] mx-auto px-8 py-6 space-y-8">
+    <div className="max-w-[1600px] mx-auto px-8 py-6 space-y-8">
         <PageTitleSection
           title={pageTitle || headerTitle}
           subtitle={headerSubtitle}
@@ -187,6 +186,5 @@ export default function MainPage() {
           <OverviewDetailGridTable items={detailGrid} />
         </div>
       </div>
-    </MainLayout>
   );
 }
