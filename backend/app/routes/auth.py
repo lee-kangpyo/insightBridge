@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Response
 from fastapi.security import OAuth2PasswordRequestForm
+from app.config import settings
 from app.services.auth import (
     authenticate_user,
     create_access_token,
@@ -11,6 +12,9 @@ from app.services.auth import (
     verify_and_mark_code_used,
     get_user_by_email,
     get_groups,
+    get_grp_id_by_grp_cd,
+    insert_grp_user,
+    get_user_roles,
 )
 from app.schemas import InstitutionChips
 from app.dependencies import require_auth
@@ -30,8 +34,33 @@ from app.schemas import (
 router = APIRouter()
 
 
+def _set_auth_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        key=settings.auth_cookie_name,
+        value=token,
+        httponly=True,
+        samesite=settings.auth_cookie_samesite,
+        max_age=settings.auth_cookie_max_age,
+        secure=settings.auth_cookie_secure,
+        path="/",
+    )
+
+
+def _clear_auth_cookie(response: Response) -> None:
+    response.set_cookie(
+        key=settings.auth_cookie_name,
+        value="",
+        httponly=True,
+        samesite=settings.auth_cookie_samesite,
+        max_age=0,
+        secure=settings.auth_cookie_secure,
+        path="/",
+    )
+
+
 @router.post("/token", response_model=OAuth2TokenResponse)
 async def login_for_access_token(
+    response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
 ):
     """OAuth2 password flow for Swagger UI Authorize (username = email)."""
@@ -45,9 +74,12 @@ async def login_for_access_token(
     if not univ_nm:
         raise HTTPException(status_code=404, detail="University not found")
 
+    roles = await get_user_roles(user["user_cd"])
     access_token = create_access_token(
-        data={"sub": str(user["user_cd"]), "univ_nm": univ_nm}
+        data={"sub": str(user["user_cd"]), "univ_nm": univ_nm, "roles": roles}
     )
+
+    _set_auth_cookie(response, access_token)
 
     chips = await get_institution_chips(univ_nm)
 
@@ -60,7 +92,7 @@ async def login_for_access_token(
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login(request: LoginRequest):
+async def login(request: LoginRequest, response: Response):
     user = await authenticate_user(request.email, request.password)
 
     if not user:
@@ -71,9 +103,12 @@ async def login(request: LoginRequest):
     if not univ_nm:
         raise HTTPException(status_code=404, detail="University not found")
 
+    roles = await get_user_roles(user["user_cd"])
     access_token = create_access_token(
-        data={"sub": str(user["user_cd"]), "univ_nm": univ_nm}
+        data={"sub": str(user["user_cd"]), "univ_nm": univ_nm, "roles": roles}
     )
+
+    _set_auth_cookie(response, access_token)
 
     chips = await get_institution_chips(univ_nm)
 
@@ -81,7 +116,14 @@ async def login(request: LoginRequest):
         access_token=access_token,
         univ_nm=univ_nm,
         institution_chips=InstitutionChips(**chips),
+        roles=roles,
     )
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    _clear_auth_cookie(response)
+    return {"message": "Logged out successfully"}
 
 
 @router.get("/me")
@@ -95,7 +137,9 @@ async def send_verification(request: SendVerificationRequest):
     if settings.domain_validation_enabled:
         univ_info = await get_university_by_email_domain(domain)
         if not univ_info:
-            raise HTTPException(status_code=400, detail="허용되지 않은 이메일 도메인입니다.")
+            raise HTTPException(
+                status_code=400, detail="허용되지 않은 이메일 도메인입니다."
+            )
 
     existing_user = await get_user_by_email(request.email)
     if existing_user:
@@ -123,7 +167,7 @@ async def verify_code(request: VerifyCodeRequest):
 
 
 @router.post("/register", response_model=RegisterResponse)
-async def register(request: RegisterRequest):
+async def register(request: RegisterRequest, response: Response):
     check_query = """
         SELECT 1 FROM email_verifications
         WHERE email = $1 AND used = TRUE
@@ -142,7 +186,9 @@ async def register(request: RegisterRequest):
     if settings.domain_validation_enabled:
         univ_info = await get_university_by_email_domain(domain)
         if not univ_info:
-            raise HTTPException(status_code=400, detail="허용되지 않은 이메일 도메인입니다.")
+            raise HTTPException(
+                status_code=400, detail="허용되지 않은 이메일 도메인입니다."
+            )
 
     hashed_password = get_password_hash(request.password)
 
@@ -179,9 +225,19 @@ async def register(request: RegisterRequest):
         raise HTTPException(status_code=500, detail="Failed to create user")
 
     user_cd = df.iloc[0]["user_cd"]
+
+    roles = []
+    if request.role:
+        grp_id = await get_grp_id_by_grp_cd(request.role)
+        if grp_id:
+            await insert_grp_user(user_cd, grp_id)
+            roles = [request.role]
+
     access_token = create_access_token(
-        data={"sub": str(user_cd), "univ_nm": univ_info["univ_nm"]}
+        data={"sub": str(user_cd), "univ_nm": univ_info["univ_nm"], "roles": roles}
     )
+
+    _set_auth_cookie(response, access_token)
 
     chips = await get_institution_chips(univ_info["univ_nm"])
 

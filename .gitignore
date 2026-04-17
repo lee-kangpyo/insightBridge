@@ -21,6 +21,7 @@ node_modules/
 .gemini/
 .vscode/
 .idea/
+.agent/
 
 # OS
 .DS_Store
@@ -32,4 +33,4 @@ docs/
 openspec/
 
 # Git worktrees
-.worktrees/
+.worktrees/.worktrees/

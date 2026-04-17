@@ -188,6 +188,37 @@ async def verify_and_mark_code_used(email: str, code: str) -> tuple[bool, str]:
 
 
 async def get_groups() -> list[dict]:
-    query = "SELECT grp_cd, grp_nm FROM ts_grp_info WHERE del_fg = 'N' ORDER BY grp_id"
+    query = "SELECT grp_id, grp_cd, grp_nm FROM ts_grp_info WHERE del_fg = 'N' ORDER BY grp_id"
     df = await fetch_df(query, ())
     return df.to_dict(orient="records") if not df.empty else []
+
+
+async def get_grp_id_by_grp_cd(grp_cd: str) -> Optional[int]:
+    query = "SELECT grp_id FROM ts_grp_info WHERE grp_cd = $1"
+    df = await fetch_df(query, (grp_cd,))
+    if df.empty:
+        return None
+    return int(df.iloc[0]["grp_id"])
+
+
+async def insert_grp_user(user_cd: int, grp_id: int) -> None:
+    query = """
+        INSERT INTO ts_grp_user (user_cd, grp_id, reg_dt)
+        VALUES ($1, $2, NOW())
+    """
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(query, user_cd, grp_id)
+
+
+async def get_user_roles(user_cd: int) -> list[str]:
+    query = """
+        SELECT g.grp_cd
+        FROM ts_grp_user gu
+        JOIN ts_grp_info g ON gu.grp_id = g.grp_id
+        WHERE gu.user_cd = $1
+    """
+    df = await fetch_df(query, (user_cd,))
+    if df.empty:
+        return []
+    return df["grp_cd"].tolist()

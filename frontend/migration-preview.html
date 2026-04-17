@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>메뉴 관리 마이그레이션 제안</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Pretendard', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+</head>
+<body class="bg-[#f7fafd] text-[#181c1e] p-8">
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-[#002c5a] mb-2">메뉴 관리 컴포넌트 마이그레이션</h1>
+            <p class="text-slate-500">기존 퍼블리싱 HTML을 리액트 구조로 분해하고 JSON 데이터를 연동하는 계획입니다.</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <!-- Component Structure -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-blue-600">account_tree</span>
+                    컴포넌트 구조 (Proposed)
+                </h2>
+                <ul class="space-y-3 text-sm">
+                    <li class="flex items-start gap-2">
+                        <span class="font-mono text-blue-500 font-bold">MenuManagementPage</span>
+                        <span class="text-slate-400">- 전체 페이지 컨테이너</span>
+                    </li>
+                    <li class="ml-4 flex items-start gap-2">
+                        <span class="font-mono text-blue-500 font-bold">MenuTreePane</span>
+                        <span class="text-slate-400">- 왼쪽 트리 네비게이션</span>
+                    </li>
+                    <li class="ml-8 flex items-start gap-2">
+                        <span class="font-mono text-blue-500 font-bold">TreeNode</span>
+                        <span class="text-slate-400">- 재귀적 트리 아이템</span>
+                    </li>
+                    <li class="ml-4 flex items-start gap-2">
+                        <span class="font-mono text-blue-500 font-bold">MenuDetailEditor</span>
+                        <span class="text-slate-400">- 오른쪽 상세 편집 폼</span>
+                    </li>
+                    <li class="ml-8 flex items-start gap-2">
+                        <span class="font-mono text-blue-500 font-bold">FormField</span>
+                        <span class="text-slate-400">- 공통 입력 필드 컴포넌트</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Data Structure -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-green-600">data_object</span>
+                    JSON 데이터 구조 (Draft)
+                </h2>
+                <pre class="bg-slate-50 p-4 rounded-lg text-xs font-mono text-slate-700 overflow-x-auto">
+{
+  "menu_id": "M220",
+  "parent_id": "M200",
+  "menu_nm": "메뉴상세조회",
+  "menu_lvl": 3,
+  "sort_no": 2,
+  "menu_url": "/system/menu/detail",
+  "comp_nm": "MenuDetailPage",
+  "use_yn": "Y",
+  "disp_yn": "Y",
+  "auth_yn": "Y",
+  "menu_desc": "트리에서 선택된 메뉴의 상세..."
+}
+                </pre>
+            </div>
+        </div>
+
+        <!-- UI Preview Placeholder -->
+        <div class="bg-[#ebeef1] p-1 rounded-xl overflow-hidden shadow-inner">
+            <div class="bg-white rounded-lg p-8 text-center border-2 border-dashed border-slate-300">
+                <span class="material-symbols-outlined text-4xl text-slate-300 mb-2">visibility</span>
+                <p class="text-slate-400 font-medium">컴포넌트 마이그레이션 후 <br> 리액트 화면이 이곳에 렌더링될 예정입니다.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

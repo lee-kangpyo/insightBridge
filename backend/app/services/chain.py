@@ -30,14 +30,20 @@ Data Relations & Filtering (IMPORTANT):
 
 Chart Config:
 - When calling execute_sql, you MUST also include a `chart_config` argument as a compact JSON object describing the best visualization for the query result.
-- The `chart_config` schema: {"type": "<line|bar|pie|heatmap>", "x": "<x-axis column name>", "y": "<y column(s)>", "title": "<short title>"}
-- **IMPORTANT**: `x` and `y` values MUST exactly match the column names in the final SELECT output (not CTE aliases).
+- The `chart_config` schema: {"type": "<type>", "x": "<x-axis column>", "y": "<y-axis column(s)>", "group": "<series-split column (optional)>", "title": "<short title>"}
+- **IMPORTANT**: `x`, `y`, and `group` values MUST exactly match the column names in the final SELECT output (not CTE aliases).
 - `y` can be a single column name OR a comma-separated list for multi-series: "col_a,col_b"
+- `group` is optional — use it when data has multiple categories you want to compare as separate series (e.g., school comparison, department comparison). If used, the chart will show multiple series split by the group column value.
 - Choose the chart type based on the data pattern:
-  - "line": time-series or trend data (e.g., monthly/yearly trends)
+  - "line": time-series or trend data (e.g., yearly trends, monthly data over time)
   - "bar": categorical comparisons (e.g., per-department counts, rankings)
   - "pie": part-to-whole proportions with few categories (≤8)
   - "heatmap": two-dimensional matrix data
+  - "area": time-series with filled area below the line (good for cumulative or stacked trends)
+  - "stacked_bar": bar chart with stacked segments for part-to-whole within categories
+  - "scatter": x/y both numeric, showing correlation or distribution
+  - "donut": pie chart with a hole in the center (same data as pie, different visual)
+  - "treemap": hierarchical data with size values (x=label, y=size)
 
 Few-shot examples:
   User: "월별 입학률 추이를 보여줘"
@@ -51,6 +57,16 @@ Few-shot examples:
 
   User: "연별 재학생수와 탈락자수의 관계를 보여줘"
   → chart_config: {"type": "line", "x": "base_year", "y": "enrolled_students,dropout_total", "title": "연별 재학생수와 탈락자수 추이"}
+
+  User: "학교별 연도별 중퇴율 추이를 비교해줘"
+  → chart_config: {"type": "line", "x": "base_year", "y": "dropout_rate", "group": "schl_nm", "title": "학교별 연도별 중퇴율 추이"}
+  (When you have multiple categories to compare across time, use `group` to split into multiple series.)
+
+  User: "각 학과별 재학생 비율을 stacked bar로 보여줘"
+  → chart_config: {"type": "stacked_bar", "x": "department", "y": "student_count", "group": "grade", "title": "학과별 학년별 재학생 비율"}
+
+  User: "학생 수와 장학금 금액의 상관관계를 보여줘"
+  → chart_config: {"type": "scatter", "x": "student_count", "y": "scholarship_amount", "title": "학생 수 vs 장학금 상관관계"}
 
 Critical:
 - The application executes ONLY the SQL string passed to execute_sql. If data is not found, use the done tool instead. Do not end with a markdown table, prose-only answer, or Final Answer without calling execute_sql or done.
@@ -142,6 +158,7 @@ def extract_sql_from_tool_calls(response: AIMessage) -> Optional[str]:
 def extract_chart_config_from_tool_calls(response: AIMessage) -> Optional[dict]:
     """tool_calls에서 chart_config를 추출한다. execute_sql 도구의 chart_config 인자 파싱."""
     import json as _json
+
     if not hasattr(response, "tool_calls") or not response.tool_calls:
         return None
     for tc in response.tool_calls:
@@ -184,6 +201,7 @@ def extract_sql_from_content(content: str) -> Optional[str]:
 def extract_chart_config_from_tool_calls(response: AIMessage) -> Optional[dict]:
     """tool_calls에서 chart_config를 추출한다. execute_sql 도구의 chart_config 인자 파싱."""
     import json as _json
+
     if not hasattr(response, "tool_calls") or not response.tool_calls:
         return None
     for tc in response.tool_calls:
@@ -292,7 +310,9 @@ async def run_sql_chain(
                 if tool_name == "execute_sql":
                     sql = extract_sql_from_tool_calls(response_msg)
                     if sql:
-                        chart_config = extract_chart_config_from_tool_calls(response_msg)
+                        chart_config = extract_chart_config_from_tool_calls(
+                            response_msg
+                        )
                         logger.info(
                             "[LCEL Chain] execute_sql SQL 추출 성공: %s, chart_config=%r",
                             sql[:100],
@@ -301,8 +321,15 @@ async def run_sql_chain(
                         return sql, True, None, chart_config
 
                 if tool_name == "done":
-                    reason = arguments.get("reason", "No reason provided") if isinstance(arguments, dict) else str(arguments)
-                    logger.info("[LCEL Chain] done 도구 호출 감지, early exit. reason=%r", reason)
+                    reason = (
+                        arguments.get("reason", "No reason provided")
+                        if isinstance(arguments, dict)
+                        else str(arguments)
+                    )
+                    logger.info(
+                        "[LCEL Chain] done 도구 호출 감지, early exit. reason=%r",
+                        reason,
+                    )
                     return None, True, reason, None
 
                 tool = _get_tool_by_name(tool_name, tools)
@@ -355,11 +382,18 @@ async def run_sql_chain(
             if sql:
                 logger.info("[LCEL Chain] content에서 SQL 추출 성공: %s", sql[:100])
                 return sql, False, None, None
-            
+
             if response_msg.content:
                 iteration_contents.append(response_msg.content)
-                if len(iteration_contents) >= 3 and iteration_contents[-1] == iteration_contents[-2] == iteration_contents[-3]:
-                    logger.warning("[LCEL Chain] 동일한 응답 3회 반복 감지, early exit.")
+                if (
+                    len(iteration_contents) >= 3
+                    and iteration_contents[-1]
+                    == iteration_contents[-2]
+                    == iteration_contents[-3]
+                ):
+                    logger.warning(
+                        "[LCEL Chain] 동일한 응답 3회 반복 감지, early exit."
+                    )
                     return None, False, response_msg.content, None
 
             if response_msg.content:
@@ -397,6 +431,147 @@ def _null_ratio(data: list[dict]) -> float:
     return nulls / total if total > 0 else 1.0
 
 
+def _levenshtein_distance(s1: str, s2: str) -> int:
+    """두 문자열 간의 Levenshtein 거리를 계산한다."""
+    if len(s1) < len(s2):
+        return _levenshtein_distance(s2, s1)
+    if len(s2) == 0:
+        return len(s1)
+
+    previous_row = list(range(len(s2) + 1))
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            insertions = previous_row[j + 1] + 1
+            deletions = current_row[j] + 1
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+
+    return previous_row[-1]
+
+
+def _find_closest_column(
+    name: str, columns: list[str], threshold: float = 0.5
+) -> Optional[str]:
+    """컬럼명과 가장 가까운 이름을 Levenshtein 거리로 찾는다. threshold 비율 이상 걸린 경우만 반환."""
+    if not columns:
+        return None
+    if name in columns:
+        return name
+
+    name_lower = name.lower()
+    for col in columns:
+        if col.lower() == name_lower:
+            return col
+
+    best_match = None
+    best_distance = float("inf")
+    for col in columns:
+        max_len = max(len(name), len(col))
+        if max_len == 0:
+            continue
+        dist = _levenshtein_distance(name, col)
+        ratio = dist / max_len
+        if ratio < threshold and dist < best_distance:
+            best_distance = dist
+            best_match = col
+
+    return best_match
+
+
+def validate_chart_config(
+    chart_config: Optional[dict], df: pd.DataFrame
+) -> Optional[dict]:
+    """chart_config를 DataFrame 컬럼과 대조하여 보정한다.
+
+    - x, y, group 컬럼명이 실제 컬럼과 다르면 Levenshtein 매칭
+    - 전부 null인 컬럼은 y에서 제외
+    - 지원 안 되는 type은 'bar'로 fallback
+    """
+    if chart_config is None or not isinstance(chart_config, dict):
+        return None
+
+    columns = df.columns.tolist()
+    result = dict(chart_config)
+
+    for key in ("x", "y", "group"):
+        original = chart_config.get(key)
+        if not original:
+            continue
+
+        if isinstance(original, str) and key == "y" and "," in original:
+            matched_parts = []
+            for part in original.split(","):
+                part = part.strip()
+                matched = _find_closest_column(part, columns)
+                if matched:
+                    matched_parts.append(matched)
+            result[key] = ",".join(matched_parts) if matched_parts else None
+        else:
+            matched = _find_closest_column(str(original), columns)
+            if matched:
+                result[key] = matched
+
+    supported_types = {
+        "line",
+        "bar",
+        "pie",
+        "heatmap",
+        "area",
+        "stacked_bar",
+        "scatter",
+        "donut",
+        "treemap",
+    }
+    chart_type = result.get("type", "bar")
+    if chart_type not in supported_types:
+        result["type"] = "bar"
+
+    y_value = result.get("y")
+    if y_value:
+        y_cols = [c.strip() for c in str(y_value).split(",")]
+        valid_y_cols = [c for c in y_cols if c in columns and not df[c].isnull().all()]
+        if not valid_y_cols:
+            numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
+            valid_numeric = [c for c in numeric_cols if not df[c].isnull().all()]
+            if valid_numeric:
+                result["y"] = valid_numeric[0]
+            else:
+                result["y"] = y_cols[0] if y_cols else None
+        elif len(valid_y_cols) < len(y_cols):
+            result["y"] = ",".join(valid_y_cols)
+
+    return result
+
+
+def _format_numeric_value(v: Any) -> Any:
+    """숫자 값의 불필요한 소수점을 정리한다."""
+    if v is None:
+        return None
+    try:
+        f = float(v)
+        if isinstance(v, float) and v != v:
+            return None
+        if f.is_integer():
+            return int(f)
+        s = f"{f:.10f}".rstrip("0")
+        if "." in s and s.endswith("."):
+            s = s[:-1]
+        return float(s) if "." in s else s
+    except (TypeError, ValueError):
+        return v
+
+
+def _format_dataframe_numbers(df: pd.DataFrame) -> pd.DataFrame:
+    """DataFrame의 numeric 컬럼에서 불필요한 소수점을 정리한다."""
+    result = df.copy()
+    for col in df.columns:
+        if df[col].dtype.kind in ("i", "f", "u"):
+            result[col] = df[col].apply(_format_numeric_value)
+    return result
+
+
 async def run_sql_chain_multi(
     question: str, chain_info: dict[str, Any]
 ) -> AsyncGenerator[tuple[str, dict], None]:
@@ -422,7 +597,11 @@ async def run_sql_chain_multi(
 
     logger.info("[MultiChain] 시작: question=%r", question)
 
-    while not loop_done and iteration < MAX_ITERATIONS and len(candidates) < MAX_CANDIDATES:
+    while (
+        not loop_done
+        and iteration < MAX_ITERATIONS
+        and len(candidates) < MAX_CANDIDATES
+    ):
         iteration += 1
         logger.info(
             "[MultiChain] iteration=%d candidates=%d/%d",
@@ -433,7 +612,9 @@ async def run_sql_chain_multi(
 
         response = await llm_with_tools.ainvoke(messages)
         response_msg: AIMessage = (
-            response if isinstance(response, AIMessage) else AIMessage(content=str(response))
+            response
+            if isinstance(response, AIMessage)
+            else AIMessage(content=str(response))
         )
 
         has_tool_calls = hasattr(response_msg, "tool_calls") and response_msg.tool_calls
@@ -478,8 +659,10 @@ async def run_sql_chain_multi(
 
                 try:
                     df = await fetch_df(sql)
-                    data_records = (
-                        df.where(pd.notnull(df), None).to_dict(orient="records")
+                    chart_config = validate_chart_config(chart_config, df)
+                    df = _format_dataframe_numbers(df)
+                    data_records = df.where(pd.notnull(df), None).to_dict(
+                        orient="records"
                     )
 
                     result_summary = f"SQL 실행 결과: {len(df)} 행\n"
@@ -539,9 +722,7 @@ async def run_sql_chain_multi(
                     else str(arguments)
                 )
                 logger.info("[MultiChain] done 도구 호출, 루프 종료. reason=%r", reason)
-                messages.append(
-                    ToolMessage(content=reason, tool_call_id=tool_call_id)
-                )
+                messages.append(ToolMessage(content=reason, tool_call_id=tool_call_id))
                 loop_done = True
                 break
 

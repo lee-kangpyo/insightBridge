@@ -7,9 +7,10 @@ class QueryRequest(BaseModel):
 
 
 class ChartConfig(BaseModel):
-    type: str  # "line" | "bar" | "pie" | "heatmap" etc.
+    type: str  # "line" | "bar" | "pie" | "heatmap" | "area" | "stacked_bar" | "scatter" | "donut" | "treemap" etc.
     x: Optional[str] = None
     y: Optional[str] = None
+    group: Optional[str] = None
     title: Optional[str] = None
 
 
@@ -395,6 +396,7 @@ class LoginResponse(BaseModel):
     token_type: str = "bearer"
     univ_nm: Optional[str] = None
     institution_chips: Optional[InstitutionChips] = None
+    roles: Optional[list[str]] = None
 
 
 class OAuth2TokenResponse(BaseModel):
@@ -439,6 +441,7 @@ class RegisterRequest(BaseModel):
     grade_nm: str
     pos_nm: str
     verification_code: str
+    role: Optional[str] = "STDNT"
 
 
 class RegisterResponse(BaseModel):
@@ -449,5 +452,6 @@ class RegisterResponse(BaseModel):
 
 
 class GroupResponse(BaseModel):
+    grp_id: int
     grp_cd: str
     grp_nm: str

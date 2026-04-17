@@ -19,7 +19,7 @@ export function ChartTile({ data, chartConfig, isLoading }) {
       <span className="text-xs font-label font-medium text-on-surface-variant uppercase tracking-wider block mb-4">
         Chart
       </span>
-      <div className="h-[320px]">
+      <div className="h-[320px] overflow-hidden">
         <ChartRenderer data={data} chartConfig={chartConfig} />
       </div>
     </div>

@@ -46,6 +46,17 @@
   }
 }
 
+@keyframes expandIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* docs/로그인 화면/code.html · screen.png — light lattice background, white glass card */
 @layer components {
   .login-root {

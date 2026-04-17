@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import re
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
@@ -12,6 +13,15 @@ from backend.app.database import get_pool
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
+
+def validate_identifier(identifier: str) -> bool:
+    """
+    SQL 식별자(테이블/컬럼명) 전용 화이트리스트 정규식 검증.
+    영문 대소문자, 숫자, 언더스코어(_)만 허용하며 숫자로 시작할 수 없음.
+    """
+    if not identifier:
+        return False
+    return bool(re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", identifier))
 
 async def analyze():
     pool = await get_pool()
@@ -26,6 +36,10 @@ async def analyze():
 
         schema_data: Dict[str, List[Dict[str, str]]] = {}
         for tname in table_names:
+            if not validate_identifier(tname):
+                logger.warning(f"Skipping potentially unsafe table name: {tname}")
+                continue
+
             cols = await conn.fetch(
                 """
                 SELECT attname, format_type(atttypid, atttypmod) as data_type
@@ -43,13 +57,21 @@ async def analyze():
         logger.info("Extracting samples...")
         # 2. 관계(FK) 유추 및 카테고리 데이터 샘플 추출
         for tname, cols in schema_data.items():
+            if not validate_identifier(tname):
+                continue
+
             for c in cols:
                 cname = c["name"]
                 ctype = c["type"]
                 
+                if not validate_identifier(cname):
+                    logger.warning(f"Skipping potentially unsafe column name: {tname}.{cname}")
+                    continue
+
                 # Enum 샘플 추출: 모든 텍스트 컬럼 중 카디널리티가 낮은(<=20) 항목을 샘플링합니다.
                 if "char" in ctype or "text" in ctype:
                     try:
+                        # 이미 validate_identifier를 통과했으므로 f-string 사용이 안전함
                         dist_cnt_row = await conn.fetchrow(f'SELECT COUNT(DISTINCT "{cname}") as cnt FROM "{tname}"')
                         dist_cnt = dist_cnt_row["cnt"] if dist_cnt_row else 0
                         
@@ -74,11 +96,20 @@ async def analyze():
                 t1 = table_names[i]
                 t2 = table_names[j]
                 
+                if not (validate_identifier(t1) and validate_identifier(t2)):
+                    continue
+
+                if t1 not in schema_data or t2 not in schema_data:
+                    continue
+
                 t1_cols_dict = {c["name"]: c["type"] for c in schema_data[t1]}
                 t2_cols_dict = {c["name"]: c["type"] for c in schema_data[t2]}
                 
                 common_cols = set(t1_cols_dict.keys()).intersection(t2_cols_dict.keys())
                 for common_col in common_cols:
+                    if not validate_identifier(common_col):
+                        continue
+
                     if not (common_col.endswith("_cd") or common_col.endswith("_code") or common_col.endswith("_id")):
                         continue
                     if common_col in ("year", "base_year", "id"):
