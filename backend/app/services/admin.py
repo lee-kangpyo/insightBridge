@@ -45,7 +45,7 @@ async def get_all_menus(include_deleted: bool = False) -> list[dict]:
     where = "" if include_deleted else "WHERE del_fg = 'N'"
     query = f"""
         SELECT menu_id, menu_cd, menu_nm, parent_menu_id,
-               menu_level, menu_path, screen_id, sort_order, del_fg, reg_dt
+               menu_level, menu_path, screen_id, sort_order, use_yn, del_fg, reg_dt
         FROM ts_menu_info
         {where}
         ORDER BY sort_order NULLS LAST, menu_id
@@ -80,9 +80,9 @@ async def create_menu(
             """
             INSERT INTO ts_menu_info (
                 menu_cd, menu_nm, parent_menu_id, menu_level,
-                menu_path, screen_id, sort_order, del_fg
+                menu_path, screen_id, sort_order, use_yn, del_fg
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, 'N')
+            VALUES ($1, $2, $3, $4, $5, $6, $7, 'Y', 'N')
             RETURNING menu_id
             """,
             menu_cd.strip(),
@@ -130,6 +130,11 @@ async def patch_menu(menu_id: int, updates: dict[str, Any]) -> None:
             add("screen_id", sid.strip() if isinstance(sid, str) else sid)
     if "sort_order" in updates:
         add("sort_order", updates["sort_order"])
+    if "use_yn" in updates and updates["use_yn"] is not None:
+        yn = str(updates["use_yn"]).strip().upper()
+        if yn not in ("Y", "N"):
+            raise ValueError("invalid_use_yn")
+        add("use_yn", yn)
     if "del_fg" in updates and updates["del_fg"] is not None:
         add("del_fg", str(updates["del_fg"]).strip())
 
