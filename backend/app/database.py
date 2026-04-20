@@ -27,10 +27,11 @@ async def fetch_df(sql: str, params: tuple = ()) -> pd.DataFrame:
     async with pool.acquire() as conn:
         rows = await conn.fetch(sql, *params)
         if not rows:
-            return pd.DataFrame(columns=[c[0] for c in rows[0].keys()] if rows else [])
+            return pd.DataFrame()
         columns = list(rows[0].keys())
         data = [dict(row) for row in rows]
-        return pd.DataFrame(data, columns=columns)
+        df = pd.DataFrame(data, columns=columns)
+        return df.replace({pd.NA: None, float('nan'): None})
 
 
 def get_main_loop():

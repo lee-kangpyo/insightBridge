@@ -1,5 +1,10 @@
 import api from './api';
 
+export const getUsers = async (search = '') => {
+  const response = await api.get(`/api/admin/users?search=${encodeURIComponent(search)}`);
+  return response.data.users || [];
+};
+
 export const getRoles = async () => {
   const response = await api.get('/api/auth/groups');
   return response.data;
