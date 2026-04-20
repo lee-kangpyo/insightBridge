@@ -51,6 +51,7 @@ class AdminMenuPatchBody(BaseModel):
     menu_path: Optional[str] = None
     screen_id: Optional[str] = None
     sort_order: Optional[int] = None
+    use_yn: Optional[str] = None
     del_fg: Optional[str] = None
 
 
@@ -191,7 +192,15 @@ async def patch_admin_menu(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No fields to update",
         )
-    await patch_menu(menu_id, data)
+    try:
+        await patch_menu(menu_id, data)
+    except ValueError as e:
+        if str(e) == "invalid_use_yn":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid use_yn",
+            ) from e
+        raise
     return {"ok": True}
 
 

@@ -47,7 +47,8 @@ function MenuTreeNode({ node, level = 0, selectedId, onSelect, searchTerm }) {
   const hasChildren = node.children && node.children.length > 0;
   const mid = node.menu_id;
   const isSelected = selectedId === mid;
-  const isInactive = node.del_fg === "Y";
+  const isDeleted = node.del_fg === "Y";
+  const isDisabled = String(node.use_yn ?? "Y").toUpperCase() === "N";
   const isHighlighted =
     searchTerm &&
     (node.menu_nm || "").toLowerCase().includes(searchTerm.toLowerCase());
@@ -59,8 +60,10 @@ function MenuTreeNode({ node, level = 0, selectedId, onSelect, searchTerm }) {
         className={`flex items-center gap-2 py-2 px-2 rounded-md cursor-pointer transition-colors ${
           isSelected
             ? "bg-primary-container/10 text-error"
-            : isInactive
-              ? "opacity-50"
+            : isDeleted
+              ? "opacity-40"
+              : isDisabled
+                ? "opacity-70"
               : isHighlighted
                 ? "bg-yellow-100 text-primary font-semibold"
                 : "hover:bg-surface-container text-on-surface"
@@ -89,9 +92,11 @@ function MenuTreeNode({ node, level = 0, selectedId, onSelect, searchTerm }) {
         >
           {node.menu_nm}
         </span>
-        {isInactive && (
+        {isDeleted ? (
           <span className="text-[10px] uppercase text-outline ml-1">del</span>
-        )}
+        ) : isDisabled ? (
+          <span className="text-[10px] uppercase text-outline ml-1">off</span>
+        ) : null}
       </div>
       {hasChildren && expanded && (
         <div className="flex flex-col ml-6 pl-2 border-l border-outline-variant/30 gap-1">
@@ -212,7 +217,10 @@ function MenuDetailForm({
     );
   }
 
-  const active = node.del_fg !== "Y";
+  const isDeleted = node.del_fg === "Y";
+  const savedEnabled = String(node.use_yn ?? "Y").toUpperCase() !== "N";
+  const isEnabled = Boolean(formData.useYn);
+  const isUseYnDirty = savedEnabled !== isEnabled;
 
   return (
     <div className="flex-1 bg-surface-container-lowest rounded-lg flex flex-col relative overflow-hidden shadow-[0_8px_32px_rgba(24,28,30,0.02)]">
@@ -273,15 +281,15 @@ function MenuDetailForm({
             </h3>
             <span
               className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
-                active
-                  ? "bg-tertiary-fixed text-on-tertiary-fixed"
-                  : "bg-surface-container text-outline"
+                isDeleted
+                  ? "bg-surface-container text-outline"
+                  : "bg-tertiary-fixed text-on-tertiary-fixed"
               }`}
             >
               <span className="material-symbols-outlined text-[14px]">
-                {active ? "check_circle" : "block"}
+                {isDeleted ? "block" : "check_circle"}
               </span>
-              {active ? "ACTIVE" : "DELETED"}
+              {isDeleted ? "DELETED" : "ACTIVE"}
             </span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -386,10 +394,10 @@ function MenuDetailForm({
             <div className="flex items-center gap-4">
               <div>
                 <div className="text-sm font-medium text-on-surface">
-                  사용여부 (del_fg)
+                  사용여부 (use_yn)
                 </div>
                 <div className="text-xs text-on-surface-variant">
-                  N=사용, Y=삭제(숨김)
+                  Y=사용, N=미사용 (목록에는 모두 표시)
                 </div>
               </div>
               <button
@@ -407,6 +415,25 @@ function MenuDetailForm({
                   }`}
                 />
               </button>
+            </div>
+            <div className="flex items-center gap-3">
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
+                  isEnabled
+                    ? "bg-tertiary-fixed text-on-tertiary-fixed"
+                    : "bg-surface-container text-outline"
+                }`}
+              >
+                <span className="material-symbols-outlined text-[14px]">
+                  {isEnabled ? "toggle_on" : "toggle_off"}
+                </span>
+                {isEnabled ? "ENABLED" : "DISABLED"}
+              </span>
+              {isUseYnDirty && (
+                <span className="text-xs text-on-surface-variant">
+                  (미저장)
+                </span>
+              )}
             </div>
           </div>
           <div className="flex flex-col gap-2">
@@ -477,7 +504,7 @@ function nodeToForm(node) {
       node.parent_menu_id === "0"
         ? ""
         : String(node.parent_menu_id),
-    useYn: node.del_fg !== "Y",
+    useYn: String(node.use_yn ?? "Y").toUpperCase() !== "N",
   };
 }
 
@@ -562,7 +589,7 @@ export default function MenuManagement() {
           formData.parentMenuId.trim() === ""
             ? null
             : formData.parentMenuId.trim(),
-        del_fg: formData.useYn ? "N" : "Y",
+        use_yn: formData.useYn ? "Y" : "N",
       });
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
@@ -579,7 +606,7 @@ export default function MenuManagement() {
     if (!selectedNode) return;
     if (
       !window.confirm(
-        `메뉴 "${selectedNode.menu_nm}" 을(를) 비활성화(del_fg=Y)할까요?`,
+        `메뉴 "${selectedNode.menu_nm}" 을(를) 삭제(del_fg=Y)할까요?`,
       )
     )
       return;
