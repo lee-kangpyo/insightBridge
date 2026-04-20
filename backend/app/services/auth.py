@@ -1,3 +1,4 @@
+import math
 import smtplib
 import bcrypt
 import logging
@@ -188,9 +189,21 @@ async def verify_and_mark_code_used(email: str, code: str) -> tuple[bool, str]:
 
 
 async def get_groups() -> list[dict]:
-    query = "SELECT grp_id, grp_cd, grp_nm FROM ts_grp_info WHERE del_fg = 'N' ORDER BY grp_id"
+    query = """
+        SELECT grp_id, grp_cd, grp_nm, description
+        FROM ts_grp_info
+        WHERE del_fg = 'N'
+        ORDER BY grp_id
+    """
     df = await fetch_df(query, ())
-    return df.to_dict(orient="records") if not df.empty else []
+    if df.empty:
+        return []
+    rows = df.to_dict(orient="records")
+    for r in rows:
+        v = r.get("description")
+        if isinstance(v, float) and math.isnan(v):
+            r["description"] = None
+    return rows
 
 
 async def get_grp_id_by_grp_cd(grp_cd: str) -> Optional[int]:

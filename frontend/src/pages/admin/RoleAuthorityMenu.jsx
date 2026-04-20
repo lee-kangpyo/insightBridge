@@ -1,36 +1,16 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import PageHeader from '../../components/common/PageHeader';
-
-const mockRoles = [
-  { grp_id: 1, grp_cd: 'ADM', grp_nm: '시스템관리자' },
-  { grp_id: 2, grp_cd: 'MGR', grp_nm: '운영관리자' },
-  { grp_id: 3, grp_cd: 'USR', grp_nm: '일반사용자' },
-  { grp_id: 4, grp_cd: 'STD', grp_nm: '학생' },
-  { grp_id: 5, grp_cd: 'INS', grp_nm: '교수' },
-];
-
-const mockMenus = [
-  { menu_id: 1, menu_nm: '개요', menu_path: '/dashboard' },
-  { menu_id: 2, menu_nm: '재정', menu_path: '/finance' },
-  { menu_id: 3, menu_nm: '학생 현황', menu_path: '/student-career' },
-  { menu_id: 4, menu_nm: '교수진', menu_path: '/education-faculty' },
-  { menu_id: 5, menu_nm: '연구', menu_path: '/research' },
-  { menu_id: 6, menu_nm: '입학', menu_path: '/admission' },
-  { menu_id: 7, menu_nm: '캄퍼스', menu_path: '/campus' },
-  { menu_id: 8, menu_nm: '지자체구', menu_path: '/governance' },
-];
-
-const mockAssignedMenus = {
-  1: [1, 2, 3, 4, 5, 6, 7, 8],
-  2: [1, 2, 3, 6],
-  3: [1, 3],
-  4: [1, 3],
-  5: [1, 3, 4, 5],
-};
+import {
+  getAdminGroups,
+  getAdminMenuTree,
+  getAdminRoleMenuMap,
+  toggleRoleMenu,
+} from '../../services/adminApi';
 
 function RoleAuthorityMenu() {
-  const [roles] = useState(mockRoles);
-  const [allMenus] = useState(mockMenus);
+  const [roles, setRoles] = useState([]);
+  const [allMenus, setAllMenus] = useState([]);
+  const [menuRoleIdsMap, setMenuRoleIdsMap] = useState({});
   const [selectedRoleId, setSelectedRoleId] = useState(null);
   const [assignedMenuIds, setAssignedMenuIds] = useState([]);
   const [initialAssignedMenuIds, setInitialAssignedMenuIds] = useState([]);
@@ -39,6 +19,41 @@ function RoleAuthorityMenu() {
   const [selectedAssignedMenuIds, setSelectedAssignedMenuIds] = useState([]);
   const [selectedAvailableMenuIds, setSelectedAvailableMenuIds] = useState([]);
   const [showToast, setShowToast] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const isActiveYn = (v) => String(v ?? 'Y').toUpperCase() !== 'N';
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const [roleRows, menuTreeData, roleMenuMapData] = await Promise.all([
+          getAdminGroups(),
+          getAdminMenuTree(),
+          getAdminRoleMenuMap(),
+        ]);
+        const roleList = Array.isArray(roleRows) ? roleRows : [];
+        setRoles(roleList.filter((r) => isActiveYn(r?.use_yn)));
+        const flat = menuTreeData?.menus_flat;
+        const menuList = Array.isArray(flat) ? flat : [];
+        setAllMenus(menuList.filter((m) => isActiveYn(m?.use_yn)));
+        const m = roleMenuMapData?.menu_role_ids ?? {};
+        setMenuRoleIdsMap(typeof m === 'object' && m ? m : {});
+      } catch (e) {
+        const msg =
+          e?.response?.data?.detail ||
+          e?.message ||
+          '데이터를 불러오지 못했습니다.';
+        setError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   const selectedRole = useMemo(
     () => roles.find((r) => r.grp_id === selectedRoleId),
@@ -77,9 +92,14 @@ function RoleAuthorityMenu() {
 
   const handleRoleSelect = (roleId) => {
     setSelectedRoleId(roleId);
-    const menus = mockAssignedMenus[roleId] || [];
-    setAssignedMenuIds([...menus]);
-    setInitialAssignedMenuIds([...menus]);
+    const nextAssigned = allMenus
+      .filter((m) => {
+        const roleIds = menuRoleIdsMap?.[String(m.menu_id)] || [];
+        return Array.isArray(roleIds) && roleIds.includes(roleId);
+      })
+      .map((m) => m.menu_id);
+    setAssignedMenuIds(nextAssigned);
+    setInitialAssignedMenuIds(nextAssigned);
     setSelectedAssignedMenuIds([]);
     setSelectedAvailableMenuIds([]);
   };
@@ -96,16 +116,51 @@ function RoleAuthorityMenu() {
     setSelectedAssignedMenuIds([]);
   };
 
-  const handleSave = () => {
-    const saveData = {
-      grp_id: selectedRoleId,
-      menu_ids: assignedMenuIds,
-      savedAt: new Date().toISOString(),
-    };
-    console.log('저장할 데이터:', JSON.stringify(saveData, null, 2));
-    setInitialAssignedMenuIds([...assignedMenuIds]);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
+  const handleSave = async () => {
+    if (!selectedRoleId) return;
+    const before = new Set(initialAssignedMenuIds);
+    const after = new Set(assignedMenuIds);
+    const added = assignedMenuIds.filter((id) => !before.has(id));
+    const removed = initialAssignedMenuIds.filter((id) => !after.has(id));
+
+    try {
+      setSaving(true);
+      setError(null);
+      for (const menuId of added) {
+        await toggleRoleMenu(menuId, selectedRoleId, true);
+      }
+      for (const menuId of removed) {
+        await toggleRoleMenu(menuId, selectedRoleId, false);
+      }
+
+      // locally reflect latest saved state
+      setInitialAssignedMenuIds([...assignedMenuIds]);
+      setMenuRoleIdsMap((prev) => {
+        const next = { ...(prev || {}) };
+        for (const menuId of added) {
+          const key = String(menuId);
+          const cur = Array.isArray(next[key]) ? next[key] : [];
+          next[key] = cur.includes(selectedRoleId)
+            ? cur
+            : [...cur, selectedRoleId].sort((a, b) => a - b);
+        }
+        for (const menuId of removed) {
+          const key = String(menuId);
+          const cur = Array.isArray(next[key]) ? next[key] : [];
+          next[key] = cur.filter((rid) => rid !== selectedRoleId);
+        }
+        return next;
+      });
+
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (e) {
+      const msg =
+        e?.response?.data?.detail || e?.message || '저장에 실패했습니다.';
+      setError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleReset = () => {
@@ -116,7 +171,9 @@ function RoleAuthorityMenu() {
     }
   };
 
-  const isDirty = JSON.stringify(assignedMenuIds.sort()) !== JSON.stringify(initialAssignedMenuIds.sort());
+  const isDirty =
+    JSON.stringify([...assignedMenuIds].sort()) !==
+    JSON.stringify([...initialAssignedMenuIds].sort());
 
   return (
     <div className="px-10 pb-12 max-w-[1920px] mx-auto flex flex-col gap-8">
@@ -135,14 +192,26 @@ function RoleAuthorityMenu() {
             <button
               className="px-6 py-2.5 rounded-md bg-primary text-on-primary font-medium hover:bg-primary-container transition-colors text-sm flex items-center gap-2"
               onClick={handleSave}
-              disabled={!selectedRoleId || !isDirty}
+              disabled={!selectedRoleId || !isDirty || saving}
             >
               <span className="material-symbols-outlined text-[18px]">save</span>
-              저장
+              {saving ? '저장 중…' : '저장'}
             </button>
           </div>
         }
       />
+
+      {error && (
+        <div className="p-4 bg-error/10 border border-error rounded-lg text-error text-sm whitespace-pre-wrap">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="text-on-surface-variant text-sm py-8">
+          불러오는 중…
+        </div>
+      ) : null}
 
       <div className="flex gap-6 items-start">
         <div className="w-72 shrink-0 bg-surface-container-lowest rounded-lg p-6 flex flex-col gap-4">

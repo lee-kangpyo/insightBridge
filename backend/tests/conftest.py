@@ -1,3 +1,53 @@
+import os
+import uuid
+from typing import AsyncIterator
+
+import asyncpg
+import pytest
+from httpx import ASGITransport, AsyncClient
+
+from app.dependencies import require_sys_adm
+from app.main import app
+
+
+@pytest.fixture(scope="session")
+def database_url() -> str:
+    url = os.getenv("DATABASE_URL")
+    if not url:
+        pytest.skip("DATABASE_URL is not set (needed for integration tests)")
+    return url
+
+
+@pytest.fixture
+async def db(database_url: str) -> AsyncIterator[asyncpg.Connection]:
+    conn = await asyncpg.connect(database_url)
+    try:
+        yield conn
+    finally:
+        await conn.close()
+
+
+@pytest.fixture
+def sys_adm_override():
+    async def _override():
+        return {"user_cd": "0", "univ_nm": "TEST", "roles": ["SYS_ADM"]}
+
+    return _override
+
+
+@pytest.fixture
+async def client(sys_adm_override) -> AsyncIterator[AsyncClient]:
+    app.dependency_overrides[require_sys_adm] = sys_adm_override
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
+    app.dependency_overrides.pop(require_sys_adm, None)
+
+
+@pytest.fixture
+def run_id() -> str:
+    return uuid.uuid4().hex[:10]
+
 import pytest
 import sys
 import os

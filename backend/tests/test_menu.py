@@ -67,8 +67,9 @@ class TestTreeifyMenus:
 
         result = treeify(flat_menus)
 
-        assert len(result) == 1
-        assert result[0]["menu_id"] == 1
+        # 부모가 없는 항목은 최상위로 올려 표시
+        assert len(result) == 2
+        assert {m["menu_id"] for m in result} == {1, 2}
 
     def test_treeify_menus_empty(self):
         from app.services.menu import treeify

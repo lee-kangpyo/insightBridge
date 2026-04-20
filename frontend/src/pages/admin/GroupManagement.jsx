@@ -1,29 +1,69 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import PageHeader from '../../components/common/PageHeader';
 import AdminTable from '../../components/common/AdminTable';
-import { loadMenuData } from '../../components/common/MenuDataLoader';
-
-const mockGroupData = [
-  { id: 1, grp_code: 'ADM', grp_nm: '입학관리자', description: '입학/선발 지표 조회 및 점검 권한', use_yn: true, permissions: ['admission', 'overview(read)'], reg_date: '2026-04-15 14:40:00' },
-  { id: 2, grp_code: 'IR_ANALYST', grp_nm: '지표분석자', description: 'IR 지표 분석 및 리포트 권한', use_yn: true, permissions: ['overview(read)'], reg_date: '2026-04-10 09:00:00' },
-  { id: 3, grp_code: 'FIN_CTRL', grp_nm: '재정통제자', description: '재정 현황 조회 및 통제 권한', use_yn: true, permissions: ['finance(read)'], reg_date: '2026-04-08 11:20:00' },
-  { id: 4, grp_code: 'STD_SUPPORT', grp_nm: '학생지원담당', description: '학생 지원 업무 권한', use_yn: false, permissions: ['student(read)'], reg_date: '2026-03-20 16:30:00' },
-  { id: 5, grp_code: 'SUPER_ADMIN', grp_nm: '시스템총괄', description: '시스템 전체 관리자 권한', use_yn: true, permissions: ['admin', 'admission', 'overview(read)', 'finance(read)', 'student(read)'], reg_date: '2026-01-01 00:00:00' },
-];
+import {
+  getAdminGroups,
+  createAdminGroup,
+  patchAdminGroup,
+  deleteAdminGroup,
+} from '../../services/adminApi';
 
 const listColumns = [
   { key: 'grp_code', label: '그룹코드', sortable: true },
   { key: 'grp_nm', label: '그룹명', sortable: true },
+  {
+    key: 'description',
+    label: '설명',
+    sortable: false,
+    render: (val) => (
+      <span className="line-clamp-2 text-on-surface-variant max-w-[200px] inline-block align-top" title={val || ''}>
+        {val || '—'}
+      </span>
+    ),
+  },
 ];
 
-function GroupListTable({ groups, selectedGroup, onSelect }) {
+function formatRegDate(iso) {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '-';
+  return d.toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+function mapGroupFromApi(row) {
+  const isDeleted = String(row.del_fg ?? 'N').toUpperCase() === 'Y';
+  const useYn = String(row.use_yn ?? 'Y').toUpperCase() !== 'N';
+  return {
+    id: Number(row.grp_id),
+    grp_code: row.grp_cd,
+    grp_nm: row.grp_nm,
+    description: row.description ?? '',
+    reg_date: formatRegDate(row.reg_dt),
+    use_yn: useYn,
+    reg_dt: row.reg_dt,
+    del_fg: String(row.del_fg ?? 'N').toUpperCase(),
+    is_deleted: isDeleted,
+    use_yn_raw: row.use_yn,
+  };
+}
+
+function GroupListTable({ groups, selectedGroup, isCreating, onSelect, onNew }) {
   return (
     <div className="flex flex-col bg-surface-container-low rounded-lg p-6 min-w-[350px] h-full">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-headline font-bold text-primary">권한 그룹 목록</h2>
-        <span className="text-xs font-label text-outline uppercase tracking-wider bg-surface-container px-2 py-1 rounded-full">
-          Total {groups.length}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-label text-outline uppercase tracking-wider bg-surface-container px-2 py-1 rounded-full">
+            Total {groups.length}
+          </span>
+          <button
+            type="button"
+            className="px-3 py-1.5 rounded-lg bg-secondary-container text-on-secondary-container text-xs font-medium hover:bg-secondary-fixed transition-colors"
+            onClick={onNew}
+          >
+            새 그룹
+          </button>
+        </div>
       </div>
       <div className="flex-1 min-h-0">
         <AdminTable
@@ -31,7 +71,7 @@ function GroupListTable({ groups, selectedGroup, onSelect }) {
           data={groups}
           onSelect={onSelect}
           searchPlaceholder="그룹명 또는 코드 검색..."
-          selectedId={selectedGroup?.id}
+          selectedId={isCreating ? null : selectedGroup?.id}
           showRowNumber={true}
         />
       </div>
@@ -39,17 +79,21 @@ function GroupListTable({ groups, selectedGroup, onSelect }) {
   );
 }
 
-function GroupDetailForm({ group, formData, onChange, onSave, onDelete }) {
-  if (!group) {
+function GroupDetailForm({ group, isCreating, formData, onChange, onSave, onDelete }) {
+  if (!group && !isCreating) {
     return (
       <div className="flex-1 bg-surface-container-lowest rounded-lg flex flex-col relative overflow-hidden shadow-[0_8px_32px_rgba(24,28,30,0.02)]">
         <div className="h-1.5 w-full absolute top-0 left-0 bg-gradient-to-r from-primary to-primary-container" />
         <div className="p-8 flex items-center justify-center h-full">
-          <p className="text-on-surface-variant">왼쪽에서 권한 그룹을 선택하세요</p>
+          <p className="text-on-surface-variant">왼쪽에서 권한 그룹을 선택하거나 &quot;새 그룹&quot;을 누르세요</p>
         </div>
       </div>
     );
   }
+
+  const displayId = isCreating ? '-' : group?.id;
+  const displayReg = isCreating ? '-' : (formData?.reg_date ?? '-');
+  const isDeleted = !isCreating && String(formData?.del_fg ?? 'N').toUpperCase() === 'Y';
 
   return (
     <div className="flex-1 bg-surface-container-lowest rounded-lg flex flex-col relative overflow-hidden shadow-[0_8px_32px_rgba(24,28,30,0.02)]">
@@ -65,123 +109,128 @@ function GroupDetailForm({ group, formData, onChange, onSave, onDelete }) {
       <div className="p-8 flex flex-col gap-6 flex-1 overflow-y-auto custom-scrollbar">
         <div className="flex justify-between items-end border-b border-outline-variant/10 pb-6">
           <div>
-            <h2 className="text-2xl font-headline font-bold text-primary mb-1">권한 그룹 상세</h2>
-            <p className="text-sm text-outline-variant">선택된 권한 그룹의 세부 정보 및 설정</p>
+            <h2 className="text-2xl font-headline font-bold text-primary mb-1">
+              {isCreating ? '새 권한 그룹' : '권한 그룹 상세'}
+            </h2>
+            <p className="text-sm text-outline-variant">
+              {isCreating
+                ? '그룹코드·그룹명을 입력한 뒤 저장하면 DB(ts_grp_info)에 등록됩니다.'
+                : '선택된 권한 그룹 정보를 수정합니다. 삭제는 논리삭제(del_fg)로 처리됩니다.'}
+            </p>
           </div>
           <div className="flex gap-2">
-            <span className={`px-3 py-1 rounded-full text-xs font-label tracking-wider flex items-center gap-1 font-medium ${
-              formData.use_yn ? 'bg-tertiary-fixed text-on-tertiary-fixed' : 'bg-surface-container text-outline'
-            }`}>
-              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: formData.use_yn ? 'var(--on-tertiary-fixed)' : 'var(--outline)' }} />
+            {!isCreating && isDeleted && (
+              <span className="px-3 py-1 rounded-full text-xs font-label tracking-wider flex items-center gap-1 font-medium bg-error-container text-on-error-container">
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--on-error-container)' }} />
+                Deleted
+              </span>
+            )}
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-label tracking-wider flex items-center gap-1 font-medium ${
+                formData.use_yn ? 'bg-tertiary-fixed text-on-tertiary-fixed' : 'bg-surface-container text-outline'
+              }`}
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ backgroundColor: formData.use_yn ? 'var(--on-tertiary-fixed)' : 'var(--outline)' }}
+              />
               {formData.use_yn ? 'Active' : 'Inactive'}
             </span>
           </div>
         </div>
         <div className="grid gap-4 grid-cols-2">
           <div className="bg-surface-container-lowest border-l-4 border-primary shadow-sm rounded-r-lg p-4">
-            <p className="text-xs font-label text-outline uppercase tracking-wider mb-1">No</p>
-            <p className="text-base font-semibold text-on-surface">{group.id}</p>
+            <p className="text-xs font-label text-outline uppercase tracking-wider mb-1">No (grp_id)</p>
+            <p className="text-base font-semibold text-on-surface">{displayId}</p>
           </div>
           <div className="bg-surface-container-lowest border-l-4 border-primary shadow-sm rounded-r-lg p-4">
-            <p className="text-xs font-label text-outline uppercase tracking-wider mb-1">Registration Date</p>
-            <p className="text-base font-semibold text-on-surface">{group.reg_date}</p>
+            <p className="text-xs font-label text-outline uppercase tracking-wider mb-1">등록일시</p>
+            <p className="text-base font-semibold text-on-surface">{displayReg}</p>
           </div>
         </div>
         <div className="space-y-6 flex-1">
           <h3 className="text-lg font-headline font-semibold text-on-surface flex items-center gap-2">
             <span className="material-symbols-outlined text-secondary">tune</span>
-            Group Configuration
+            그룹 설정
           </h3>
+          <p className="text-sm text-on-surface-variant -mt-2">
+            메뉴 단위 접근 권한은 <strong className="text-on-surface">역할–메뉴</strong> 관리(ts_grp_menu)에서 연결합니다.
+          </p>
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-on-surface-variant">Group Name (그룹명)</label>
+              <label className="block text-sm font-medium text-on-surface-variant">그룹명</label>
               <input
                 className="w-full px-4 py-3 rounded-lg bg-surface-container-low text-base text-on-surface border-b-2 border-transparent focus:bg-surface-container-lowest focus:border-secondary focus:outline-none transition-all"
                 type="text"
                 value={formData.grp_nm}
+                disabled={isDeleted}
                 onChange={(e) => onChange({ ...formData, grp_nm: e.target.value })}
               />
             </div>
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-on-surface-variant">Group Code (그룹코드)</label>
+              <label className="block text-sm font-medium text-on-surface-variant">그룹코드</label>
               <input
                 className="w-full px-4 py-3 rounded-lg bg-surface-container-low text-base text-on-surface font-mono border-b-2 border-transparent focus:bg-surface-container-lowest focus:border-secondary focus:outline-none transition-all"
                 type="text"
                 value={formData.grp_code}
+                disabled={isDeleted}
                 onChange={(e) => onChange({ ...formData, grp_code: e.target.value })}
               />
             </div>
           </div>
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-on-surface-variant">Description (설명)</label>
+            <label className="block text-sm font-medium text-on-surface-variant">설명 (description)</label>
             <textarea
               className="w-full px-4 py-3 rounded-lg bg-surface-container-low text-base text-on-surface resize-none border-b-2 border-transparent focus:bg-surface-container-lowest focus:border-secondary focus:outline-none transition-all"
-              rows="3"
-              value={formData.description}
+              rows={3}
+              value={formData.description ?? ''}
+              disabled={isDeleted}
               onChange={(e) => onChange({ ...formData, description: e.target.value })}
+              placeholder="그룹 용도·권한 범위 등 상세 설명"
             />
           </div>
           <div className="flex items-center justify-between p-4 bg-surface-container-low rounded-lg">
             <div>
-              <p className="text-sm font-medium text-on-surface">사용여부 (System Status)</p>
-              <p className="text-xs text-outline-variant">시스템 내 해당 그룹의 활성화 상태</p>
+              <p className="text-sm font-medium text-on-surface">사용 여부</p>
+              <p className="text-xs text-outline-variant">비활성 시 use_yn = N (삭제는 del_fg = Y)</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
                 className="sr-only peer"
                 checked={formData.use_yn}
+                disabled={isDeleted}
                 onChange={(e) => onChange({ ...formData, use_yn: e.target.checked })}
               />
               <div className="w-11 h-6 bg-outline-variant rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-secondary" />
             </label>
           </div>
-          <div className="space-y-3 pt-2 border-t border-outline-variant/10">
-            <label className="block text-sm font-medium text-on-surface-variant mb-2">Permission Scope (권한 범위)</label>
-            <div className="flex flex-wrap gap-2">
-              {formData.permissions.map((perm, idx) => (
-                <span
-                  key={idx}
-                  className="px-3 py-1.5 bg-primary-fixed text-primary-container rounded-lg text-sm font-medium border border-primary-fixed-dim/30 flex items-center gap-1"
-                >
-                  <span className="material-symbols-outlined text-[16px]">check</span>
-                  {perm}
-                  <button
-                    className="ml-1 hover:text-error transition-colors"
-                    onClick={() => onChange({ ...formData, permissions: formData.permissions.filter((_, i) => i !== idx) })}
-                  >
-                    <span className="material-symbols-outlined text-[14px]">close</span>
-                  </button>
-                </span>
-              ))}
-              <span
-                className="px-3 py-1.5 bg-surface-container text-outline-variant rounded-lg text-sm font-medium border border-outline-variant/20 hover:bg-surface-container-high cursor-pointer transition-colors flex items-center gap-1 border-dashed"
-                onClick={() => {
-                  const newPerm = prompt('권한 태그를 입력하세요:');
-                  if (newPerm && newPerm.trim()) {
-                    onChange({ ...formData, permissions: [...formData.permissions, newPerm.trim()] });
-                  }
-                }}
-              >
-                <span className="material-symbols-outlined text-[16px]">add</span>
-                Add Permission
-              </span>
-            </div>
-          </div>
         </div>
         <div className="mt-8 pt-6 border-t border-outline-variant/10 flex justify-end gap-3">
+          {!isCreating && (
+            <button
+              type="button"
+              className={`px-6 py-2.5 rounded-lg text-error font-medium text-sm border border-error/30 transition-colors focus:outline-none focus:ring-2 focus:ring-error/20 ${
+                isDeleted ? 'opacity-50 cursor-not-allowed' : 'hover:bg-error-container'
+              }`}
+              onClick={onDelete}
+              disabled={isDeleted}
+            >
+              삭제 (논리)
+            </button>
+          )}
           <button
-            className="px-6 py-2.5 rounded-lg text-error font-medium text-sm border border-error/30 hover:bg-error-container transition-colors focus:outline-none focus:ring-2 focus:ring-error/20"
-            onClick={onDelete}
-          >
-            삭제 (Delete)
-          </button>
-          <button
-            className="px-8 py-2.5 rounded-lg bg-primary text-on-primary font-medium text-sm hover:bg-primary-container transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2"
+            type="button"
+            className={`px-8 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm focus:outline-none focus:ring-2 flex items-center gap-2 ${
+              isDeleted
+                ? 'bg-surface-container text-outline opacity-50 cursor-not-allowed focus:ring-outline/20'
+                : 'bg-primary text-on-primary hover:bg-primary-container focus:ring-primary/50'
+            }`}
             onClick={onSave}
+            disabled={isDeleted}
           >
             <span className="material-symbols-outlined text-[18px]">save</span>
-            저장 (Save)
+            저장
           </button>
         </div>
       </div>
@@ -190,53 +239,125 @@ function GroupDetailForm({ group, formData, onChange, onSave, onDelete }) {
 }
 
 export default function GroupManagement() {
-  const [groups, setGroups] = useState(mockGroupData);
+  const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [formData, setFormData] = useState(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [showLoadSuccess, setShowLoadSuccess] = useState(false);
+
+  const loadGroups = useCallback(async () => {
+    setLoadError(null);
+    setLoading(true);
+    try {
+      const rows = await getAdminGroups();
+      const mapped = Array.isArray(rows) ? rows.map(mapGroupFromApi) : [];
+      setGroups(mapped);
+      return mapped;
+    } catch (err) {
+      const msg =
+        err.response?.data?.detail ||
+        err.message ||
+        '그룹 목록을 불러오지 못했습니다.';
+      setLoadError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+      setGroups([]);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadGroups();
+  }, [loadGroups]);
 
   const handleSelectGroup = (group) => {
+    setIsCreating(false);
     setSelectedGroup(group);
     setFormData({ ...group });
+  };
+
+  const handleNewGroup = () => {
+    setSelectedGroup(null);
+    setIsCreating(true);
+    setFormData({
+      id: null,
+      grp_code: '',
+      grp_nm: '',
+      description: '',
+      reg_date: '-',
+      use_yn: true,
+      reg_dt: null,
+    });
   };
 
   const handleFormChange = (newData) => {
     setFormData(newData);
   };
 
-  const handleSave = () => {
-    if (!formData.grp_nm || !formData.grp_nm.trim()) {
+  const handleSave = async () => {
+    if (!isCreating && String(formData?.del_fg ?? 'N').toUpperCase() === 'Y') {
+      alert('삭제된(del_fg=Y) 그룹은 수정할 수 없습니다.');
+      return;
+    }
+    if (!formData.grp_nm?.trim()) {
       alert('그룹명을 입력해주세요.');
       return;
     }
-    if (!formData.grp_code || !formData.grp_code.trim()) {
+    if (!formData.grp_code?.trim()) {
       alert('그룹코드를 입력해주세요.');
       return;
     }
-    console.log('저장할 데이터:', JSON.stringify({ ...formData, savedAt: new Date().toISOString() }, null, 2));
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
-  };
-
-  const handleDelete = () => {
-    if (window.confirm(`"${selectedGroup?.grp_nm}" 그룹을 삭제하시겠습니까?`)) {
-      console.log('삭제할 그룹:', JSON.stringify(selectedGroup, null, 2));
-      setGroups(groups.filter(g => g.id !== selectedGroup.id));
-      setSelectedGroup(null);
-      setFormData(null);
+    try {
+      if (isCreating) {
+        const { grp_id } = await createAdminGroup({
+          grp_cd: formData.grp_code.trim(),
+          grp_nm: formData.grp_nm.trim(),
+          description: formData.description?.trim() || null,
+        });
+        const mapped = await loadGroups();
+        const created = mapped.find((g) => g.id === Number(grp_id));
+        setIsCreating(false);
+        if (created) {
+          setSelectedGroup(created);
+          setFormData({ ...created });
+        }
+      } else if (selectedGroup) {
+        await patchAdminGroup(selectedGroup.id, {
+          grp_cd: formData.grp_code.trim(),
+          grp_nm: formData.grp_nm.trim(),
+          description: formData.description?.trim() || null,
+          use_yn: formData.use_yn,
+        });
+        const mapped = await loadGroups();
+        const updated = mapped.find((g) => g.id === selectedGroup.id);
+        if (updated) {
+          setSelectedGroup(updated);
+          setFormData({ ...updated });
+        }
+      }
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      alert(typeof detail === 'string' ? detail : err.message || '저장에 실패했습니다.');
     }
   };
 
-  const handleLoadPermissions = async () => {
+  const handleDelete = async () => {
+    if (!selectedGroup) return;
+    if (!window.confirm(`"${selectedGroup.grp_nm}" 그룹을 논리삭제하시겠습니까?`)) return;
     try {
-      const menuData = await loadMenuData();
-      console.log('권한 불러오기 결과:', JSON.stringify(menuData, null, 2));
-      setShowLoadSuccess(true);
-      setTimeout(() => setShowLoadSuccess(false), 3000);
-    } catch (error) {
-      console.error('권한 불러오기 실패:', error);
-      alert('권한 데이터를 불러오는 데 실패했습니다.');
+      await deleteAdminGroup(selectedGroup.id);
+      setSelectedGroup(null);
+      setFormData(null);
+      await loadGroups();
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      alert(typeof detail === 'string' ? detail : err.message || '삭제에 실패했습니다.');
     }
   };
 
@@ -246,17 +367,28 @@ export default function GroupManagement() {
         title="권한 그룹 관리"
         description="시스템 권한 그룹을 생성하고, 권한 범위를 설정하며, 사용자별 접근 권한을 관리합니다."
       />
+      {loadError && (
+        <div className="rounded-lg border border-error/40 bg-error-container/30 text-on-error-container px-4 py-3 text-sm">
+          {loadError}
+        </div>
+      )}
+      {loading && !groups.length ? (
+        <p className="text-on-surface-variant text-sm">불러오는 중…</p>
+      ) : null}
       <div className="flex flex-col lg:flex-row gap-6 w-full flex-1 min-h-0">
         <div className="w-full lg:w-1/3 flex flex-col">
           <GroupListTable
             groups={groups}
             selectedGroup={selectedGroup}
+            isCreating={isCreating}
             onSelect={handleSelectGroup}
+            onNew={handleNewGroup}
           />
         </div>
         <div className="w-full lg:w-2/3 flex flex-col">
           <GroupDetailForm
             group={selectedGroup}
+            isCreating={isCreating}
             formData={formData}
             onChange={handleFormChange}
             onSave={handleSave}
@@ -264,25 +396,10 @@ export default function GroupManagement() {
           />
         </div>
       </div>
-      <div className="flex justify-end">
-        <button
-          className="px-6 py-2.5 rounded-lg bg-secondary-container text-on-secondary-container font-medium text-sm hover:bg-secondary-fixed transition-colors shadow-sm flex items-center gap-2"
-          onClick={handleLoadPermissions}
-        >
-          <span className="material-symbols-outlined text-[18px]">download</span>
-          권한 불러오기
-        </button>
-      </div>
       {showSuccess && (
         <div className="fixed bottom-6 right-6 bg-tertiary-fixed text-on-tertiary-fixed px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 animate-[expandIn_0.3s_ease-out]">
           <span className="material-symbols-outlined text-[20px]">check_circle</span>
-          <span className="font-medium">변경사항이 저장되었습니다.</span>
-        </div>
-      )}
-      {showLoadSuccess && (
-        <div className="fixed bottom-6 right-6 bg-secondary-fixed text-on-secondary-fixed px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 animate-[expandIn_0.3s_ease-out]">
-          <span className="material-symbols-outlined text-[20px]">download</span>
-          <span className="font-medium">권한 데이터를 불러왔습니다. 콘솔을 확인하세요.</span>
+          <span className="font-medium">처리되었습니다.</span>
         </div>
       )}
     </div>
