@@ -24,3 +24,24 @@ export const toggleRoleMenu = async (menuId, roleId, enabled) => {
   });
   return response.data;
 };
+
+/** SYS_ADM 전용: 메뉴 트리 + 플랫 목록 */
+export const getAdminMenuTree = async () => {
+  const response = await api.get('/api/admin/menus/tree');
+  return response.data;
+};
+
+export const createAdminMenu = async (payload) => {
+  const response = await api.post('/api/admin/menus', payload);
+  return response.data;
+};
+
+export const patchAdminMenu = async (menuId, payload) => {
+  const response = await api.patch(`/api/admin/menus/${menuId}`, payload);
+  return response.data;
+};
+
+export const deleteAdminMenu = async (menuId) => {
+  const response = await api.delete(`/api/admin/menus/${menuId}`);
+  return response.data;
+};
