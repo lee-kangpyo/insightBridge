@@ -162,3 +162,89 @@ class TestSysAdmAuthorization:
             )
             # Should not be 403 (should succeed or fail with a different error, but not authz denial)
             assert response.status_code != 403
+
+
+class TestPatchMenu:
+    @pytest.mark.asyncio
+    async def test_patch_menu_executes(self):
+        from app.services.admin import patch_menu
+
+        pool_mock = MagicMock()
+        conn_mock = AsyncMock()
+        pool_mock.acquire.return_value.__aenter__.return_value = conn_mock
+
+        with patch("app.services.admin.get_pool", return_value=pool_mock):
+            await patch_menu(5, {"menu_nm": "변경"})
+            conn_mock.execute.assert_called_once()
+
+
+class TestCreateMenu:
+    @pytest.mark.asyncio
+    async def test_create_menu_returns_id(self):
+        from app.services.admin import create_menu
+
+        pool_mock = MagicMock()
+        conn_mock = AsyncMock()
+        conn_mock.fetchrow = AsyncMock(return_value={"menu_id": 99})
+        pool_mock.acquire.return_value.__aenter__.return_value = conn_mock
+
+        with patch("app.services.admin.get_pool", return_value=pool_mock):
+            mid = await create_menu(menu_cd="T1", menu_nm="테스트")
+            assert mid == 99
+
+
+class TestAdminMenuTreeRoute:
+    @pytest.mark.asyncio
+    async def test_admin_menus_tree_forbidden_without_sys_adm(self):
+        from fastapi.testclient import TestClient
+        from app.main import app
+        from app.services.auth import create_access_token
+
+        client = TestClient(app)
+        token = create_access_token(
+            data={"sub": "1", "univ_nm": "Test Univ", "roles": ["EMP"]}
+        )
+        response = client.get(
+            "/api/admin/menus/tree",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_admin_menus_tree_ok_with_sys_adm(self):
+        from fastapi.testclient import TestClient
+        from app.main import app
+        from app.services.auth import create_access_token
+        from unittest.mock import patch, AsyncMock
+
+        client = TestClient(app)
+        token = create_access_token(
+            data={"sub": "1", "univ_nm": "Test Univ", "roles": ["SYS_ADM"]}
+        )
+
+        flat = [
+            {
+                "menu_id": 1,
+                "menu_cd": "ROOT",
+                "menu_nm": "루트",
+                "parent_menu_id": None,
+                "menu_level": 1,
+                "menu_path": "/",
+                "screen_id": None,
+                "sort_order": 1,
+                "del_fg": "N",
+                "reg_dt": None,
+            }
+        ]
+
+        with patch("app.routes.admin.get_all_menus", new_callable=AsyncMock) as mock_flat:
+            mock_flat.return_value = flat
+            response = client.get(
+                "/api/admin/menus/tree",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+        assert response.status_code == 200
+        body = response.json()
+        assert "menu_tree" in body
+        assert "menus_flat" in body
+        assert len(body["menu_tree"]) >= 1

@@ -3,22 +3,60 @@ import pandas as pd
 from app.database import fetch_df
 
 
+def _menu_id_int(menu_id) -> int | None:
+    if menu_id is None:
+        return None
+    try:
+        return int(menu_id)
+    except (TypeError, ValueError):
+        return None
+
+
+def _parent_menu_id_int(parent_raw) -> int | None:
+    """None / 0 / '' / '0' → root; otherwise parse int parent id."""
+    if parent_raw is None:
+        return None
+    if isinstance(parent_raw, str) and parent_raw.strip() in ("", "0"):
+        return None
+    if parent_raw == 0:
+        return None
+    try:
+        v = int(parent_raw)
+        return None if v == 0 else v
+    except (TypeError, ValueError):
+        return None
+
+
+def _sort_key(menu: dict):
+    so = menu.get("sort_order")
+    try:
+        return (0, int(so)) if so is not None else (0, 0)
+    except (TypeError, ValueError):
+        return (1, str(so or ""))
+
+
 def treeify(flat_menus: list) -> list:
     if not flat_menus:
         return []
 
-    menu_map: dict = {}
+    menu_map: dict[int, dict] = {}
     for menu in flat_menus:
-        menu_map[menu["menu_id"]] = {**menu, "children": []}
+        mid = _menu_id_int(menu.get("menu_id"))
+        if mid is None:
+            continue
+        menu_map[mid] = {**menu, "menu_id": mid, "children": []}
 
-    roots = []
-    for menu_id, menu in menu_map.items():
-        parent_id = menu.get("parent_menu_id")
-        if parent_id is None or parent_id == 0:
+    roots: list[dict] = []
+    for mid, menu in menu_map.items():
+        parent_mid = _parent_menu_id_int(menu.get("parent_menu_id"))
+        if parent_mid is None or parent_mid not in menu_map:
             roots.append(menu)
-        elif parent_id in menu_map:
-            menu_map[parent_id]["children"].append(menu)
+        else:
+            menu_map[parent_mid]["children"].append(menu)
 
+    for m in menu_map.values():
+        m["children"].sort(key=_sort_key)
+    roots.sort(key=_sort_key)
     return roots
 
 
