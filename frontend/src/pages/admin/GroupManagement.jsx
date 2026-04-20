@@ -39,9 +39,10 @@ function mapGroupFromApi(row) {
     grp_nm: row.grp_nm,
     description: row.description ?? '',
     reg_date: formatRegDate(row.reg_dt),
-    use_yn: isDeleted ? false : useYn,
+    use_yn: useYn,
     reg_dt: row.reg_dt,
-    del_fg: row.del_fg,
+    del_fg: String(row.del_fg ?? 'N').toUpperCase(),
+    is_deleted: isDeleted,
     use_yn_raw: row.use_yn,
   };
 }
@@ -92,6 +93,7 @@ function GroupDetailForm({ group, isCreating, formData, onChange, onSave, onDele
 
   const displayId = isCreating ? '-' : group?.id;
   const displayReg = isCreating ? '-' : (formData?.reg_date ?? '-');
+  const isDeleted = !isCreating && String(formData?.del_fg ?? 'N').toUpperCase() === 'Y';
 
   return (
     <div className="flex-1 bg-surface-container-lowest rounded-lg flex flex-col relative overflow-hidden shadow-[0_8px_32px_rgba(24,28,30,0.02)]">
@@ -117,6 +119,12 @@ function GroupDetailForm({ group, isCreating, formData, onChange, onSave, onDele
             </p>
           </div>
           <div className="flex gap-2">
+            {!isCreating && isDeleted && (
+              <span className="px-3 py-1 rounded-full text-xs font-label tracking-wider flex items-center gap-1 font-medium bg-error-container text-on-error-container">
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--on-error-container)' }} />
+                Deleted
+              </span>
+            )}
             <span
               className={`px-3 py-1 rounded-full text-xs font-label tracking-wider flex items-center gap-1 font-medium ${
                 formData.use_yn ? 'bg-tertiary-fixed text-on-tertiary-fixed' : 'bg-surface-container text-outline'
@@ -155,6 +163,7 @@ function GroupDetailForm({ group, isCreating, formData, onChange, onSave, onDele
                 className="w-full px-4 py-3 rounded-lg bg-surface-container-low text-base text-on-surface border-b-2 border-transparent focus:bg-surface-container-lowest focus:border-secondary focus:outline-none transition-all"
                 type="text"
                 value={formData.grp_nm}
+                disabled={isDeleted}
                 onChange={(e) => onChange({ ...formData, grp_nm: e.target.value })}
               />
             </div>
@@ -164,6 +173,7 @@ function GroupDetailForm({ group, isCreating, formData, onChange, onSave, onDele
                 className="w-full px-4 py-3 rounded-lg bg-surface-container-low text-base text-on-surface font-mono border-b-2 border-transparent focus:bg-surface-container-lowest focus:border-secondary focus:outline-none transition-all"
                 type="text"
                 value={formData.grp_code}
+                disabled={isDeleted}
                 onChange={(e) => onChange({ ...formData, grp_code: e.target.value })}
               />
             </div>
@@ -174,6 +184,7 @@ function GroupDetailForm({ group, isCreating, formData, onChange, onSave, onDele
               className="w-full px-4 py-3 rounded-lg bg-surface-container-low text-base text-on-surface resize-none border-b-2 border-transparent focus:bg-surface-container-lowest focus:border-secondary focus:outline-none transition-all"
               rows={3}
               value={formData.description ?? ''}
+              disabled={isDeleted}
               onChange={(e) => onChange({ ...formData, description: e.target.value })}
               placeholder="그룹 용도·권한 범위 등 상세 설명"
             />
@@ -188,6 +199,7 @@ function GroupDetailForm({ group, isCreating, formData, onChange, onSave, onDele
                 type="checkbox"
                 className="sr-only peer"
                 checked={formData.use_yn}
+                disabled={isDeleted}
                 onChange={(e) => onChange({ ...formData, use_yn: e.target.checked })}
               />
               <div className="w-11 h-6 bg-outline-variant rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-secondary" />
@@ -198,16 +210,24 @@ function GroupDetailForm({ group, isCreating, formData, onChange, onSave, onDele
           {!isCreating && (
             <button
               type="button"
-              className="px-6 py-2.5 rounded-lg text-error font-medium text-sm border border-error/30 hover:bg-error-container transition-colors focus:outline-none focus:ring-2 focus:ring-error/20"
+              className={`px-6 py-2.5 rounded-lg text-error font-medium text-sm border border-error/30 transition-colors focus:outline-none focus:ring-2 focus:ring-error/20 ${
+                isDeleted ? 'opacity-50 cursor-not-allowed' : 'hover:bg-error-container'
+              }`}
               onClick={onDelete}
+              disabled={isDeleted}
             >
               삭제 (논리)
             </button>
           )}
           <button
             type="button"
-            className="px-8 py-2.5 rounded-lg bg-primary text-on-primary font-medium text-sm hover:bg-primary-container transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2"
+            className={`px-8 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm focus:outline-none focus:ring-2 flex items-center gap-2 ${
+              isDeleted
+                ? 'bg-surface-container text-outline opacity-50 cursor-not-allowed focus:ring-outline/20'
+                : 'bg-primary text-on-primary hover:bg-primary-container focus:ring-primary/50'
+            }`}
             onClick={onSave}
+            disabled={isDeleted}
           >
             <span className="material-symbols-outlined text-[18px]">save</span>
             저장
@@ -277,6 +297,10 @@ export default function GroupManagement() {
   };
 
   const handleSave = async () => {
+    if (!isCreating && String(formData?.del_fg ?? 'N').toUpperCase() === 'Y') {
+      alert('삭제된(del_fg=Y) 그룹은 수정할 수 없습니다.');
+      return;
+    }
     if (!formData.grp_nm?.trim()) {
       alert('그룹명을 입력해주세요.');
       return;

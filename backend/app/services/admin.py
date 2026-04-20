@@ -204,6 +204,7 @@ async def list_groups_admin() -> list[dict]:
     query = """
         SELECT grp_id, grp_cd, grp_nm, reg_dt, use_yn, del_fg, description
         FROM ts_grp_info
+        WHERE del_fg = 'N'
         ORDER BY grp_id
     """
     df = await fetch_df(query, ())
