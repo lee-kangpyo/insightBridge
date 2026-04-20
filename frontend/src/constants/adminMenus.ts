@@ -17,6 +17,11 @@ export const ADMIN_MENUS: MenuItem[] = [
     path: '/admin/role-authority-menu',
   },
   {
+    menu_id: 922,
+    menu_nm: '사용자관리',
+    path: '/admin/users',
+  },
+  {
     menu_id: 901,
     menu_nm: '테스트',
     children: [
@@ -24,11 +29,6 @@ export const ADMIN_MENUS: MenuItem[] = [
         menu_id: 911,
         menu_nm: '역할별 메뉴관리',
         path: '/admin/role-menu',
-      },
-      {
-        menu_id: 921,
-        menu_nm: '사용자 권한 관리',
-        path: '/admin/users',
       },
     ],
   },

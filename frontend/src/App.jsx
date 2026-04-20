@@ -23,6 +23,7 @@ import UserRoleManager from "./pages/admin/UserRoleManager";
 import MenuManagement from "./pages/admin/MenuManagement";
 import GroupManagement from "./pages/admin/GroupManagement";
 import RoleAuthorityMenu from "./pages/admin/RoleAuthorityMenu";
+import UserManagement from "./pages/admin/UserManagement";
 
 function App() {
   return (
@@ -157,7 +158,7 @@ function App() {
       >
         <Route index element={<MenuManagement />} />
         <Route path="role-menu" element={<RoleMenuMatrix />} />
-        <Route path="users" element={<UserRoleManager />} />
+        <Route path="users" element={<UserManagement />} />
         <Route path="menus" element={<MenuManagement />} />
         <Route path="groups" element={<GroupManagement />} />
         <Route path="role-authority-menu" element={<RoleAuthorityMenu />} />

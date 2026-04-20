@@ -4,12 +4,19 @@ from app.database import fetch_df, get_pool
 
 async def search_users(search: str, limit: int = 50) -> list[dict]:
     query = """
-        SELECT u.user_cd, u.user_id, u.user_nm,
-               g.grp_id, g.grp_nm
+        SELECT u.user_cd, u.user_id, u.user_nm, u.univ_cd,
+               u.mobile1, u.mobile2, u.mobile3,
+               u.office1, u.office2, u.office3,
+               u.dept_nm, u.grade_nm, u.pos_nm, u.reg_dt,
+               STRING_AGG(g.grp_nm, ', ') as grp_nm
         FROM ts_user_info u
         LEFT JOIN ts_grp_user gu ON u.user_cd = gu.user_cd
         LEFT JOIN ts_grp_info g ON gu.grp_id = g.grp_id
         WHERE u.user_id ILIKE $1 OR u.user_nm ILIKE $1
+        GROUP BY u.user_cd, u.user_id, u.user_nm, u.univ_cd,
+               u.mobile1, u.mobile2, u.mobile3,
+               u.office1, u.office2, u.office3,
+               u.dept_nm, u.grade_nm, u.pos_nm, u.reg_dt
         ORDER BY u.user_cd
         LIMIT $2
     """
