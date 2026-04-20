@@ -76,3 +76,20 @@ export const deleteAdminMenu = async (menuId) => {
   const response = await api.delete(`/api/admin/menus/${menuId}`);
   return response.data;
 };
+
+export const updateUser = async (userCd, data) => {
+  const response = await api.patch(`/api/admin/users/${userCd}`, data);
+  return response.data;
+};
+
+export const deleteUser = async (userCd) => {
+  const response = await api.delete(`/api/admin/users/${userCd}`);
+  return response.data;
+};
+
+export const resetUserPassword = async (userCd, newPassword) => {
+  const response = await api.post(`/api/admin/users/${userCd}/reset-password`, {
+    new_password: newPassword,
+  });
+  return response.data;
+};

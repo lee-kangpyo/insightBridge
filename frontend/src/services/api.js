@@ -227,4 +227,19 @@ export const getUserMenus = async () => {
   return response.data;
 };
 
+export const getRoleUserMappings = async () => {
+  const response = await api.get('/api/admin/role-users/mappings');
+  return response.data;
+};
+
+export const replaceUserGroups = async (userCd, grpIds) => {
+  const response = await api.put(`/api/admin/users/${userCd}/groups`, { grp_ids: grpIds });
+  return response.data;
+};
+
+export const replaceGroupUsers = async (grpId, userCds) => {
+  const response = await api.put(`/api/admin/groups/${grpId}/users`, { user_cds: userCds });
+  return response.data;
+};
+
 export default api;

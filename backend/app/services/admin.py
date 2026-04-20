@@ -8,6 +8,68 @@ from app.services.menu import _sanitize_menu_record
 _PATCH_UNSET = object()
 
 
+async def get_all_role_user_mappings() -> list[dict]:
+    query = """
+        SELECT gu.user_cd, gu.grp_id, gu.reg_dt,
+               u.user_nm, u.dept_nm, u.user_id,
+               g.grp_nm, g.grp_cd
+        FROM ts_grp_user gu
+        JOIN ts_user_info u ON gu.user_cd = u.user_cd
+        JOIN ts_grp_info g ON gu.grp_id = g.grp_id
+        ORDER BY gu.user_cd, gu.grp_id
+    """
+    df = await fetch_df(query, ())
+    return df.to_dict(orient="records") if not df.empty else []
+
+
+async def get_all_grp_info() -> list[dict]:
+    query = """
+        SELECT grp_id, grp_cd, grp_nm, reg_dt, del_fg, univ_cd, description
+        FROM ts_grp_info
+        WHERE del_fg = 'N'
+        ORDER BY grp_id
+    """
+    df = await fetch_df(query, ())
+    return df.to_dict(orient="records") if not df.empty else []
+
+
+async def get_all_user_info() -> list[dict]:
+    query = """
+        SELECT user_cd, user_id, user_nm, mobile1, mobile2, mobile3,
+               office1, office2, office3, dept_nm, grade_nm, pos_nm, reg_dt, univ_cd
+        FROM ts_user_info
+        ORDER BY user_cd
+    """
+    df = await fetch_df(query, ())
+    return df.to_dict(orient="records") if not df.empty else []
+
+
+async def replace_user_groups(user_cd: int, grp_ids: list[int]) -> None:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await conn.execute("DELETE FROM ts_grp_user WHERE user_cd = $1", user_cd)
+            for grp_id in grp_ids:
+                await conn.execute(
+                    "INSERT INTO ts_grp_user (user_cd, grp_id, reg_dt) VALUES ($1, $2, NOW())",
+                    user_cd,
+                    grp_id,
+                )
+
+
+async def replace_group_users(grp_id: int, user_cds: list[int]) -> None:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await conn.execute("DELETE FROM ts_grp_user WHERE grp_id = $1", grp_id)
+            for user_cd in user_cds:
+                await conn.execute(
+                    "INSERT INTO ts_grp_user (user_cd, grp_id, reg_dt) VALUES ($1, $2, NOW())",
+                    user_cd,
+                    grp_id,
+                )
+
+
 async def search_users(search: str, limit: int = 50) -> list[dict]:
     query = """
         SELECT u.user_cd, u.user_id, u.user_nm, u.univ_cd,
@@ -169,6 +231,94 @@ async def toggle_role_menu(menu_id: int, grp_id: int, enabled: bool) -> None:
                 grp_id,
                 menu_id,
             )
+
+
+async def update_user_info(user_cd: int, updates: dict[str, Any]) -> None:
+    """Partial update of user information; keys must be DB column names."""
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        fields: list[str] = []
+        values: list[Any] = []
+        idx = 1
+
+        if "user_nm" in updates and updates["user_nm"] is not None:
+            fields.append(f"user_nm = ${idx}")
+            values.append(str(updates["user_nm"]).strip())
+            idx += 1
+        if "univ_cd" in updates and updates["univ_cd"] is not None:
+            fields.append(f"univ_cd = ${idx}")
+            values.append(str(updates["univ_cd"]).strip())
+            idx += 1
+        if "dept_nm" in updates and updates["dept_nm"] is not None:
+            fields.append(f"dept_nm = ${idx}")
+            values.append(str(updates["dept_nm"]).strip())
+            idx += 1
+        if "grade_nm" in updates and updates["grade_nm"] is not None:
+            fields.append(f"grade_nm = ${idx}")
+            values.append(str(updates["grade_nm"]).strip())
+            idx += 1
+        if "pos_nm" in updates and updates["pos_nm"] is not None:
+            fields.append(f"pos_nm = ${idx}")
+            values.append(str(updates["pos_nm"]).strip())
+            idx += 1
+        if "mobile1" in updates and updates["mobile1"] is not None:
+            fields.append(f"mobile1 = ${idx}")
+            values.append(str(updates["mobile1"]).strip())
+            idx += 1
+        if "mobile2" in updates and updates["mobile2"] is not None:
+            fields.append(f"mobile2 = ${idx}")
+            values.append(str(updates["mobile2"]).strip())
+            idx += 1
+        if "mobile3" in updates and updates["mobile3"] is not None:
+            fields.append(f"mobile3 = ${idx}")
+            values.append(str(updates["mobile3"]).strip())
+            idx += 1
+        if "office1" in updates and updates["office1"] is not None:
+            fields.append(f"office1 = ${idx}")
+            values.append(str(updates["office1"]).strip())
+            idx += 1
+        if "office2" in updates and updates["office2"] is not None:
+            fields.append(f"office2 = ${idx}")
+            values.append(str(updates["office2"]).strip())
+            idx += 1
+        if "office3" in updates and updates["office3"] is not None:
+            fields.append(f"office3 = ${idx}")
+            values.append(str(updates["office3"]).strip())
+            idx += 1
+        if "mobile_co_cd" in updates and updates["mobile_co_cd"] is not None:
+            fields.append(f"mobile_co_cd = ${idx}")
+            values.append(str(updates["mobile_co_cd"]).strip())
+            idx += 1
+
+        if not fields:
+            return
+
+        values.append(user_cd)
+        query = f"UPDATE ts_user_info SET {', '.join(fields)} WHERE user_cd = ${idx}"
+        await conn.execute(query, *values)
+
+
+async def delete_user(user_cd: int) -> None:
+    """Delete user and associated records from related tables."""
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await conn.execute("DELETE FROM ts_grp_user WHERE user_cd = $1", user_cd)
+            await conn.execute("DELETE FROM ts_user_info WHERE user_cd = $1", user_cd)
+
+
+async def reset_user_password(user_cd: int, new_password: str) -> None:
+    """Reset user password to a new password."""
+    from app.services.auth import get_password_hash
+
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        hashed_pw = get_password_hash(new_password)
+        await conn.execute(
+            "UPDATE ts_user_info SET user_pw = $1 WHERE user_cd = $2",
+            hashed_pw,
+            user_cd,
+        )
 
 
 async def get_role_menu_map() -> dict[int, list[int]]:

@@ -13,6 +13,14 @@ from app.services.admin import (
     create_menu,
     patch_menu,
     soft_delete_menu,
+    get_all_role_user_mappings,
+    get_all_grp_info,
+    get_all_user_info,
+    replace_user_groups,
+    replace_group_users,
+    update_user_info,
+    delete_user,
+    reset_user_password,
     list_groups_admin,
     create_group,
     patch_group,
@@ -241,6 +249,106 @@ async def patch_role_menu(
     _: dict = Depends(require_sys_adm),
 ):
     await toggle_role_menu(body.menu_id, body.role_id, body.enabled)
+    return {"ok": True}
+
+
+class RoleUsersMappingsResponse(BaseModel):
+    mappings: list[dict]
+    groups: list[dict]
+    users: list[dict]
+
+
+@router.get("/admin/role-users/mappings", response_model=RoleUsersMappingsResponse)
+async def get_role_user_mappings(_: dict = Depends(require_sys_adm)):
+    mappings = await get_all_role_user_mappings()
+    groups = await get_all_grp_info()
+    users = await get_all_user_info()
+    return {
+        "mappings": mappings,
+        "groups": groups,
+        "users": users,
+    }
+
+
+class ReplaceGroupsRequest(BaseModel):
+    grp_ids: list[int]
+
+
+@router.put("/admin/users/{user_cd}/groups")
+async def replace_user_groups_endpoint(
+    user_cd: int,
+    body: ReplaceGroupsRequest,
+    _: dict = Depends(require_sys_adm),
+):
+    await replace_user_groups(user_cd, body.grp_ids)
+    return {"ok": True}
+
+
+class ReplaceUsersRequest(BaseModel):
+    user_cds: list[int]
+
+
+@router.put("/admin/groups/{grp_id}/users")
+async def replace_group_users_endpoint(
+    grp_id: int,
+    body: ReplaceUsersRequest,
+    _: dict = Depends(require_sys_adm),
+):
+    await replace_group_users(grp_id, body.user_cds)
+    return {"ok": True}
+
+
+class UpdateUserRequest(BaseModel):
+    user_nm: Optional[str] = None
+    univ_cd: Optional[str] = None
+    dept_nm: Optional[str] = None
+    grade_nm: Optional[str] = None
+    pos_nm: Optional[str] = None
+    mobile1: Optional[str] = None
+    mobile2: Optional[str] = None
+    mobile3: Optional[str] = None
+    office1: Optional[str] = None
+    office2: Optional[str] = None
+    office3: Optional[str] = None
+    mobile_co_cd: Optional[str] = None
+
+
+@router.patch("/admin/users/{user_cd}")
+async def patch_user(
+    user_cd: int,
+    body: UpdateUserRequest,
+    _: dict = Depends(require_sys_adm),
+):
+    data = body.model_dump(exclude_unset=True)
+    if not data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No fields to update",
+        )
+    await update_user_info(user_cd, data)
+    return {"ok": True}
+
+
+@router.delete("/admin/users/{user_cd}")
+async def delete_user_endpoint(
+    user_cd: int,
+    _: dict = Depends(require_sys_adm),
+):
+    await delete_user(user_cd)
+    return {"ok": True}
+
+
+class ResetPasswordRequest(BaseModel):
+    new_password: str = Field(..., min_length=6)
+
+
+@router.post("/admin/users/{user_cd}/reset-password")
+async def reset_user_password_endpoint(
+    user_cd: int,
+    body: ResetPasswordRequest,
+    _: dict = Depends(require_sys_adm),
+):
+    await reset_user_password(user_cd, body.new_password)
     return {"ok": True}
 
 

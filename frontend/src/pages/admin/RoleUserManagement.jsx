@@ -1,32 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import PageHeader from '../../components/common/PageHeader';
-
-const mockRoles = [
-  { grp_id: 1, grp_cd: 'ADM', grp_nm: '시스템관리자' },
-  { grp_id: 2, grp_cd: 'MGR', grp_nm: '운영관리자' },
-  { grp_id: 3, grp_cd: 'USR', grp_nm: '일반사용자' },
-  { grp_id: 4, grp_cd: 'STD', grp_nm: '학생' },
-  { grp_id: 5, grp_cd: 'INS', grp_nm: '교수' },
-];
-
-const mockUsers = [
-  { user_id: 101, user_nm: '김철수', user_email: 'cheolsu@example.com', dept_nm: '컴퓨터공학과' },
-  { user_id: 102, user_nm: '이영희', user_email: 'younghee@example.com', dept_nm: '경영학과' },
-  { user_id: 103, user_nm: '박지민', user_email: 'jimin@example.com', dept_nm: '컴퓨터공학과' },
-  { user_id: 104, user_nm: '최민수', user_email: 'minsu@example.com', dept_nm: '전자공학과' },
-  { user_id: 105, user_nm: '정수진', user_email: 'sujin@example.com', dept_nm: '수학과' },
-  { user_id: 106, user_nm: '강동원', user_email: 'dongwon@example.com', dept_nm: '물리학과' },
-  { user_id: 107, user_nm: '손예진', user_email: 'yejin@example.com', dept_nm: '화학과' },
-  { user_id: 108, user_nm: '유아인', user_email: 'ain@example.com', dept_nm: '생물학과' },
-];
-
-const mockAssigned = {
-  1: [101, 102, 103],
-  2: [104, 105],
-  3: [106, 107, 108],
-  4: [],
-  5: [101],
-};
+import { getRoleUserMappings, replaceUserGroups, replaceGroupUsers } from '../../services/api';
 
 function RoleUserManagement() {
   const [viewMode, setViewMode] = useState('USER');
@@ -36,34 +10,83 @@ function RoleUserManagement() {
   const [selectedAvailableIds, setSelectedAvailableIds] = useState([]);
   const [initialAssignedIds, setInitialAssignedIds] = useState([]);
   const [showToast, setShowToast] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const [roles, setRoles] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [mappings, setMappings] = useState([]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        const data = await getRoleUserMappings();
+        setRoles(data.groups || []);
+        setUsers(data.users || []);
+        setMappings(data.mappings || []);
+      } catch (err) {
+        console.error('Failed to load role-user data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
+  const assignedMap = useMemo(() => {
+    const map = {};
+    mappings.forEach((m) => {
+      if (!map[m.user_cd]) map[m.user_cd] = [];
+      if (!map[`grp_${m.grp_id}`]) map[`grp_${m.grp_id}`] = [];
+      map[m.user_cd].push(m.grp_id);
+      map[`grp_${m.grp_id}`].push(m.user_cd);
+    });
+    return map;
+  }, [mappings]);
 
   const leftPanelData = useMemo(() => {
-    return viewMode === 'USER' ? mockUsers : mockRoles;
-  }, [viewMode]);
+    return viewMode === 'USER' ? users : roles;
+  }, [viewMode, users, roles]);
 
   const rightPanelData = useMemo(() => {
-    return viewMode === 'USER' ? mockRoles : mockUsers;
-  }, [viewMode]);
+    return viewMode === 'USER' ? roles : users;
+  }, [viewMode, users, roles]);
 
   const assignedItems = useMemo(() => {
     return rightPanelData.filter((item) => {
-      const id = viewMode === 'USER' ? item.grp_id : item.user_id;
+      const id = viewMode === 'USER' ? item.grp_id : item.user_cd;
       return assignedIds.includes(id);
     });
   }, [rightPanelData, assignedIds, viewMode]);
 
   const availableItems = useMemo(() => {
     return rightPanelData.filter((item) => {
-      const id = viewMode === 'USER' ? item.grp_id : item.user_id;
+      const id = viewMode === 'USER' ? item.grp_id : item.user_cd;
       return !assignedIds.includes(id);
     });
   }, [rightPanelData, assignedIds, viewMode]);
+
+  useEffect(() => {
+    if (selectedItemId !== null) {
+      const key = viewMode === 'USER' ? selectedItemId : `grp_${selectedItemId}`;
+      const ids = assignedMap[key] || [];
+      setAssignedIds(ids);
+      setInitialAssignedIds(ids);
+    } else {
+      setAssignedIds([]);
+      setInitialAssignedIds([]);
+    }
+    setSelectedAssignedIds([]);
+    setSelectedAvailableIds([]);
+  }, [selectedItemId, viewMode, assignedMap]);
 
   const handleViewModeChange = (newMode) => {
     setViewMode(newMode);
     setSelectedItemId(null);
     setSelectedAssignedIds([]);
     setSelectedAvailableIds([]);
+    setAssignedIds([]);
+    setInitialAssignedIds([]);
   };
 
   const handleAddItems = () => {
@@ -78,17 +101,22 @@ function RoleUserManagement() {
     setSelectedAssignedIds([]);
   };
 
-  const handleSave = () => {
-    const saveData = {
-      viewMode,
-      [viewMode === 'USER' ? 'user_id' : 'grp_id']: selectedItemId,
-      assignedIds,
-      savedAt: new Date().toISOString(),
-    };
-    console.log('저장할 데이터:', JSON.stringify(saveData, null, 2));
-    setInitialAssignedIds([...assignedIds]);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
+  const handleSave = async () => {
+    try {
+      if (viewMode === 'USER') {
+        await replaceUserGroups(selectedItemId, assignedIds);
+      } else {
+        await replaceGroupUsers(selectedItemId, assignedIds);
+      }
+      setInitialAssignedIds([...assignedIds]);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+
+      const data = await getRoleUserMappings();
+      setMappings(data.mappings || []);
+    } catch (err) {
+      console.error('Failed to save role-user mappings:', err);
+    }
   };
 
   const handleReset = () => {
@@ -99,7 +127,18 @@ function RoleUserManagement() {
     }
   };
 
-  const isDirty = JSON.stringify(assignedIds.sort()) !== JSON.stringify(initialAssignedIds.sort());
+  const isDirty =
+    JSON.stringify([...assignedIds].sort()) !== JSON.stringify([...initialAssignedIds].sort());
+
+  if (loading) {
+    return (
+      <div className="px-10 pb-12 max-w-[1920px] mx-auto flex flex-col gap-8">
+        <div className="flex items-center justify-center h-64">
+          <span className="text-on-surface-variant">데이터를 불러오는 중...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-10 pb-12 max-w-[1920px] mx-auto flex flex-col gap-8">
@@ -158,7 +197,7 @@ function RoleUserManagement() {
           </div>
           <div className="overflow-y-auto no-scrollbar max-h-[500px] flex flex-col gap-1">
             {leftPanelData.map((item, index) => {
-              const id = viewMode === 'USER' ? item.user_id : item.grp_id;
+              const id = viewMode === 'USER' ? item.user_cd : item.grp_id;
               const displayName = viewMode === 'USER' ? item.user_nm : item.grp_nm;
               const subText = viewMode === 'USER' ? item.dept_nm : item.grp_cd;
               return (
@@ -201,7 +240,7 @@ function RoleUserManagement() {
                           checked={assignedItems.length > 0 && selectedAssignedIds.length === assignedItems.length}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setSelectedAssignedIds(assignedItems.map((item) => viewMode === 'USER' ? item.grp_id : item.user_id));
+                              setSelectedAssignedIds(assignedItems.map((item) => viewMode === 'USER' ? item.grp_id : item.user_cd));
                             } else {
                               setSelectedAssignedIds([]);
                             }
@@ -220,7 +259,7 @@ function RoleUserManagement() {
                   </thead>
                   <tbody>
                     {assignedItems.map((item, index) => {
-                      const id = viewMode === 'USER' ? item.grp_id : item.user_id;
+                      const id = viewMode === 'USER' ? item.grp_id : item.user_cd;
                       const displayName = viewMode === 'USER' ? item.grp_nm : item.user_nm;
                       const subText = viewMode === 'USER' ? item.grp_cd : item.dept_nm;
                       return (
@@ -297,7 +336,7 @@ function RoleUserManagement() {
                           checked={availableItems.length > 0 && selectedAvailableIds.length === availableItems.length}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setSelectedAvailableIds(availableItems.map((item) => viewMode === 'USER' ? item.grp_id : item.user_id));
+                              setSelectedAvailableIds(availableItems.map((item) => viewMode === 'USER' ? item.grp_id : item.user_cd));
                             } else {
                               setSelectedAvailableIds([]);
                             }
@@ -316,7 +355,7 @@ function RoleUserManagement() {
                   </thead>
                   <tbody>
                     {availableItems.map((item, index) => {
-                      const id = viewMode === 'USER' ? item.grp_id : item.user_id;
+                      const id = viewMode === 'USER' ? item.grp_id : item.user_cd;
                       const displayName = viewMode === 'USER' ? item.grp_nm : item.user_nm;
                       const subText = viewMode === 'USER' ? item.grp_cd : item.dept_nm;
                       return (
