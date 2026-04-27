@@ -14,6 +14,21 @@ from ..database import fetch_df
 
 logger = logging.getLogger(__name__)
 
+def _safe_log_preview(v: Any, limit: int = 200) -> str:
+    """Windows 콘솔/로그 뷰어 인코딩 문제를 피하기 위한 안전한 프리뷰 문자열.
+
+    - 비ASCII 문자는 \\uXXXX 형태로 이스케이프하여 '깨짐(�)' 없이 확인 가능하게 한다.
+    """
+    try:
+        s = str(v)
+    except Exception:
+        s = repr(v)
+    s = s[:limit]
+    try:
+        return s.encode("unicode_escape").decode("ascii")
+    except Exception:
+        return repr(s)
+
 SQL_TOOL_SYSTEM_PROMPT = """You are a PostgreSQL expert helping users query their database.
 
 Below this message, the **현재 DB 스키마** section lists all public tables with columns, types, and comments. Use it as the primary reference.
@@ -304,7 +319,7 @@ async def run_sql_chain(
                     iteration,
                     tool_name,
                     tool_call_id,
-                    str(arguments)[:200],
+                    _safe_log_preview(arguments),
                 )
 
                 if tool_name == "execute_sql":
@@ -340,7 +355,7 @@ async def run_sql_chain(
                             "[LCEL Chain] iteration=%d 도구=%r 결과 미리보기=%r",
                             iteration,
                             tool_name,
-                            str(tool_result)[:200],
+                            _safe_log_preview(tool_result),
                         )
                         messages.append(response_msg)
                         messages.append(
@@ -419,7 +434,9 @@ async def run_sql_chain(
 
 normalize_sql_for_execution = _normalize_sql_for_execution
 
-MAX_CANDIDATES = 3
+# Admin/Contents에서 SQL 생성은 "기본 1개"만 사용한다.
+# `/api/query`(SSE)도 동일 체인을 사용하므로, 멀티 후보(방법 1~3) UI가 필요 없으면 1로 제한한다.
+MAX_CANDIDATES = 1
 
 
 def _null_ratio(data: list[dict]) -> float:
@@ -735,7 +752,7 @@ async def run_sql_chain_multi(
                             "[MultiChain] iteration=%d 도구=%r 결과 미리보기=%r",
                             iteration,
                             tool_name,
-                            str(tool_result)[:200],
+                        _safe_log_preview(tool_result),
                         )
                         messages.append(
                             ToolMessage(

@@ -8,6 +8,11 @@ class QueryRequest(BaseModel):
     question: str
 
 
+class QueryOnceRequest(BaseModel):
+    question: str
+    limit: int = 20
+
+
 class ChartConfig(BaseModel):
     type: str  # "line" | "bar" | "pie" | "heatmap" | "area" | "stacked_bar" | "scatter" | "donut" | "treemap" etc.
     x: Optional[str] = None

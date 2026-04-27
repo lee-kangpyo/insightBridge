@@ -188,6 +188,43 @@ export const queryStream = async (question, onCandidate, onDone, onError) => {
   }
 };
 
+export const queryAdminStream = async (question, onCandidate, onDone, onError) => {
+  try {
+    const response = await requestWithAuth('/api/query/admin', {
+      method: 'POST',
+      body: JSON.stringify({ question }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: response.statusText }));
+      onError?.(new Error(err.detail || 'Query failed'));
+      return;
+    }
+
+    await parseSseStream(response, (eventType, data) => {
+      if (eventType === 'candidate') onCandidate?.(data);
+      else if (eventType === 'done') onDone?.(data);
+      else if (eventType === 'error') onError?.(new Error(data.error || 'Stream error'));
+    });
+  } catch (err) {
+    onError?.(err);
+  }
+};
+
+export const queryOnce = async (question, limit = 20) => {
+  const response = await requestWithAuth('/api/query/once', {
+    method: 'POST',
+    body: JSON.stringify({ question, limit }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(err.detail || 'Query failed');
+  }
+
+  return await response.json();
+};
+
 export const refineQuery = async (
   originalQuestion,
   feedback,

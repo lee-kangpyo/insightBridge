@@ -145,23 +145,21 @@ export default function ContentsCreateForm({
   };
 
   return (
-    <div className="flex min-h-0 flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-        <div className="flex flex-col gap-8">
-          <GeneralInfoSection
-            value={generalInfo}
-            onChange={setGeneralInfo}
-            contentType={contentType}
-            onContentTypeChange={setContentType}
-          />
-          <ChartSettings value={chartData} onChange={setChartData} visible={contentType === 'chart'} />
-          <GridSettings value={gridData} onChange={setGridData} visible={contentType === 'grid'} />
-          <CardSettings value={cardData} onChange={setCardData} visible={contentType === 'card'} />
-          <SqlSettings value={sqlData} onChange={setSqlData} visible={contentType === 'sql'} />
-        </div>
+    <div>
+      <div className="flex flex-col gap-8">
+        <GeneralInfoSection
+          value={generalInfo}
+          onChange={setGeneralInfo}
+          contentType={contentType}
+          onContentTypeChange={setContentType}
+        />
+        <ChartSettings value={chartData} onChange={setChartData} visible={contentType === 'chart'} />
+        <GridSettings value={gridData} onChange={setGridData} visible={contentType === 'grid'} />
+        <CardSettings value={cardData} onChange={setCardData} visible={contentType === 'card'} />
+        <SqlSettings value={sqlData} onChange={setSqlData} visible={contentType === 'sql'} />
       </div>
 
-      <div className="mt-6 flex items-center justify-end gap-3 border-t border-outline-variant pt-5">
+      <div className="sticky bottom-0 -mx-6 -mb-6 mt-6 flex items-center justify-end gap-3 border-t border-outline-variant bg-surface-container-lowest px-6 py-4">
         <button
           type="button"
           onClick={handleCancel}
