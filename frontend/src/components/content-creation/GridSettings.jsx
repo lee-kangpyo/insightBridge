@@ -1,4 +1,4 @@
-export default function GridSettings({ value, onChange, visible }) {
+export default function GridSettings({ value, onChange, visible, errors, showErrors }) {
   const handleChange = (field, fieldValue) => {
     onChange({ ...value, [field]: fieldValue });
   };
@@ -21,6 +21,9 @@ export default function GridSettings({ value, onChange, visible }) {
 
   if (!visible) return null;
 
+  const hasColumnsError = showErrors ? errors?.hasColumns : '';
+  const sectionTitleError = showErrors ? errors?.sectionTitle : '';
+
   return (
     <section className="bg-surface-container-lowest rounded-xl p-8 shadow-ambient flex flex-col gap-6 w-full">
       <div className="flex items-center justify-between border-b border-surface-container-high pb-4">
@@ -39,6 +42,9 @@ export default function GridSettings({ value, onChange, visible }) {
             onChange={(e) => handleChange('sectionTitle', e.target.value)}
             placeholder="그리드 섹션 제목을 입력하세요"
           />
+          {sectionTitleError ? (
+            <p className="mt-1 text-xs text-error">{sectionTitleError}</p>
+          ) : null}
         </div>
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
@@ -52,6 +58,9 @@ export default function GridSettings({ value, onChange, visible }) {
               컬럼 추가
             </button>
           </div>
+          {hasColumnsError ? (
+            <p className="text-xs text-error">{hasColumnsError}</p>
+          ) : null}
           {value.columns.map((column, index) => (
             <div
               key={index}
@@ -66,6 +75,9 @@ export default function GridSettings({ value, onChange, visible }) {
                   onChange={(e) => handleColumnChange(index, 'displayName', e.target.value)}
                   placeholder="예: 학과명"
                 />
+                {showErrors && errors?.columns?.[index]?.displayName ? (
+                  <p className="mt-1 text-xs text-error">{errors.columns[index].displayName}</p>
+                ) : null}
               </div>
               <div className="flex flex-col w-full">
                 <label className="ds-label">데이터 키</label>
@@ -76,6 +88,9 @@ export default function GridSettings({ value, onChange, visible }) {
                   onChange={(e) => handleColumnChange(index, 'dataKey', e.target.value)}
                   placeholder="예: department_nm"
                 />
+                {showErrors && errors?.columns?.[index]?.dataKey ? (
+                  <p className="mt-1 text-xs text-error">{errors.columns[index].dataKey}</p>
+                ) : null}
               </div>
               <div className="flex flex-col w-full">
                 <label className="ds-label">정렬</label>

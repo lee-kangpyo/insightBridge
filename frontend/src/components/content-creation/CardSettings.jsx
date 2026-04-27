@@ -1,4 +1,4 @@
-export default function CardSettings({ value, onChange, visible }) {
+export default function CardSettings({ value, onChange, visible, errors, showErrors }) {
   const handleChange = (field, fieldValue) => {
     onChange({ ...value, [field]: fieldValue });
   };
@@ -21,6 +21,10 @@ export default function CardSettings({ value, onChange, visible }) {
 
   if (!visible) return null;
 
+  const hasItemsError = showErrors ? errors?.hasItems : '';
+  const cardTitleError = showErrors ? errors?.cardTitle : '';
+  const titlePositionError = showErrors ? errors?.titlePosition : '';
+
   return (
     <section className="bg-surface-container-lowest rounded-xl p-8 shadow-ambient flex flex-col gap-6 w-full">
       <div className="flex items-center justify-between border-b border-surface-container-high pb-4">
@@ -40,6 +44,9 @@ export default function CardSettings({ value, onChange, visible }) {
               onChange={(e) => handleChange('cardTitle', e.target.value)}
               placeholder="카드 제목을 입력하세요"
             />
+            {cardTitleError ? (
+              <p className="mt-1 text-xs text-error">{cardTitleError}</p>
+            ) : null}
           </div>
           <div className="flex flex-col">
             <label className="ds-label">제목 위치</label>
@@ -52,6 +59,9 @@ export default function CardSettings({ value, onChange, visible }) {
               <option value="center">중앙</option>
               <option value="right-top">우측 상단</option>
             </select>
+            {titlePositionError ? (
+              <p className="mt-1 text-xs text-error">{titlePositionError}</p>
+            ) : null}
           </div>
         </div>
         <div className="flex flex-col gap-4">
@@ -66,6 +76,9 @@ export default function CardSettings({ value, onChange, visible }) {
               항목 추가
             </button>
           </div>
+          {hasItemsError ? (
+            <p className="text-xs text-error">{hasItemsError}</p>
+          ) : null}
           {(value.items || []).map((item, index) => (
             <div
               key={index}
@@ -80,6 +93,9 @@ export default function CardSettings({ value, onChange, visible }) {
                   onChange={(e) => handleItemChange(index, 'label', e.target.value)}
                   placeholder="라벨"
                 />
+                {showErrors && errors?.items?.[index]?.label ? (
+                  <p className="mt-1 text-xs text-error">{errors.items[index].label}</p>
+                ) : null}
               </div>
               <div className="flex flex-col w-full">
                 <label className="ds-label">내용</label>
@@ -90,6 +106,9 @@ export default function CardSettings({ value, onChange, visible }) {
                   onChange={(e) => handleItemChange(index, 'content', e.target.value)}
                   placeholder="내용"
                 />
+                {showErrors && errors?.items?.[index]?.content ? (
+                  <p className="mt-1 text-xs text-error">{errors.items[index].content}</p>
+                ) : null}
               </div>
               <div className="flex flex-col shrink-0">
                 <label className="ds-label">색상</label>

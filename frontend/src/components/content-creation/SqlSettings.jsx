@@ -58,7 +58,7 @@ function DataPreviewTable({ rows }) {
   );
 }
 
-export default function SqlSettings({ value, onChange, visible }) {
+export default function SqlSettings({ value, onChange, visible, errors, showErrors }) {
   const sqlValue = (value?.sql ?? '').toString();
 
   const [prompt, setPrompt] = useState('');
@@ -113,12 +113,17 @@ export default function SqlSettings({ value, onChange, visible }) {
 
   if (!visible) return null;
 
+  const sqlError = showErrors ? errors?.sql : '';
+
   return (
     <section className="bg-surface-container-lowest rounded-xl p-8 shadow-ambient flex flex-col gap-6 w-full">
       <div className="flex items-center gap-3 border-b border-surface-container-high pb-4">
         <span className="material-symbols-outlined text-secondary">database</span>
         <h2 className="font-headline text-xl font-bold text-primary">데이터 조회 상세</h2>
       </div>
+      {sqlError ? (
+        <p className="text-xs text-error">{sqlError}</p>
+      ) : null}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="flex flex-col gap-6">
