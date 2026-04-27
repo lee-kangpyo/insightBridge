@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/common/PageHeader';
 import { ADMIN_PAGE_CONTAINER_CLASS } from '../../constants/adminLayout';
-import { getTemplateById, getTemplateSlots, getItems, getScreenSlots, saveScreenSlots } from '../../services/adminApi';
+import { getTemplateById, getTemplateSlots, getItems, getScreenSlots, saveScreenSlots, createScreen } from '../../services/adminApi';
 import SlotLayout from '../../components/admin/SlotLayout/SlotLayout';
 import SlotConfigModal from '../../components/admin/SlotLayout/SlotConfigModal';
 
@@ -15,15 +15,19 @@ export default function SlotLayoutPage() {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [hasChanges, setHasChanges] = useState(false);
   const [items, setItems] = useState([]);
+  
+  // 화면 생성 관련 상태
+  const [scrId, setScrId] = useState(null);
+  const [scrNm, setScrNm] = useState('');
+  const [isScreenCreated, setIsScreenCreated] = useState(false);
+  const [isCreatingScreen, setIsCreatingScreen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [templateData, assignedSlots, allItems] = await Promise.all([
+        const [templateData, allItems] = await Promise.all([
           getTemplateById(templateId),
-          getTemplateSlots(templateId),
           getItems(),
         ]);
 
@@ -40,20 +44,6 @@ export default function SlotLayoutPage() {
           height: s.height ?? s.h ?? 1,
         }));
         setSlots(blueprintSlots);
-
-        // Populate assignments from template slots (legacy) or screen slots
-        const assignments = new Map();
-        (assignedSlots || []).forEach((s) => {
-          if (s.item_id) {
-            const item = allItems.find((i) => i.item_id === s.item_id);
-            assignments.set(s.slot_id, {
-              item_id: s.item_id,
-              item_nm: item?.item_nm || s.scr_nm || s.item_id,
-              cnts_tp: item?.mapping_json?.type || 'default',
-            });
-          }
-        });
-        setSlotAssignments(assignments);
       } catch (error) {
         console.error('Failed to fetch template:', error);
       } finally {
@@ -63,59 +53,69 @@ export default function SlotLayoutPage() {
     fetchData();
   }, [templateId]);
 
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      if (hasChanges) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasChanges]);
+  const handleCreateScreen = useCallback(async () => {
+    if (!scrNm.trim()) {
+      alert('화면 이름을 입력해주세요.');
+      return;
+    }
+    setIsCreatingScreen(true);
+    try {
+      const result = await createScreen({
+        scr_nm: scrNm,
+        template_id: parseInt(templateId, 10),
+      });
+      setScrId(result.scr_id);
+      setIsScreenCreated(true);
+    } catch (error) {
+      console.error('Failed to create screen:', error);
+      alert('화면 생성 중 오류가 발생했습니다.');
+    } finally {
+      setIsCreatingScreen(false);
+    }
+  }, [scrNm, templateId]);
 
   const handleSlotClick = useCallback((slot) => {
+    if (!isScreenCreated) {
+      alert('화면을 먼저 생성해주세요.');
+      return;
+    }
     setSelectedSlot(slot);
     setIsModalOpen(true);
-  }, []);
+  }, [isScreenCreated]);
 
-  const handleModalSave = useCallback((slotId, assignment) => {
-    setSlotAssignments((prev) => {
-      const next = new Map(prev);
-      if (assignment) {
-        next.set(slotId, assignment);
-      } else {
-        next.delete(slotId);
-      }
-      return next;
-    });
-    setHasChanges(true);
-    setIsModalOpen(false);
-    setSelectedSlot(null);
-  }, []);
+  const handleModalSave = useCallback(async (slotId, assignment) => {
+    if (!scrId) {
+      alert('화면 ID가 없습니다. 화면을 먼저 생성해주세요.');
+      return;
+    }
+    
+    try {
+      // 즉시 DB 반영 (Decision 7)
+      await saveScreenSlots(scrId, [
+        { slot_id: slotId, item_id: assignment?.item_id || null }
+      ]);
+      
+      setSlotAssignments((prev) => {
+        const next = new Map(prev);
+        if (assignment) {
+          next.set(slotId, assignment);
+        } else {
+          next.delete(slotId);
+        }
+        return next;
+      });
+      setIsModalOpen(false);
+      setSelectedSlot(null);
+    } catch (error) {
+      console.error('Failed to save slot:', error);
+      alert('슬롯 저장 중 오류가 발생했습니다.');
+    }
+  }, [scrId]);
 
   const handleModalCancel = useCallback(() => {
     setIsModalOpen(false);
     setSelectedSlot(null);
   }, []);
-
-  const handleSave = useCallback(async () => {
-    try {
-      const slotsToSave = Array.from(slotAssignments.entries()).map(([slotId, assignment]) => ({
-        slot_id: slotId,
-        item_id: assignment?.item_id || null,
-      }));
-      
-      // Note: We need a screen ID to save. For now, we'll use templateId as a fallback
-      // In a real scenario, you'd have a screen selected
-      await saveScreenSlots(templateId, slotsToSave);
-      setHasChanges(false);
-      alert('저장되었습니다.');
-    } catch (error) {
-      console.error('Failed to save slots:', error);
-      alert('저장 중 오류가 발생했습니다.');
-    }
-  }, [slotAssignments, templateId]);
 
   if (loading) {
     return (
@@ -144,39 +144,65 @@ export default function SlotLayoutPage() {
             <span className="group-hover:-translate-x-1 transition-transform duration-300">←</span>
             템플릿 목록
           </button>
-          
-          <button
-            className="px-6 py-2.5 text-sm font-bold text-white bg-primary rounded-xl shadow-lg shadow-primary/20 hover:bg-primary-hover hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 disabled:opacity-50 disabled:shadow-none"
-            disabled={!hasChanges}
-            onClick={handleSave}
-          >
-            변경사항 저장
-          </button>
         </div>
       </div>
 
-      {hasChanges && (
-        <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-medium animate-bounce-subtle">
-          <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
-          저장되지 않은 변경사항이 있습니다.
+      {/* 화면 생성 UI (Decision 6) */}
+      {!isScreenCreated && (
+        <div className="mb-6 p-6 bg-surface-container rounded-xl border border-outline/20">
+          <h3 className="font-semibold text-on-surface mb-3">화면 생성</h3>
+          <p className="text-sm text-on-surface-variant mb-4">
+            슬롯을 설정하기 전에 화면을 먼저 생성해야 합니다.
+          </p>
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={scrNm}
+              onChange={(e) => setScrNm(e.target.value)}
+              placeholder="화면 이름을 입력하세요"
+              className="flex-1 px-4 py-2.5 text-sm bg-surface rounded-lg border border-outline focus:outline-none focus:border-primary"
+            />
+            <button
+              onClick={handleCreateScreen}
+              disabled={isCreatingScreen || !scrNm.trim()}
+              className="px-6 py-2.5 text-sm font-bold text-white bg-primary rounded-xl shadow-lg shadow-primary/20 hover:bg-primary-hover transition-all duration-300 disabled:opacity-50"
+            >
+              {isCreatingScreen ? '생성 중...' : '화면 생성'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isScreenCreated && (
+        <div className="mb-4 flex items-center gap-2 px-4 py-3 bg-primary-container border border-primary/20 rounded-xl text-primary text-xs font-medium">
+          <span className="flex h-2 w-2 rounded-full bg-primary"></span>
+          화면: {scrNm} (ID: {scrId}) — 슬롯을 클릭하여 아이템을 설정하세요.
         </div>
       )}
 
       {/* Workspace Area */}
-      <div className="relative flex-1 min-h-[600px] bg-[#0f172a] rounded-3xl p-12 overflow-hidden shadow-2xl border border-white/5">
+      <div className={`relative flex-1 min-h-[600px] rounded-3xl p-12 overflow-hidden shadow-2xl border border-white/5 transition-colors duration-500 ${isScreenCreated ? 'bg-[#0f172a]' : 'bg-surface-container'}`}>
         {/* Workspace Background Decor */}
         <div className="absolute inset-0 opacity-10 pointer-events-none">
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:40px_40px]"></div>
         </div>
 
         <div className="relative h-full flex items-center justify-center">
-          <div className="scale-90 xl:scale-100 transition-transform duration-500">
+          <div className={`scale-90 xl:scale-100 transition-all duration-500 ${!isScreenCreated ? 'opacity-50 pointer-events-none' : ''}`}>
             <SlotLayout
               slots={slots}
               slotAssignments={slotAssignments}
               onSlotClick={handleSlotClick}
             />
           </div>
+          
+          {!isScreenCreated && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="bg-surface/90 backdrop-blur-sm rounded-xl px-6 py-4 border border-outline/20 text-center">
+                <p className="text-on-surface-variant text-sm">화면을 생성하면 슬롯 편집이 활성화됩니다.</p>
+              </div>
+            </div>
+          )}
         </div>
         
         {/* Canvas Controls Placeholder */}

@@ -11,6 +11,7 @@ const TABS = [
 ];
 
 export default function SlotConfigModal({ slot, assignment, items, onSave, onCancel }) {
+  const [viewMode, setViewMode] = useState(assignment?.item_id ? 'config' : 'list');
   const [activeTab, setActiveTab] = useState('form');
   const [selectedItem, setSelectedItem] = useState(() => {
     if (assignment?.item_id) {
@@ -22,79 +23,84 @@ export default function SlotConfigModal({ slot, assignment, items, onSave, onCan
   const [selectedSql, setSelectedSql] = useState(null);
   const [mappingJson, setMappingJson] = useState(() => selectedItem?.mapping_json || {});
   const [error, setError] = useState(null);
-  const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [itemName, setItemName] = useState('');
-  const [isEditingItem, setIsEditingItem] = useState(false);
+  
+  // 데이터 연동을 위한 상태
+  const [contentDetail, setContentDetail] = useState(null);
+  const [sqlPreviewData, setSqlPreviewData] = useState(null);
 
   useEffect(() => {
     if (selectedItem) {
       setSelectedCnts(selectedItem.shape_cnts_id ? { cnts_id: selectedItem.shape_cnts_id } : null);
       setSelectedSql(selectedItem.sql_cnts_id ? { cnts_id: selectedItem.sql_cnts_id } : null);
       setMappingJson(selectedItem.mapping_json || {});
+      setItemName(selectedItem.item_nm || '');
     }
   }, [selectedItem]);
 
-  const handleSave = useCallback(async () => {
-    if (!selectedItem) {
-      setError('아이템을 선택하거나 생성해주세요.');
-      return;
+  // contentDetail 동기화 로직 (기존 유지)
+  useEffect(() => {
+    if (contentDetail && viewMode === 'config' && !selectedItem?.item_id) {
+      setMappingJson(prev => {
+        if (prev.type === contentDetail.contentType && 
+            (contentDetail.contentType !== 'chart' || prev.chartType === contentDetail.data?.chartType)) {
+          return prev;
+        }
+        const newMapping = {
+          type: contentDetail.contentType,
+          mapping: prev.mapping || {}
+        };
+        if (contentDetail.contentType === 'chart') {
+          newMapping.chartType = contentDetail.data?.chartType || 'bar';
+          if (!newMapping.mapping.categoryField) newMapping.mapping.categoryField = '';
+          if (!Array.isArray(newMapping.mapping.series)) newMapping.mapping.series = [];
+        }
+        return newMapping;
+      });
     }
+  }, [contentDetail, viewMode, selectedItem]);
 
+  const handleSelectItem = (item) => {
     const assignment = {
-      item_id: selectedItem.item_id,
-      item_nm: selectedItem.item_nm,
-      cnts_tp: selectedItem.mapping_json?.type || 'default',
+      item_id: item.item_id,
+      item_nm: item.item_nm,
+      cnts_tp: item.mapping_json?.type || 'default',
     };
-
     onSave(slot.slot_id, assignment);
-  }, [slot, selectedItem, onSave]);
+  };
 
-  const handleCreateItem = async () => {
+  const handleFinalSave = async () => {
     if (!itemName.trim()) {
       setError('아이템 이름을 입력해주세요.');
       return;
     }
 
     try {
+      let itemToSave = selectedItem;
       const payload = {
         item_nm: itemName,
         shape_cnts_id: selectedCnts?.cnts_id || null,
         sql_cnts_id: selectedSql?.cnts_id || null,
         mapping_json: mappingJson,
       };
-      const result = await createItem(payload);
-      const newItem = {
-        item_id: result.item_id,
-        ...payload,
-      };
-      setSelectedItem(newItem);
-      setIsItemModalOpen(false);
-      setItemName('');
-      setError(null);
-    } catch (err) {
-      setError(handleApiError(err, '아이템 생성 중 오류가 발생했습니다.'));
-    }
-  };
 
-  const handleUpdateItem = async () => {
-    if (!selectedItem) return;
+      if (selectedItem?.item_id) {
+        // 수정 모드
+        await updateItem(selectedItem.item_id, payload);
+        itemToSave = { ...selectedItem, ...payload };
+      } else {
+        // 신규 생성 모드
+        const result = await createItem(payload);
+        itemToSave = { ...payload, item_id: result.item_id };
+      }
 
-    try {
-      const payload = {
-        item_nm: itemName || selectedItem.item_nm,
-        shape_cnts_id: selectedCnts?.cnts_id || selectedItem.shape_cnts_id,
-        sql_cnts_id: selectedSql?.cnts_id || selectedItem.sql_cnts_id,
-        mapping_json: mappingJson,
-      };
-      await updateItem(selectedItem.item_id, payload);
-      const updatedItem = { ...selectedItem, ...payload };
-      setSelectedItem(updatedItem);
-      setIsItemModalOpen(false);
-      setIsEditingItem(false);
-      setItemName('');
-      setError(null);
+      onSave(slot.slot_id, {
+        item_id: itemToSave.item_id,
+        item_nm: itemToSave.item_nm,
+        cnts_tp: itemToSave.mapping_json?.type || 'default',
+      });
     } catch (err) {
-      setError(handleApiError(err, '아이템 수정 중 오류가 발생했습니다.'));
+      setError(handleApiError(err, '저장 중 오류가 발생했습니다.'));
     }
   };
 
@@ -102,195 +108,172 @@ export default function SlotConfigModal({ slot, assignment, items, onSave, onCan
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-surface rounded-xl shadow-lg w-full max-w-[1100px] max-h-[90vh] flex flex-col">
+      <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-[1100px] max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in duration-300">
+        
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-outline/20">
-          <div className="flex items-center gap-4">
-            <h2 className="text-lg font-semibold text-on-surface">
-              슬롯 {slot.slot_id} 구성
+        <div className="flex items-center justify-between px-8 py-5 border-b border-outline/10 bg-surface-container-low">
+          <div>
+            <h2 className="text-xl font-bold text-on-surface">
+              {viewMode === 'list' ? '아이템 선택' : `아이템 설정 (${slot.slot_id})`}
             </h2>
-            {selectedItem && (
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-1 bg-primary-container text-primary text-xs rounded-lg font-medium">
-                  {selectedItem.item_nm}
-                </span>
-                <button
-                  onClick={() => {
-                    setItemName(selectedItem.item_nm);
-                    setIsEditingItem(true);
-                    setIsItemModalOpen(true);
-                  }}
-                  className="text-xs text-primary hover:text-primary/80 transition-colors"
-                >
-                  수정
-                </button>
-              </div>
-            )}
+            <p className="text-xs text-on-surface-variant mt-1">
+              {viewMode === 'list' ? '사용할 아이템을 선택하거나 새로 만듭니다.' : '형태, 데이터, 매핑 규칙을 설정합니다.'}
+            </p>
           </div>
-          <button
-            onClick={onCancel}
-            className="text-on-surface-variant hover:text-on-surface transition-colors"
-          >
+          <button onClick={onCancel} className="p-2 hover:bg-surface-container-high rounded-full transition-colors">
             ✕
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-outline/20">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => {
-                if (tab.id === 'mapping' && !isMappingEnabled) return;
-                setActiveTab(tab.id);
-                setError(null);
-              }}
-              disabled={tab.id === 'mapping' && !isMappingEnabled}
-              className={`px-6 py-3 text-sm font-medium transition-colors ${
-                activeTab === tab.id
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-on-surface-variant hover:text-on-surface'
-              } ${tab.id === 'mapping' && !isMappingEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-auto p-6">
-          {error && (
-            <div className="mb-4 p-3 bg-error-container text-error rounded-lg text-sm">
-              {error}
+        {viewMode === 'list' ? (
+          /* Step 1: Item Selection List */
+          <div className="flex-1 overflow-auto p-8 bg-surface">
+            <div className="flex justify-between items-center mb-6">
+              <span className="text-sm font-medium text-on-surface-variant">기존 아이템 ({items.length})</span>
+              <button
+                onClick={() => setViewMode('config')}
+                className="px-5 py-2.5 text-sm font-bold text-on-primary bg-primary rounded-xl shadow-lg shadow-primary/20 hover:bg-primary-hover transition-all duration-300"
+              >
+                + 새 아이템 만들기
+              </button>
             </div>
-          )}
-
-          {/* Item Selection */}
-          <div className="mb-6 p-4 bg-surface-container rounded-xl border border-outline/20">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-on-surface">아이템 선택</h3>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setItemName('');
-                    setIsEditingItem(false);
-                    setIsItemModalOpen(true);
-                  }}
-                  className="px-3 py-1.5 text-xs font-medium text-on-primary bg-primary rounded-lg hover:bg-primary/90 transition-colors"
-                >
-                  새 아이템
+            
+            {items.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-outline/20 rounded-3xl">
+                <p className="text-on-surface-variant">등록된 아이템이 없습니다.</p>
+                <button onClick={() => setViewMode('config')} className="mt-4 text-primary font-bold hover:underline">
+                  첫 아이템 만들기 →
                 </button>
               </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {items.map((item) => (
+                  <button
+                    key={item.item_id}
+                    onClick={() => handleSelectItem(item)}
+                    className="group flex flex-col p-5 bg-white rounded-2xl border border-outline/10 shadow-sm hover:border-primary/50 hover:shadow-md transition-all duration-300 text-left"
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <span className="px-2 py-1 bg-surface-container-high text-[10px] font-bold text-primary rounded-md uppercase tracking-wider">
+                        {item.mapping_json?.type || '미지정'}
+                      </span>
+                      <span className="text-[10px] text-on-surface-variant">ID: {item.item_id}</span>
+                    </div>
+                    <div className="font-bold text-on-surface group-hover:text-primary transition-colors truncate w-full mb-1">
+                      {item.item_nm}
+                    </div>
+                    <div className="text-xs text-on-surface-variant truncate w-full">
+                      {item.mapping_json?.chartType ? `${item.mapping_json.chartType} 차트` : '설정 정보 없음'}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Step 2: Configuration View (Tabs) */
+          <div className="flex-1 flex flex-col overflow-hidden bg-surface">
+            {/* Config Sub-Header with Name Input */}
+            <div className="px-8 py-4 bg-surface-container-lowest border-b border-outline/10 flex items-center gap-4">
+              <div className="flex-1">
+                <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter mb-1">아이템 이름</label>
+                <input
+                  type="text"
+                  value={itemName}
+                  onChange={(e) => setItemName(e.target.value)}
+                  className="w-full px-4 py-2 bg-white rounded-xl border border-outline/20 focus:outline-none focus:border-primary font-medium"
+                  placeholder="아이템 이름을 입력하세요"
+                />
+              </div>
+              <div className="flex flex-col justify-end h-full">
+                 <button onClick={() => setViewMode('list')} className="text-xs text-on-surface-variant hover:text-primary transition-colors mt-4">
+                   ← 목록으로 돌아가기
+                 </button>
+              </div>
             </div>
-            <div className="grid grid-cols-4 gap-2 max-h-32 overflow-auto">
-              {items.map((item) => (
+
+            {/* Tabs Navigation */}
+            <div className="flex px-8 border-b border-outline/10 bg-surface-container-lowest">
+              {TABS.map((tab) => (
                 <button
-                  key={item.item_id}
+                  key={tab.id}
                   onClick={() => {
-                    setSelectedItem(item);
-                    setError(null);
+                    if (tab.id === 'mapping' && !isMappingEnabled) return;
+                    setActiveTab(tab.id);
                   }}
-                  className={`px-3 py-2 text-sm rounded-lg border transition-colors text-left ${
-                    selectedItem?.item_id === item.item_id
-                      ? 'bg-primary-container border-primary text-primary'
-                      : 'bg-surface border-outline hover:bg-surface-container-high'
-                  }`}
+                  disabled={tab.id === 'mapping' && !isMappingEnabled}
+                  className={`px-6 py-4 text-sm font-bold transition-all relative ${activeTab === tab.id
+                    ? 'text-primary'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                    } ${tab.id === 'mapping' && !isMappingEnabled ? 'opacity-30 cursor-not-allowed' : ''}`}
                 >
-                  <div className="font-medium truncate">{item.item_nm}</div>
-                  <div className="text-xs text-on-surface-variant">
-                    {item.mapping_json?.type || '미지정'}
-                  </div>
+                  {tab.label}
+                  {activeTab === tab.id && (
+                    <div className="absolute bottom-0 left-0 w-full h-1 bg-primary rounded-t-full" />
+                  )}
                 </button>
               ))}
             </div>
+
+            {/* Tab Content Area */}
+            <div className="flex-1 overflow-auto p-8">
+              {error && (
+                <div className="mb-6 p-4 bg-error-container text-error rounded-2xl text-sm flex items-center gap-3">
+                  <span className="text-lg">⚠️</span> {error}
+                </div>
+              )}
+
+              {activeTab === 'form' && (
+                <FormTab
+                  selectedCnts={selectedCnts}
+                  onSelectCnts={setSelectedCnts}
+                  onContentDetailChange={setContentDetail}
+                />
+              )}
+
+              {activeTab === 'sql' && (
+                <SqlTab
+                  selectedSql={selectedSql}
+                  onSelectSql={setSelectedSql}
+                  onPreviewDataChange={setSqlPreviewData}
+                />
+              )}
+
+              {activeTab === 'mapping' && isMappingEnabled && (
+                <MappingTab
+                  selectedCnts={selectedCnts}
+                  selectedSql={selectedSql}
+                  contentDetail={contentDetail}
+                  sqlPreviewData={sqlPreviewData}
+                  mappingJson={mappingJson}
+                  onMappingJsonChange={setMappingJson}
+                />
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-between items-center px-8 py-5 border-t border-outline/10 bg-surface-container-low">
+              <button
+                onClick={() => setViewMode('list')}
+                className="px-6 py-2.5 text-sm font-bold text-on-surface-variant hover:bg-surface-container-high rounded-xl transition-colors"
+              >
+                취소 후 목록으로
+              </button>
+              <button
+                onClick={handleFinalSave}
+                className="px-8 py-2.5 text-sm font-bold text-on-primary bg-primary rounded-xl shadow-lg shadow-primary/20 hover:bg-primary-hover transition-all duration-300"
+              >
+                아이템 저장 및 적용
+              </button>
+            </div>
           </div>
-
-          {activeTab === 'form' && (
-            <FormTab
-              selectedCnts={selectedCnts}
-              onSelectCnts={setSelectedCnts}
-            />
-          )}
-
-          {activeTab === 'sql' && (
-            <SqlTab
-              selectedSql={selectedSql}
-              onSelectSql={setSelectedSql}
-            />
-          )}
-
-          {activeTab === 'mapping' && isMappingEnabled && (
-            <MappingTab
-              selectedCnts={selectedCnts}
-              selectedSql={selectedSql}
-              mappingJson={mappingJson}
-              onMappingJsonChange={setMappingJson}
-            />
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-outline/20">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-on-surface-variant bg-surface-container rounded-lg border border-outline hover:bg-surface-container-high transition-colors"
-          >
-            취소
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!selectedItem}
-            className="px-4 py-2 text-sm font-medium text-on-primary bg-primary rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
-          >
-            저장
-          </button>
-        </div>
+        )}
       </div>
-
-      {/* Item Modal */}
-      {isItemModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
-          <div className="bg-surface rounded-xl shadow-lg w-full max-w-md p-6">
-            <h3 className="text-lg font-semibold text-on-surface mb-4">
-              {isEditingItem ? '아이템 수정' : '새 아이템 생성'}
-            </h3>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-on-surface-variant mb-1">
-                아이템 이름
-              </label>
-              <input
-                type="text"
-                value={itemName}
-                onChange={(e) => setItemName(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-surface-container rounded-lg border border-outline focus:outline-none focus:border-primary"
-                placeholder="아이템 이름을 입력하세요"
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => {
-                  setIsItemModalOpen(false);
-                  setItemName('');
-                }}
-                className="px-4 py-2 text-sm font-medium text-on-surface-variant bg-surface-container rounded-lg border border-outline hover:bg-surface-container-high transition-colors"
-              >
-                취소
-              </button>
-              <button
-                onClick={isEditingItem ? handleUpdateItem : handleCreateItem}
-                className="px-4 py-2 text-sm font-medium text-on-primary bg-primary rounded-lg hover:bg-primary/90 transition-colors"
-              >
-                {isEditingItem ? '수정' : '생성'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-function FormTab({ selectedCnts, onSelectCnts }) {
+function FormTab({ selectedCnts, onSelectCnts, onContentDetailChange }) {
   const [contents, setContents] = useState([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(false);
@@ -331,18 +314,20 @@ function FormTab({ selectedCnts, onSelectCnts }) {
   useEffect(() => {
     if (!selectedCnts) {
       setContentDetail(null);
+      onContentDetailChange(null);
       return;
     }
     const fetchDetail = async () => {
       try {
         const response = await api.get(`/api/admin/contents/${selectedCnts.cnts_id}`);
         setContentDetail(response.data.content);
+        onContentDetailChange(response.data.content);
       } catch (err) {
         console.error('Failed to fetch content detail:', err);
       }
     };
     fetchDetail();
-  }, [selectedCnts]);
+  }, [selectedCnts, onContentDetailChange]);
 
   const filters = [
     { id: 'all', label: '전체' },
@@ -361,11 +346,10 @@ function FormTab({ selectedCnts, onSelectCnts }) {
             <button
               key={f.id}
               onClick={() => setFilter(f.id)}
-              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-                filter === f.id
-                  ? 'bg-primary text-on-primary'
-                  : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
-              }`}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${filter === f.id
+                ? 'bg-primary text-on-primary'
+                : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
+                }`}
             >
               {f.label}
             </button>
@@ -389,9 +373,8 @@ function FormTab({ selectedCnts, onSelectCnts }) {
               <tr
                 key={`${content.cnts_id}-${index}`}
                 onClick={() => onSelectCnts(content)}
-                className={`border-b border-outline/10 cursor-pointer hover:bg-surface-container ${
-                  selectedCnts?.cnts_id === content.cnts_id ? 'bg-primary-container' : ''
-                }`}
+                className={`border-b border-outline/10 cursor-pointer hover:bg-surface-container ${selectedCnts?.cnts_id === content.cnts_id ? 'bg-primary-container' : ''
+                  }`}
               >
                 <td className="py-2 px-3">{index + 1}</td>
                 <td className="py-2 px-3">
@@ -478,7 +461,7 @@ function FormTab({ selectedCnts, onSelectCnts }) {
   );
 }
 
-function SqlTab({ selectedSql, onSelectSql }) {
+function SqlTab({ selectedSql, onSelectSql, onPreviewDataChange }) {
   const [contents, setContents] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
@@ -521,6 +504,7 @@ function SqlTab({ selectedSql, onSelectSql }) {
     setSqlDetail(null);
     setPreviewData(null);
     setPreviewError(null);
+    onPreviewDataChange(null);
     try {
       const response = await api.get(`/api/admin/contents/${content.cnts_id}`);
       setSqlDetail(response.data.content);
@@ -536,8 +520,10 @@ function SqlTab({ selectedSql, onSelectSql }) {
     try {
       const data = await executeSqlPreview(selectedSql.cnts_id);
       setPreviewData(data);
+      onPreviewDataChange(data);
     } catch (err) {
       setPreviewError(handleApiError(err, 'SQL 미리보기 실행 중 오류가 발생했습니다.'));
+      onPreviewDataChange(null);
     } finally {
       setPreviewLoading(false);
     }
@@ -576,9 +562,8 @@ function SqlTab({ selectedSql, onSelectSql }) {
               <tr
                 key={content.cnts_id}
                 onClick={() => handleSelect(content)}
-                className={`border-b border-outline/10 cursor-pointer hover:bg-surface-container ${
-                  selectedSql?.cnts_id === content.cnts_id ? 'bg-primary-container' : ''
-                }`}
+                className={`border-b border-outline/10 cursor-pointer hover:bg-surface-container ${selectedSql?.cnts_id === content.cnts_id ? 'bg-primary-container' : ''
+                  }`}
               >
                 <td className="py-2 px-3">
                   <input
@@ -673,47 +658,63 @@ function SqlTab({ selectedSql, onSelectSql }) {
   );
 }
 
-function MappingTab({ selectedCnts, selectedSql, mappingJson, onMappingJsonChange }) {
-  const [columns, setColumns] = useState([]);
+function MappingTab({ selectedCnts, selectedSql, contentDetail, sqlPreviewData, mappingJson, onMappingJsonChange }) {
   const [draggingColumn, setDraggingColumn] = useState(null);
 
-  useEffect(() => {
-    if (!selectedSql) {
-      setColumns([]);
-      return;
+  // SQL 미리보기 결과에서 컬럼 동적으로 추출
+  const sqlColumns = React.useMemo(() => {
+    if (sqlPreviewData?.columns && Array.isArray(sqlPreviewData.columns)) {
+      return sqlPreviewData.columns;
     }
-    const sampleColumns = ['column_1', 'column_2', 'column_3', 'column_4'];
-    setColumns(sampleColumns);
-  }, [selectedSql]);
+    return [];
+  }, [sqlPreviewData]);
 
+  // 형태(그리드/차트/카드)의 data 구조에서 매핑 대상 필드 추출
   const widgetFields = React.useMemo(() => {
     const fields = [];
-    switch (selectedCnts?.contentType) {
+    const contentType = contentDetail?.contentType || selectedCnts?.contentType;
+    const data = contentDetail?.data;
+
+    switch (contentType) {
       case 'chart':
-        fields.push(
-          { id: 'categoryField', label: '카테고리 필드' },
-          { id: 'series', label: '시리즈' }
-        );
+        fields.push({ id: 'categoryField', label: '카테고리 필드', type: 'string' });
+        fields.push({ id: 'series', label: '시리즈', type: 'array' });
         break;
       case 'grid':
-        fields.push(
-          { id: 'columns', label: '컬럼' }
-        );
+        // 그리드의 columns 정의에서 각 컬럼을 매핑 대상으로 생성
+        if (data?.columns && Array.isArray(data.columns)) {
+          data.columns.forEach((col, idx) => {
+            fields.push({
+              id: `column_${idx}`,
+              label: col.header || col.field || `컬럼 ${idx + 1}`,
+              field: col.field,
+              type: 'column'
+            });
+          });
+        } else {
+          fields.push({ id: 'columns', label: '컬럼 목록', type: 'array' });
+        }
         break;
       case 'card':
-        fields.push(
-          { id: 'value', label: '값' },
-          { id: 'label', label: '라벨' }
-        );
+        if (data?.items && Array.isArray(data.items)) {
+          data.items.forEach((item, idx) => {
+            fields.push({
+              id: `card_item_${idx}`,
+              label: item.label || `카드 아이템 ${idx + 1}`,
+              type: 'item'
+            });
+          });
+        } else {
+          fields.push({ id: 'cardLabel', label: '라벨', type: 'item' });
+          fields.push({ id: 'cardValue', label: '값', type: 'item' });
+        }
         break;
       default:
-        fields.push(
-          { id: 'field_1', label: '필드 1' },
-          { id: 'field_2', label: '필드 2' }
-        );
+        fields.push({ id: 'field_1', label: '필드 1', type: 'string' });
+        fields.push({ id: 'field_2', label: '필드 2', type: 'string' });
     }
     return fields;
-  }, [selectedCnts]);
+  }, [contentDetail, selectedCnts]);
 
   const handleDragStart = (column) => {
     setDraggingColumn(column);
@@ -725,12 +726,30 @@ function MappingTab({ selectedCnts, selectedSql, mappingJson, onMappingJsonChang
 
   const handleDrop = (fieldId) => {
     if (!draggingColumn) return;
-    
+
     const newMapping = { ...mappingJson };
     if (!newMapping.mapping) {
       newMapping.mapping = {};
     }
-    newMapping.mapping[fieldId] = draggingColumn;
+
+    if (fieldId === 'series') {
+      newMapping.mapping[fieldId] = [{ field: draggingColumn }];
+    } else if (fieldId.startsWith('column_')) {
+      if (!Array.isArray(newMapping.mapping.columns)) {
+        newMapping.mapping.columns = [];
+      }
+      const colIdx = parseInt(fieldId.split('_')[1], 10);
+      newMapping.mapping.columns[colIdx] = { field: draggingColumn };
+    } else if (fieldId.startsWith('card_item_')) {
+      if (!Array.isArray(newMapping.mapping.items)) {
+        newMapping.mapping.items = [];
+      }
+      const cardIdx = parseInt(fieldId.split('_')[2], 10);
+      newMapping.mapping.items[cardIdx] = { field: draggingColumn };
+    } else {
+      newMapping.mapping[fieldId] = draggingColumn;
+    }
+
     onMappingJsonChange(newMapping);
     setDraggingColumn(null);
   };
@@ -748,18 +767,24 @@ function MappingTab({ selectedCnts, selectedSql, mappingJson, onMappingJsonChang
       {/* SQL Columns */}
       <div className="w-64">
         <h3 className="font-semibold text-on-surface mb-4">SQL 컬럼</h3>
-        <div className="space-y-2">
-          {columns.map((column) => (
-            <div
-              key={column}
-              draggable
-              onDragStart={() => handleDragStart(column)}
-              className="px-3 py-2 bg-surface-container rounded-lg border border-outline cursor-move hover:border-primary transition-colors"
-            >
-              {column}
-            </div>
-          ))}
-        </div>
+        {sqlColumns.length > 0 ? (
+          <div className="space-y-2">
+            {sqlColumns.map((column) => (
+              <div
+                key={column}
+                draggable
+                onDragStart={() => handleDragStart(column)}
+                className="px-3 py-2 bg-surface-container rounded-lg border border-outline cursor-move hover:border-primary transition-colors"
+              >
+                {column}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-on-surface-variant text-sm">
+            SQL 탭에서 미리보기를 실행하면 컬럼이 표시됩니다.
+          </div>
+        )}
         <p className="mt-4 text-xs text-on-surface-variant">
           컬럼을 드래그하여 우측 필드에 맵핑하세요.
         </p>
@@ -768,37 +793,42 @@ function MappingTab({ selectedCnts, selectedSql, mappingJson, onMappingJsonChang
       {/* Mappings */}
       <div className="flex-1">
         <h3 className="font-semibold text-on-surface mb-4">맵핑 설정</h3>
-        <div className="space-y-2">
-          {widgetFields.map((field) => (
-            <div
-              key={field.id}
-              onDragOver={handleDragOver}
-              onDrop={() => handleDrop(field.id)}
-              className={`px-3 py-2 rounded-lg border-2 border-dashed transition-colors ${
-                mappingJson.mapping?.[field.id]
+        {widgetFields.length > 0 ? (
+          <div className="space-y-2">
+            {widgetFields.map((field) => (
+              <div
+                key={field.id}
+                onDragOver={handleDragOver}
+                onDrop={() => handleDrop(field.id)}
+                className={`px-3 py-2 rounded-lg border-2 border-dashed transition-colors ${mappingJson.mapping?.[field.id]
                   ? 'bg-primary-container border-primary'
                   : 'bg-surface-container border-outline hover:border-primary'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium">{field.label}</div>
-                  <div className="text-xs text-on-surface-variant">
-                    {mappingJson.mapping?.[field.id] || '여기에 드롭'}
+                  }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">{field.label}</div>
+                    <div className="text-xs text-on-surface-variant">
+                      {mappingJson.mapping?.[field.id] || '여기에 드롭'}
+                    </div>
                   </div>
+                  {mappingJson.mapping?.[field.id] && (
+                    <button
+                      onClick={() => handleRemoveMapping(field.id)}
+                      className="text-error hover:text-error/80 transition-colors"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
-                {mappingJson.mapping?.[field.id] && (
-                  <button
-                    onClick={() => handleRemoveMapping(field.id)}
-                    className="text-error hover:text-error/80 transition-colors"
-                  >
-                    ✕
-                  </button>
-                )}
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-on-surface-variant text-sm text-center py-8">
+            형태 탭에서 콘텐츠를 선택하면 매핑 필드가 표시됩니다.
+          </div>
+        )}
       </div>
 
       {/* JSON Preview */}
