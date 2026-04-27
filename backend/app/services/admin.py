@@ -1,4 +1,5 @@
 import math
+import json
 from typing import Any, Optional
 
 import pandas as pd
@@ -476,8 +477,8 @@ async def get_all_screen_templates() -> list[dict]:
         return []
     rows = df.to_dict(orient="records")
     for r in rows:
-        if r.get("slots") is not None:
-            r["slots"] = r["slots"]
+        if r.get("slots") is not None and isinstance(r["slots"], str):
+            r["slots"] = json.loads(r["slots"])
     return rows
 
 
