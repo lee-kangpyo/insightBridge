@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import PageHeader from "../../components/common/PageHeader";
 import AdminSearchBar from "../../components/common/AdminSearchBar";
 import { ADMIN_PAGE_CONTAINER_CLASS } from "../../constants/adminLayout";
@@ -8,6 +8,172 @@ import {
   patchAdminMenu,
   deleteAdminMenu,
 } from "../../services/adminApi";
+
+function Toast({ toast, onClose }) {
+  if (!toast) return null;
+  const tone =
+    toast.type === "error"
+      ? "bg-error text-on-error"
+      : toast.type === "info"
+        ? "bg-surface-container text-on-surface"
+        : "bg-tertiary-fixed text-on-tertiary-fixed";
+  const icon =
+    toast.type === "error"
+      ? "error"
+      : toast.type === "info"
+        ? "info"
+        : "check_circle";
+
+  return (
+    <div
+      className={`fixed bottom-6 right-6 z-50 ${tone} px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 animate-[expandIn_0.3s_ease-out]`}
+      role="status"
+      aria-live="polite"
+    >
+      <span className="material-symbols-outlined text-[20px]">{icon}</span>
+      <span className="font-medium">{toast.message}</span>
+      <button
+        type="button"
+        className="ml-1 inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-surface/30"
+        onClick={onClose}
+        aria-label="알림 닫기"
+      >
+        <span className="material-symbols-outlined text-[18px]">close</span>
+      </button>
+    </div>
+  );
+}
+
+function AddRootMenuDialog({
+  open,
+  value,
+  errors,
+  saving,
+  onChange,
+  onClose,
+  onSubmit,
+}) {
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) onSubmit();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose, onSubmit]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <button
+        type="button"
+        className="absolute inset-0 bg-surface/60 backdrop-blur-[2px]"
+        aria-label="닫기"
+        onClick={onClose}
+      />
+      <div className="relative mx-auto mt-[10vh] w-[min(560px,calc(100%-2rem))] rounded-2xl border border-outline-variant/40 bg-surface-container-lowest shadow-[0_24px_80px_rgba(0,0,0,0.25)] overflow-hidden">
+        <div className="h-1.5 w-full bg-gradient-to-r from-primary to-primary-container" />
+        <div className="p-6 sm:p-7 flex flex-col gap-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-xs font-medium tracking-wider text-on-surface-variant uppercase">
+                Root Node
+              </div>
+              <h2 className="mt-1 text-xl sm:text-2xl font-headline font-bold text-primary">
+                최상위 메뉴 추가
+              </h2>
+              <p className="mt-2 text-sm text-on-surface-variant leading-relaxed">
+                메뉴코드/메뉴명은 필수입니다.{" "}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              onClick={onClose}
+              aria-label="닫기"
+              disabled={saving}
+            >
+              <span className="material-symbols-outlined text-[20px]">
+                close
+              </span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">
+                메뉴코드 (menu_cd)
+              </label>
+              <input
+                className={`border-0 border-b focus:ring-0 px-0 py-2 bg-transparent text-on-surface font-mono text-sm ${
+                  errors.menuCd
+                    ? "border-error focus:border-error"
+                    : "border-outline focus:border-primary"
+                }`}
+                type="text"
+                value={value.menuCd}
+                onChange={(e) => onChange({ ...value, menuCd: e.target.value })}
+                autoFocus
+                placeholder="예) ADM_MENUS"
+              />
+              {errors.menuCd ? (
+                <div className="text-xs text-error">{errors.menuCd}</div>
+              ) : null}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">
+                메뉴명 (menu_nm)
+              </label>
+              <input
+                className={`border-0 border-b focus:ring-0 px-0 py-2 bg-transparent text-on-surface font-medium ${
+                  errors.menuName
+                    ? "border-error focus:border-error"
+                    : "border-outline focus:border-primary"
+                }`}
+                type="text"
+                value={value.menuName}
+                onChange={(e) =>
+                  onChange({ ...value, menuName: e.target.value })
+                }
+                placeholder="예) 메뉴관리"
+              />
+              {errors.menuName ? (
+                <div className="text-xs text-error">{errors.menuName}</div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-end pt-2">
+            <button
+              type="button"
+              className="h-11 px-4 rounded-lg border border-outline-variant/40 bg-surface-container-lowest text-on-surface hover:bg-surface-container-high transition-colors font-medium"
+              onClick={onClose}
+              disabled={saving}
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              className={`h-11 px-5 rounded-lg text-on-primary font-semibold transition-colors inline-flex items-center justify-center gap-2 ${
+                saving
+                  ? "bg-primary/60 cursor-not-allowed"
+                  : "bg-primary hover:bg-primary/90"
+              }`}
+              onClick={onSubmit}
+              disabled={saving}
+            >
+              <span className="material-symbols-outlined text-[18px]">add</span>
+              {saving ? "추가 중…" : "추가"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function menuIcon(node) {
   if (node.children && node.children.length > 0) return "folder";
@@ -385,9 +551,9 @@ function MenuDetailForm({
                     메인 화면 왼쪽 메뉴
                   </span>
                   <span className="text-on-surface-variant/80"> — </span>
-                  숫자는 메뉴 깊이를 나타냅니다. 1·2단계는 같은 줄에서
-                  시작하고, 3단계부터는 한 단계 깊어질 때마다 안쪽으로 한 칸씩
-                  더 들여 보입니다. (맨 아래 하위 메뉴일수록 더 안쪽)
+                  숫자는 메뉴 깊이를 나타냅니다. 1·2단계는 같은 줄에서 시작하고,
+                  3단계부터는 한 단계 깊어질 때마다 안쪽으로 한 칸씩 더 들여
+                  보입니다. (맨 아래 하위 메뉴일수록 더 안쪽)
                 </div>
               ) : null}
               <input
@@ -560,6 +726,20 @@ export default function MenuManagement() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef(null);
+  const [addRootOpen, setAddRootOpen] = useState(false);
+  const [addRootForm, setAddRootForm] = useState({ menuCd: "", menuName: "" });
+  const [addRootErrors, setAddRootErrors] = useState({
+    menuCd: "",
+    menuName: "",
+  });
+
+  const showToast = useCallback((message, type = "success") => {
+    setToast({ message, type });
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => setToast(null), 3000);
+  }, []);
 
   const loadTree = useCallback(async () => {
     try {
@@ -615,12 +795,12 @@ export default function MenuManagement() {
   const handleSave = async () => {
     if (!selectedNode) return;
     if (!formData.menuCd?.trim() || !formData.menuName?.trim()) {
-      alert("메뉴코드와 메뉴명은 필수입니다.");
+      showToast("메뉴코드와 메뉴명은 필수입니다.", "error");
       return;
     }
     const lvl = parseOptionalInt(formData.menuLevel);
     if (lvl !== null && (lvl < 1 || lvl > 4)) {
-      alert("메뉴 레벨은 1~4 사이여야 합니다.");
+      showToast("메뉴 레벨은 1~4 사이여야 합니다.", "error");
       return;
     }
     try {
@@ -675,21 +855,39 @@ export default function MenuManagement() {
     }
   };
 
-  const handleAddRoot = async () => {
-    const menu_cd = window.prompt("새 메뉴 코드(menu_cd)", "");
-    if (menu_cd === null) return;
-    const menu_nm = window.prompt("새 메뉴명(menu_nm)", "");
-    if (menu_nm === null) return;
-    if (!menu_cd.trim() || !menu_nm.trim()) {
-      alert("메뉴코드와 메뉴명은 필수입니다.");
+  const openAddRoot = () => {
+    if (saving) return;
+    setAddRootForm({ menuCd: "", menuName: "" });
+    setAddRootErrors({ menuCd: "", menuName: "" });
+    setAddRootOpen(true);
+  };
+
+  const closeAddRoot = () => {
+    if (saving) return;
+    setAddRootOpen(false);
+  };
+
+  const validateAddRoot = () => {
+    const next = { menuCd: "", menuName: "" };
+    if (!addRootForm.menuCd?.trim()) next.menuCd = "메뉴코드를 입력해주세요.";
+    if (!addRootForm.menuName?.trim()) next.menuName = "메뉴명을 입력해주세요.";
+    setAddRootErrors(next);
+    return !next.menuCd && !next.menuName;
+  };
+
+  const handleSubmitAddRoot = async () => {
+    if (!validateAddRoot()) {
+      showToast("필수 입력값을 확인해주세요.", "error");
       return;
     }
     try {
       setSaving(true);
       setError(null);
+      const menu_cd = addRootForm.menuCd.trim();
+      const menu_nm = addRootForm.menuName.trim();
       const { menu_id } = await createAdminMenu({
-        menu_cd: menu_cd.trim(),
-        menu_nm: menu_nm.trim(),
+        menu_cd,
+        menu_nm,
         parent_menu_id: null,
       });
       const tree = await loadTree();
@@ -698,11 +896,17 @@ export default function MenuManagement() {
         setSelectedNode(created);
         setFormData(nodeToForm(created));
       }
+      setAddRootOpen(false);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
+      showToast(`추가되었습니다: ${menu_nm}`, "success");
     } catch (err) {
       const msg = err.response?.data?.detail || err.message || "추가 실패";
       setError(typeof msg === "string" ? msg : JSON.stringify(msg));
+      showToast(
+        typeof msg === "string" ? msg : "추가에 실패했습니다.",
+        "error",
+      );
     } finally {
       setSaving(false);
     }
@@ -731,7 +935,7 @@ export default function MenuManagement() {
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           onExpandAll={handleExpandAll}
-          onAddRoot={handleAddRoot}
+          onAddRoot={openAddRoot}
           loading={loading}
         />
         <MenuDetailForm
@@ -752,6 +956,23 @@ export default function MenuManagement() {
           <span className="font-medium">처리되었습니다.</span>
         </div>
       )}
+      <Toast toast={toast} onClose={() => setToast(null)} />
+      <AddRootMenuDialog
+        open={addRootOpen}
+        value={addRootForm}
+        errors={addRootErrors}
+        saving={saving}
+        onChange={(next) => {
+          setAddRootForm(next);
+          setAddRootErrors((prev) => ({
+            menuCd: prev.menuCd && next.menuCd.trim() ? "" : prev.menuCd,
+            menuName:
+              prev.menuName && next.menuName.trim() ? "" : prev.menuName,
+          }));
+        }}
+        onClose={closeAddRoot}
+        onSubmit={handleSubmitAddRoot}
+      />
     </div>
   );
 }
