@@ -48,10 +48,10 @@ export default function SlotLayout({ slots, slotAssignments, onSlotClick }) {
           {slots.map((slot, index) => {
             const slotId = slot.slot_id || slot.id || `slot_${index}`;
             const assignment = slotAssignments.get(slotId);
-            const x = (slot.x || 0) * CELL_SIZE;
-            const y = (slot.y || 0) * CELL_SIZE;
-            const width = (slot.w || 1) * CELL_SIZE;
-            const height = (slot.h || 1) * CELL_SIZE;
+            const x = (slot.x_pos ?? 0) * CELL_SIZE;
+            const y = (slot.y_pos ?? 0) * CELL_SIZE;
+            const width = (slot.width ?? 1) * CELL_SIZE;
+            const height = (slot.height ?? 1) * CELL_SIZE;
 
             return (
               <g

@@ -100,13 +100,15 @@ export const getTemplateList = async () => {
 };
 
 export const getTemplateSlots = async (templateId) => {
-  const response = await api.get(`/api/admin/screen-templates/${templateId}`);
-  const template = response.data;
-  if (!template || !template.slots) return [];
-  const slotsData = typeof template.slots === 'string' ? JSON.parse(template.slots) : template.slots;
+  const response = await api.get(`/api/admin/screen-templates/${templateId}/slots`);
+  const slotsData = response.data || [];
   return slotsData.map((slot, idx) => ({
     ...slot,
-    slot_id: slot.slot_id || slot.id || `slot_${idx}`,
+    slot_id: slot.slot_id ?? slot.id ?? `slot_${idx}`,
+    x_pos: slot.x_pos ?? slot.x ?? 0,
+    y_pos: slot.y_pos ?? slot.y ?? 0,
+    width: slot.width ?? slot.w ?? 1,
+    height: slot.height ?? slot.h ?? 1,
   }));
 };
 

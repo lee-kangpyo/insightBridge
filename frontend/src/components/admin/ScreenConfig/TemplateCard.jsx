@@ -1,13 +1,23 @@
 export default function TemplateCard({ template, isSelected, onClick }) {
   const parseSlots = (slotsData) => {
+    let parsed = [];
     if (typeof slotsData === 'string') {
       try {
-        return JSON.parse(slotsData);
+        parsed = JSON.parse(slotsData);
       } catch {
-        return [];
+        parsed = [];
       }
+    } else {
+      parsed = slotsData || [];
     }
-    return slotsData || [];
+    return parsed.map((slot, idx) => ({
+      ...slot,
+      slot_id: slot.slot_id ?? slot.id ?? `slot_${idx}`,
+      x_pos: slot.x_pos ?? slot.x ?? 0,
+      y_pos: slot.y_pos ?? slot.y ?? 0,
+      width: slot.width ?? slot.w ?? 1,
+      height: slot.height ?? slot.h ?? 1,
+    }));
   };
 
   const slots = parseSlots(template.slots);
@@ -17,10 +27,10 @@ export default function TemplateCard({ template, isSelected, onClick }) {
   const cellSize = 28;
 
   const getSlotStyle = (slot) => {
-    const left = slot.x * cellSize;
-    const top = slot.y * cellSize;
-    const width = slot.w * cellSize;
-    const height = slot.h * cellSize;
+    const left = slot.x_pos * cellSize;
+    const top = slot.y_pos * cellSize;
+    const width = slot.width * cellSize;
+    const height = slot.height * cellSize;
     return { left, top, width, height };
   };
 
@@ -99,7 +109,7 @@ export default function TemplateCard({ template, isSelected, onClick }) {
               {slots.map((slot, index) => {
                 const { left, top, width, height } = getSlotStyle(slot);
                 return (
-                  <g key={slot.id || index}>
+                  <g key={slot.slot_id}>
                     <rect
                       x={left + 2}
                       y={top + 2}
@@ -123,7 +133,7 @@ export default function TemplateCard({ template, isSelected, onClick }) {
                         fill={accentColor}
                         className="pointer-events-none select-none font-mono"
                       >
-                        {slot.id.replace('slot_', '')}
+                        {String(slot.slot_id).replace('slot_', '')}
                       </text>
                     )}
                   </g>
