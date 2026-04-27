@@ -100,8 +100,51 @@ export const getTemplateList = async () => {
 };
 
 export const getTemplateSlots = async (templateId) => {
-  const response = await api.get(`/api/admin/screen-templates/${templateId}/slots`);
+  const response = await api.get(`/api/admin/screen-templates/${templateId}`);
+  const template = response.data;
+  if (!template || !template.slots) return [];
+  const slotsData = typeof template.slots === 'string' ? JSON.parse(template.slots) : template.slots;
+  return slotsData.map((slot, idx) => ({
+    ...slot,
+    slot_id: slot.slot_id || slot.id || `slot_${idx}`,
+  }));
+};
+
+export const getTemplateById = async (templateId) => {
+  const response = await api.get(`/api/admin/screen-templates/${templateId}`);
   return response.data;
+};
+
+export const getContentsByType = async (type) => {
+  const response = await api.get('/api/admin/contents', {
+    params: { cnts_tp: type },
+  });
+  return response.data.contents || [];
+};
+
+export const getSqlContents = async () => {
+  const response = await api.get('/api/admin/contents', {
+    params: { cnts_tp: 'sql' },
+  });
+  return response.data.contents || [];
+};
+
+export const executeSqlPreview = async (cntsId) => {
+  const response = await api.get(`/api/admin/contents/${cntsId}/preview`);
+  return response.data;
+};
+
+export const handleApiError = (error, fallbackMessage = '오류가 발생했습니다.') => {
+  if (error.response?.data?.detail) {
+    return error.response.data.detail;
+  }
+  if (error.response?.data?.message) {
+    return error.response.data.message;
+  }
+  if (error.message) {
+    return error.message;
+  }
+  return fallbackMessage;
 };
 
 // --- Contents (Admin) ---

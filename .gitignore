@@ -36,4 +36,6 @@ openspec/
 # Git worktrees
 .worktrees/.worktrees/
 .worktrees/
-.worktrees/
+
+# Development Outputs
+output/

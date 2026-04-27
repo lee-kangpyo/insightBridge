@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/common/PageHeader';
 import { ADMIN_PAGE_CONTAINER_CLASS } from '../../constants/adminLayout';
 import { getTemplateList } from '../../services/adminApi';
 import TemplateGrid from '../../components/admin/ScreenConfig/TemplateGrid';
 
 export default function ScreenConfigPage() {
+  const navigate = useNavigate();
   const [templates, setTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -25,12 +27,7 @@ export default function ScreenConfigPage() {
 
   const handleSelectTemplate = (template) => {
     setSelectedTemplate(template);
-    console.log('Selected template:', {
-      templateId: template.template_id,
-      name: template.name,
-      slotCount: template.slots?.length || 0,
-      slots: template.slots,
-    });
+    navigate(`/admin/screen-config/${template.template_id}`);
   };
 
   return (
