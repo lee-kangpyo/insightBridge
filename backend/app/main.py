@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import sys
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routes import (
@@ -17,6 +18,11 @@ from .routes import (
 from .database import close_pool
 from .middleware.csrf import CSRFMiddleware
 from .config import settings
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"

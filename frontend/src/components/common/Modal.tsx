@@ -35,23 +35,19 @@ const SIZE_CLASS: Record<ModalSize, string> = {
   full: 'max-w-[min(96vw,1400px)]',
 };
 
-const VARIANT_PRESET: Record<
-  ModalVariant,
-  {
-    size: ModalSize;
-    bodyClassName: string;
-  }
-> = {
-  dialog: {
-    size: 'sm',
-    bodyClassName: 'max-h-[min(70vh,32rem)]',
-  },
-  form: {
-    // 긴 폼이더라도 화면을 과도하게 덮지 않는 “넉넉한 모달” 규격
-    size: 'xl',
-    bodyClassName: 'max-h-[min(82vh,52rem)]',
-  },
+const VARIANT_PRESET: Record<ModalVariant, { size: ModalSize }> = {
+  dialog: { size: 'sm' },
+  form: { size: 'xl' },
 };
+
+function pickScrollLockTarget(): HTMLElement {
+  const main = document.querySelector('main');
+  if (!main) return document.body;
+  const style = window.getComputedStyle(main);
+  const overflowY = style.overflowY;
+  if (overflowY === 'auto' || overflowY === 'scroll') return main as HTMLElement;
+  return document.body;
+}
 
 function getFocusableElements(root: HTMLElement | null): HTMLElement[] {
   if (!root) return [];
@@ -94,15 +90,15 @@ export default function Modal({
   const describedBy = useMemo(() => (description ? descId : undefined), [description, descId]);
   const preset = VARIANT_PRESET[variant];
   const resolvedSize: ModalSize = size ?? preset.size;
-  const bodySizingClassName = preset.bodyClassName;
 
   useEffect(() => {
     if (!isOpen) return undefined;
 
     lastActiveElementRef.current = (document.activeElement as HTMLElement) ?? null;
 
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const scrollLockTarget = pickScrollLockTarget();
+    const prevOverflow = scrollLockTarget.style.overflow;
+    scrollLockTarget.style.overflow = 'hidden';
 
     const panel = panelRef.current;
     const focusables = getFocusableElements(panel);
@@ -144,7 +140,7 @@ export default function Modal({
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = prevOverflow;
+      scrollLockTarget.style.overflow = prevOverflow;
       lastActiveElementRef.current?.focus?.();
     };
   }, [isOpen, closeOnEscape, onClose]);
@@ -160,16 +156,24 @@ export default function Modal({
         }}
         aria-hidden
       />
+
+      {/* 패널 자체가 스크롤 컨테이너: 헤더/푸터 위에서도 휠 스크롤이 자연스럽게 동작 */}
       <div
         ref={panelRef}
-        className={`relative w-full ${SIZE_CLASS[resolvedSize]} rounded-xl border border-outline-variant bg-surface-container-lowest shadow-xl outline-none`}
+        className={[
+          'relative w-full',
+          SIZE_CLASS[resolvedSize],
+          'max-h-[calc(100vh-2rem)]',
+          'overflow-y-auto',
+          'rounded-xl border border-outline-variant bg-surface-container-lowest shadow-xl outline-none',
+        ].join(' ')}
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
         aria-describedby={describedBy}
         tabIndex={-1}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-outline-variant px-6 py-4">
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-outline-variant bg-surface-container-lowest px-6 py-4">
           <div className="min-w-0">
             <h2 id={labelledBy} className="font-headline text-base font-semibold text-on-surface">
               {title}
@@ -195,10 +199,12 @@ export default function Modal({
           ) : null}
         </div>
 
-        <div className={`${bodySizingClassName} overflow-y-auto px-6 py-6`}>{children}</div>
+        <div className="px-6 py-6">{children}</div>
 
         {footer ? (
-          <div className="border-t border-outline-variant bg-surface-container-low px-6 py-4">{footer}</div>
+          <div className="sticky bottom-0 z-10 border-t border-outline-variant bg-surface-container-low px-6 py-4">
+            {footer}
+          </div>
         ) : null}
       </div>
     </div>
