@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { getContentsByType, getSqlContents, executeSqlPreview, handleApiError, getAdminContentsList } from '../../../services/adminApi';
 import api from '../../../services/api';
 import { CONTENT_TYPE_MAP } from '../../../constants/contentTypes';
+import { ChartDetail, GridDetail, CardDetail, SqlDetail } from '../../content-detail';
 
 const TABS = [
   { id: 'form', label: '형태' },
@@ -139,6 +140,7 @@ function FormTab({ selectedCnts, onSelectCnts }) {
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [contentDetail, setContentDetail] = useState(null);
 
   useEffect(() => {
     const fetchContents = async () => {
@@ -158,6 +160,22 @@ function FormTab({ selectedCnts, onSelectCnts }) {
     };
     fetchContents();
   }, [filter]);
+
+  useEffect(() => {
+    if (!selectedCnts) {
+      setContentDetail(null);
+      return;
+    }
+    const fetchDetail = async () => {
+      try {
+        const response = await api.get(`/api/admin/contents/${selectedCnts.cnts_id}`);
+        setContentDetail(response.data.content);
+      } catch (err) {
+        console.error('Failed to fetch content detail:', err);
+      }
+    };
+    fetchDetail();
+  }, [selectedCnts]);
 
   const filters = [
     { id: 'all', label: '전체' },
@@ -253,9 +271,18 @@ function FormTab({ selectedCnts, onSelectCnts }) {
 
         <div className="mt-6">
           <h4 className="font-medium text-on-surface mb-2">미리보기</h4>
-          <div className="bg-surface-container rounded-lg p-4 text-center text-on-surface-variant text-sm">
-            미리보기 영역
-          </div>
+          {contentDetail ? (
+            <div className="bg-surface-container-lowest rounded-lg p-4 text-sm">
+              {contentDetail.contentType === 'chart' && <ChartDetail data={contentDetail.data} />}
+              {contentDetail.contentType === 'grid' && <GridDetail data={contentDetail.data} />}
+              {contentDetail.contentType === 'card' && <CardDetail data={contentDetail.data} />}
+              {contentDetail.contentType === 'sql' && <SqlDetail data={contentDetail.data} />}
+            </div>
+          ) : (
+            <div className="bg-surface-container rounded-lg p-4 text-center text-on-surface-variant text-sm">
+              미리보기 영역
+            </div>
+          )}
         </div>
       </div>
     </div>

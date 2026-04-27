@@ -492,15 +492,17 @@ async def get_screen_template_by_id(template_id: int) -> Optional[dict]:
     if df.empty:
         return None
     rows = df.to_dict(orient="records")
+    if rows and rows[0].get("slots") is not None and isinstance(rows[0]["slots"], str):
+        rows[0]["slots"] = json.loads(rows[0]["slots"])
     return rows[0] if rows else None
 
 
 async def get_screen_template_slots(template_id: int) -> list[dict]:
     query = """
-        SELECT s.slot_id, s.template_id, s.scr_id, s.x_pos, s.y_pos, s.width, s.height,
+        SELECT s.slot_id, s.template_id, s.item_id,
                i.scr_nm
         FROM ts_scr_template_slot_scr s
-        LEFT JOIN ts_scr_info i ON s.scr_id = i.scr_id
+        LEFT JOIN ts_scr_info i ON s.item_id = i.scr_id
         WHERE s.template_id = $1
         ORDER BY s.slot_id
     """
