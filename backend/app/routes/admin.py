@@ -30,6 +30,16 @@ from app.services.admin import (
     get_screen_template_slots,
     _PATCH_UNSET,
 )
+from app.services.screen_items import (
+    create_item,
+    update_item,
+    get_item,
+    list_items,
+    delete_item,
+    save_screen_slots,
+    get_screen_slots,
+    get_screen_with_template,
+)
 from app.services.menu import treeify
 
 router = APIRouter()
@@ -393,3 +403,131 @@ async def get_admin_screen_template_slots(
 ):
     rows = await get_screen_template_slots(template_id)
     return [ScreenTemplateSlotItem(**r) for r in rows]
+
+
+# ── Screen Item Management ──
+
+class ItemCreateBody(BaseModel):
+    item_nm: str = Field(..., min_length=1)
+    shape_cnts_id: Optional[int] = None
+    sql_cnts_id: Optional[int] = None
+    mapping_json: Optional[dict[str, Any]] = None
+
+
+class ItemPatchBody(BaseModel):
+    item_nm: Optional[str] = None
+    shape_cnts_id: Optional[int] = None
+    sql_cnts_id: Optional[int] = None
+    mapping_json: Optional[dict[str, Any]] = None
+
+
+class ScreenSlotBody(BaseModel):
+    slot_id: str
+    item_id: Optional[int] = None
+
+
+@router.post("/admin/items", status_code=status.HTTP_201_CREATED)
+async def post_item(
+    body: ItemCreateBody,
+    _: dict = Depends(require_sys_adm),
+):
+    try:
+        item_id = await create_item(
+            item_nm=body.item_nm,
+            shape_cnts_id=body.shape_cnts_id,
+            sql_cnts_id=body.sql_cnts_id,
+            mapping_json=body.mapping_json,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    return {"item_id": item_id}
+
+
+@router.get("/admin/items")
+async def get_items(_: dict = Depends(require_sys_adm)):
+    rows = await list_items()
+    return {"items": rows}
+
+
+@router.get("/admin/items/{item_id}")
+async def get_item_detail(item_id: int, _: dict = Depends(require_sys_adm)):
+    row = await get_item(item_id)
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Item not found",
+        )
+    return {"item": row}
+
+
+@router.patch("/admin/items/{item_id}")
+async def patch_item(
+    item_id: int,
+    body: ItemPatchBody,
+    _: dict = Depends(require_sys_adm),
+):
+    data = body.model_dump(exclude_unset=True)
+    if not data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No fields to update",
+        )
+    try:
+        await update_item(
+            item_id,
+            item_nm=data.get("item_nm"),
+            shape_cnts_id=data.get("shape_cnts_id"),
+            sql_cnts_id=data.get("sql_cnts_id"),
+            mapping_json=data.get("mapping_json"),
+        )
+    except LookupError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Item not found",
+        )
+    return {"ok": True}
+
+
+@router.delete("/admin/items/{item_id}")
+async def delete_item_endpoint(item_id: int, _: dict = Depends(require_sys_adm)):
+    try:
+        await delete_item(item_id)
+    except LookupError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Item not found",
+        )
+    return {"ok": True}
+
+
+# ── Screen Slot Management ──
+
+@router.put("/admin/screens/{scr_id}/slots")
+async def put_screen_slots(
+    scr_id: str,
+    body: list[ScreenSlotBody],
+    _: dict = Depends(require_sys_adm),
+):
+    slots = [{"slot_id": s.slot_id, "item_id": s.item_id} for s in body]
+    await save_screen_slots(scr_id, slots)
+    return {"ok": True}
+
+
+@router.get("/admin/screens/{scr_id}/slots")
+async def get_screen_slots_endpoint(scr_id: str, _: dict = Depends(require_sys_adm)):
+    rows = await get_screen_slots(scr_id)
+    return {"slots": rows}
+
+
+@router.get("/admin/screens/{scr_id}")
+async def get_screen_endpoint(scr_id: str, _: dict = Depends(require_sys_adm)):
+    row = await get_screen_with_template(scr_id)
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Screen not found",
+        )
+    return {"screen": row}

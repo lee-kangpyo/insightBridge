@@ -175,3 +175,47 @@ export const deleteAdminContents = async (cntsId) => {
   const response = await api.delete(`/api/admin/contents/${cntsId}`);
   return response.data;
 };
+
+// --- Screen Items ---
+
+export const getItems = async () => {
+  const response = await api.get('/api/admin/items');
+  return response.data.items || [];
+};
+
+export const getItem = async (itemId) => {
+  const response = await api.get(`/api/admin/items/${itemId}`);
+  return response.data.item;
+};
+
+export const createItem = async (payload) => {
+  const response = await api.post('/api/admin/items', payload);
+  return response.data;
+};
+
+export const updateItem = async (itemId, payload) => {
+  const response = await api.patch(`/api/admin/items/${itemId}`, payload);
+  return response.data;
+};
+
+export const deleteItem = async (itemId) => {
+  const response = await api.delete(`/api/admin/items/${itemId}`);
+  return response.data;
+};
+
+// --- Screen Slots ---
+
+export const getScreenSlots = async (scrId) => {
+  const response = await api.get(`/api/admin/screens/${scrId}/slots`);
+  return response.data.slots || [];
+};
+
+export const saveScreenSlots = async (scrId, slots) => {
+  const response = await api.put(`/api/admin/screens/${scrId}/slots`, slots);
+  return response.data;
+};
+
+export const getScreen = async (scrId) => {
+  const response = await api.get(`/api/admin/screens/${scrId}`);
+  return response.data.screen;
+};

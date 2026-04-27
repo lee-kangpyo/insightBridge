@@ -484,11 +484,11 @@ class ScreenTemplateItem(BaseModel):
 
 
 class ScreenTemplateSlotItem(BaseModel):
-    slot_id: int
+    slot_id: str
     template_id: int
-    scr_id: Optional[str] = None
-    x_pos: int
-    y_pos: int
-    width: int
-    height: int
+    item_id: Optional[str] = None
+    x_pos: Optional[int] = None
+    y_pos: Optional[int] = None
+    width: Optional[int] = None
+    height: Optional[int] = None
     scr_nm: Optional[str] = None

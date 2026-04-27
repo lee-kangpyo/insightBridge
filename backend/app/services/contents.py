@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal, Optional, Sequence
 
+import asyncpg
+import pandas as pd
 from app.database import fetch_df, get_pool
 
 ContentsType = Literal["chart", "grid", "card", "sql"]
@@ -277,8 +279,46 @@ async def create_contents(payload: dict[str, Any]) -> int:
             return cnts_id
 
 
-async def list_contents(include_deleted: bool = False) -> list[ContentsRow]:
-    where = "" if include_deleted else "WHERE COALESCE(del_fg, 'N') <> 'Y'"
+async def count_contents(include_deleted: bool = False, cnts_tp: Optional[str] = None) -> int:
+    where_clauses = []
+    params: list[Any] = []
+    if not include_deleted:
+        where_clauses.append("COALESCE(del_fg, 'N') <> 'Y'")
+    if cnts_tp:
+        where_clauses.append("cnts_tp = $1")
+        params.append(cnts_tp)
+    
+    where = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+    df = await fetch_df(
+        f"""
+        SELECT COUNT(*) as total
+        FROM ts_cnts_info
+        {where}
+        """,
+        tuple(params),
+    )
+    if df.empty:
+        return 0
+    return int(df.iloc[0]["total"])
+
+
+async def list_contents(include_deleted: bool = False, page: Optional[int] = None, limit: Optional[int] = None, cnts_tp: Optional[str] = None) -> list[ContentsRow]:
+    where_clauses = []
+    params: list[Any] = []
+    if not include_deleted:
+        where_clauses.append("COALESCE(del_fg, 'N') <> 'Y'")
+    if cnts_tp:
+        where_clauses.append(f"cnts_tp = ${len(params) + 1}")
+        params.append(cnts_tp)
+    
+    where = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+    
+    pagination = ""
+    if page is not None and limit is not None:
+        offset = (page - 1) * limit
+        pagination = f" LIMIT ${len(params) + 1} OFFSET ${len(params) + 2}"
+        params.extend([limit, offset])
+    
     df = await fetch_df(
         f"""
         SELECT
@@ -290,8 +330,9 @@ async def list_contents(include_deleted: bool = False) -> list[ContentsRow]:
         FROM ts_cnts_info
         {where}
         ORDER BY cnts_id DESC
+        {pagination}
         """,
-        (),
+        tuple(params),
     )
     if df.empty:
         return []
@@ -439,6 +480,57 @@ async def get_contents_detail(cnts_id: int, tp: ContentsType) -> dict[str, Any]:
         return {}
 
     return {}
+
+
+async def execute_sql_preview(cnts_id: int) -> dict[str, Any]:
+    """
+    SQL 콘텐츠의 SQL을 실행하여 preview 결과를 반환합니다.
+    최대 100개의 row만 반환하며, truncated 플래그를 포함합니다.
+    """
+    master = await get_contents_master(cnts_id)
+    if master.cnts_tp != "sql":
+        raise ValueError("not_sql_content")
+    
+    sql = master.user_sql
+    if not sql:
+        raise ValueError("empty_sql")
+    
+    # SQL injection 방지를 위해 read-only 쿼리만 허용하는 기본 검증
+    normalized_sql = sql.strip().lower()
+    # 단어 경계를 고려한 검증 (테이블명/컬럼명에 포함된 경우는 허용)
+    forbidden_keywords = ['insert', 'update', 'delete', 'drop', 'create', 'alter', 'truncate']
+    import re
+    for keyword in forbidden_keywords:
+        # 단어 경계 패턴: 공백, 줄바꿈, 탭, 괄호, 세미콜론 뒤에 오는 경우
+        pattern = r'(^|[\s;(),])' + keyword + r'([\s;(),]|$)'
+        if re.search(pattern, normalized_sql):
+            raise ValueError(f"unsafe_sql: contains forbidden keyword '{keyword}'")
+    
+    try:
+        # 최대 101개를 조회하여 100개 초과 여부 확인
+        # 이미 LIMIT이 있는지 확인
+        has_limit = re.search(r'\blimit\s+\d+\b', normalized_sql)
+        if has_limit:
+            limited_sql = sql
+        else:
+            limited_sql = f"{sql.rstrip(';')} LIMIT 101"
+        
+        df = await fetch_df(limited_sql, ())
+        
+        columns = list(df.columns)
+        rows_data = df.head(100).to_dict(orient="records")
+        # fetch_df에서 이미 NaN/NA를 None으로 치환했으므로 별도 처리는 생략
+        
+        result = {
+            "columns": columns,
+            "rows": rows_data,
+            "truncated": len(df) > 100,
+        }
+        return result
+    except asyncpg.exceptions.PostgresError as e:
+        raise ValueError(f"sql_execution_error: {str(e)}")
+    except Exception as e:
+        raise ValueError(f"sql_execution_error: {str(e)}")
 
 
 async def soft_delete_contents(cnts_id: int) -> None:
