@@ -5,6 +5,7 @@ import GridSettings from './GridSettings';
 import CardSettings from './CardSettings';
 import SqlSettings from './SqlSettings';
 import { createAdminContents, patchAdminContents } from '../../services/adminApi';
+import { validateContentsBeforeSave } from '../../utils/contentsValidation';
 
 const INITIAL_GENERAL_INFO = {
   contentId: '',
@@ -65,6 +66,8 @@ export default function ContentsCreateForm({
   const [sqlData, setSqlData] = useState(INITIAL_SQL_DATA);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
+  const [showValidation, setShowValidation] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState(null);
 
   const normalized = useMemo(() => normalizeInitialContent(initialContent), [initialContent]);
 
@@ -105,6 +108,8 @@ export default function ContentsCreateForm({
     setGridData(INITIAL_GRID_DATA);
     setCardData(INITIAL_CARD_DATA);
     setSqlData(INITIAL_SQL_DATA);
+    setShowValidation(false);
+    setFieldErrors(null);
   };
 
   const handleSave = async () => {
@@ -115,6 +120,14 @@ export default function ContentsCreateForm({
       contentType,
       data: activeData,
     };
+
+    const v = validateContentsBeforeSave({ generalInfo, contentType, data: activeData });
+    setShowValidation(true);
+    setFieldErrors(v.errors);
+    if (!v.ok) {
+      showToast(v.message, 'error');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -152,11 +165,13 @@ export default function ContentsCreateForm({
           onChange={setGeneralInfo}
           contentType={contentType}
           onContentTypeChange={setContentType}
+          errors={fieldErrors}
+          showErrors={showValidation}
         />
-        <ChartSettings value={chartData} onChange={setChartData} visible={contentType === 'chart'} />
-        <GridSettings value={gridData} onChange={setGridData} visible={contentType === 'grid'} />
-        <CardSettings value={cardData} onChange={setCardData} visible={contentType === 'card'} />
-        <SqlSettings value={sqlData} onChange={setSqlData} visible={contentType === 'sql'} />
+        <ChartSettings value={chartData} onChange={setChartData} visible={contentType === 'chart'} errors={{ ...(fieldErrors?.chartFields || {}), ...(fieldErrors?.chart || {}) }} showErrors={showValidation} />
+        <GridSettings value={gridData} onChange={setGridData} visible={contentType === 'grid'} errors={{ ...(fieldErrors?.gridFields || {}), ...(fieldErrors?.grid || {}) }} showErrors={showValidation} />
+        <CardSettings value={cardData} onChange={setCardData} visible={contentType === 'card'} errors={{ ...(fieldErrors?.cardFields || {}), ...(fieldErrors?.card || {}) }} showErrors={showValidation} />
+        <SqlSettings value={sqlData} onChange={setSqlData} visible={contentType === 'sql'} errors={fieldErrors?.sql} showErrors={showValidation} />
       </div>
 
       <div className="sticky bottom-0 -mx-6 -mb-6 mt-6 flex items-center justify-end gap-3 border-t border-outline-variant bg-surface-container-lowest px-6 py-4">

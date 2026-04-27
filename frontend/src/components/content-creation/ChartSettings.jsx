@@ -1,9 +1,16 @@
-export default function ChartSettings({ value, onChange, visible }) {
+export default function ChartSettings({ value, onChange, visible, errors, showErrors }) {
   const handleChange = (field, fieldValue) => {
     onChange({ ...value, [field]: fieldValue });
   };
 
   if (!visible) return null;
+
+  const chartTypeError = showErrors ? errors?.chartType : '';
+  const xAxisError = showErrors ? errors?.xAxis : '';
+  const yAxisError = showErrors ? errors?.yAxis : '';
+  const chartTitleError = showErrors ? errors?.chartTitle : '';
+  const chartTitlePositionError = showErrors ? errors?.chartTitlePosition : '';
+  const legendPositionError = showErrors ? errors?.legendPosition : '';
 
   const chartTypes = [
     { value: 'bar', label: '세로 막대형', icon: 'bar_chart' },
@@ -30,6 +37,9 @@ export default function ChartSettings({ value, onChange, visible }) {
               onChange={(e) => handleChange('chartTitle', e.target.value)}
               placeholder="차트 제목을 입력하세요"
             />
+            {chartTitleError ? (
+              <p className="mt-1 text-xs text-error">{chartTitleError}</p>
+            ) : null}
           </div>
           <div className="flex flex-col">
             <label className="ds-label">차트 제목 위치</label>
@@ -43,6 +53,9 @@ export default function ChartSettings({ value, onChange, visible }) {
               <option value="left">좌측</option>
               <option value="right">우측</option>
             </select>
+            {chartTitlePositionError ? (
+              <p className="mt-1 text-xs text-error">{chartTitlePositionError}</p>
+            ) : null}
           </div>
         </div>
         <div>
@@ -71,6 +84,9 @@ export default function ChartSettings({ value, onChange, visible }) {
               </div>
             ))}
           </div>
+          {chartTypeError ? (
+            <p className="mt-2 text-xs text-error">{chartTypeError}</p>
+          ) : null}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="flex flex-col">
@@ -82,6 +98,9 @@ export default function ChartSettings({ value, onChange, visible }) {
               onChange={(e) => handleChange('xAxis', e.target.value)}
               placeholder="X축 컬럼명"
             />
+            {xAxisError ? (
+              <p className="mt-1 text-xs text-error">{xAxisError}</p>
+            ) : null}
           </div>
           <div className="flex flex-col">
             <label className="ds-label">Y축 컬럼명</label>
@@ -92,6 +111,9 @@ export default function ChartSettings({ value, onChange, visible }) {
               onChange={(e) => handleChange('yAxis', e.target.value)}
               placeholder="Y축 컬럼명"
             />
+            {yAxisError ? (
+              <p className="mt-1 text-xs text-error">{yAxisError}</p>
+            ) : null}
           </div>
           <div className="flex flex-col">
             <label className="ds-label">범례 위치</label>
@@ -105,6 +127,9 @@ export default function ChartSettings({ value, onChange, visible }) {
               <option value="bottom">하단</option>
               <option value="hidden">숨김</option>
             </select>
+            {legendPositionError ? (
+              <p className="mt-1 text-xs text-error">{legendPositionError}</p>
+            ) : null}
           </div>
         </div>
       </div>

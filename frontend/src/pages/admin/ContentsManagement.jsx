@@ -12,6 +12,7 @@ import ContentsCreateModal from '../../components/content-creation/ContentsCreat
 import ContentsEditModal from '../../components/content-creation/ContentsEditModal';
 import Modal from '../../components/common/Modal';
 import { createAdminContents, deleteAdminContents, getAdminContentsList } from '../../services/adminApi';
+import { validateContentsBeforeSave } from '../../utils/contentsValidation';
 
 export function ContentsCreate() {
   const [generalInfo, setGeneralInfo] = useState({
@@ -30,6 +31,8 @@ export function ContentsCreate() {
   const [sqlData, setSqlData] = useState({ sql: '' });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
+  const [showValidation, setShowValidation] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState(null);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -49,6 +52,14 @@ export function ContentsCreate() {
         (contentType === 'sql' && sqlData) ||
         {},
     };
+
+    const v = validateContentsBeforeSave({ generalInfo, contentType, data: payload.data });
+    setShowValidation(true);
+    setFieldErrors(v.errors);
+    if (!v.ok) {
+      showToast(v.message, 'error');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -71,6 +82,8 @@ export function ContentsCreate() {
     setGridData({ sectionTitle: '', columns: [] });
     setCardData({ cardTitle: '', titlePosition: 'left-top', items: [{ label: '', content: '', color: '#002c5a' }] });
     setSqlData({ sql: '' });
+    setShowValidation(false);
+    setFieldErrors(null);
   };
 
   return (
@@ -103,11 +116,13 @@ export function ContentsCreate() {
           onChange={setGeneralInfo}
           contentType={contentType}
           onContentTypeChange={setContentType}
+          errors={fieldErrors}
+          showErrors={showValidation}
         />
-        <ChartSettings value={chartData} onChange={setChartData} visible={contentType === 'chart'} />
-        <GridSettings value={gridData} onChange={setGridData} visible={contentType === 'grid'} />
-        <CardSettings value={cardData} onChange={setCardData} visible={contentType === 'card'} />
-        <SqlSettings value={sqlData} onChange={setSqlData} visible={contentType === 'sql'} />
+        <ChartSettings value={chartData} onChange={setChartData} visible={contentType === 'chart'} errors={{ ...(fieldErrors?.chartFields || {}), ...(fieldErrors?.chart || {}) }} showErrors={showValidation} />
+        <GridSettings value={gridData} onChange={setGridData} visible={contentType === 'grid'} errors={{ ...(fieldErrors?.gridFields || {}), ...(fieldErrors?.grid || {}) }} showErrors={showValidation} />
+        <CardSettings value={cardData} onChange={setCardData} visible={contentType === 'card'} errors={{ ...(fieldErrors?.cardFields || {}), ...(fieldErrors?.card || {}) }} showErrors={showValidation} />
+        <SqlSettings value={sqlData} onChange={setSqlData} visible={contentType === 'sql'} errors={fieldErrors?.sql} showErrors={showValidation} />
       </main>
       {toast && (
         <div
