@@ -3,7 +3,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from app.dependencies import require_sys_adm
-from app.schemas import AdminGroupItem
+from app.schemas import AdminGroupItem, ScreenTemplateItem, ScreenTemplateSlotItem
 from app.services.admin import (
     search_users,
     update_user_role,
@@ -25,6 +25,9 @@ from app.services.admin import (
     create_group,
     patch_group,
     soft_delete_group,
+    get_all_screen_templates,
+    get_screen_template_by_id,
+    get_screen_template_slots,
     _PATCH_UNSET,
 )
 from app.services.menu import treeify
@@ -361,3 +364,32 @@ async def get_admin_role_menu_map(_: dict = Depends(require_sys_adm)):
     menu_role_ids = await get_role_menu_map()
     # JSON object keys must be strings; keep frontend parsing simple.
     return {"menu_role_ids": {str(k): v for k, v in menu_role_ids.items()}}
+
+
+@router.get("/admin/screen-templates", response_model=list[ScreenTemplateItem])
+async def get_admin_screen_templates(_: dict = Depends(require_sys_adm)):
+    rows = await get_all_screen_templates()
+    return [ScreenTemplateItem(**r) for r in rows]
+
+
+@router.get("/admin/screen-templates/{template_id}", response_model=ScreenTemplateItem)
+async def get_admin_screen_template(
+    template_id: int,
+    _: dict = Depends(require_sys_adm),
+):
+    row = await get_screen_template_by_id(template_id)
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Template not found",
+        )
+    return ScreenTemplateItem(**row)
+
+
+@router.get("/admin/screen-templates/{template_id}/slots", response_model=list[ScreenTemplateSlotItem])
+async def get_admin_screen_template_slots(
+    template_id: int,
+    _: dict = Depends(require_sys_adm),
+):
+    rows = await get_screen_template_slots(template_id)
+    return [ScreenTemplateSlotItem(**r) for r in rows]

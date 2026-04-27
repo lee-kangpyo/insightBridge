@@ -1,4 +1,5 @@
 import math
+import json
 from typing import Any, Optional
 
 import pandas as pd
@@ -462,3 +463,48 @@ async def patch_group(
 
 async def soft_delete_group(grp_id: int) -> None:
     await patch_group(grp_id, del_fg="Y")
+
+
+async def get_all_screen_templates() -> list[dict]:
+    query = """
+        SELECT template_id, name, slots
+        FROM ts_scr_template_info
+        WHERE del_fg = 'N'
+        ORDER BY template_id
+    """
+    df = await fetch_df(query, ())
+    if df.empty:
+        return []
+    rows = df.to_dict(orient="records")
+    for r in rows:
+        if r.get("slots") is not None and isinstance(r["slots"], str):
+            r["slots"] = json.loads(r["slots"])
+    return rows
+
+
+async def get_screen_template_by_id(template_id: int) -> Optional[dict]:
+    query = """
+        SELECT template_id, name, slots
+        FROM ts_scr_template_info
+        WHERE template_id = $1 AND del_fg = 'N'
+    """
+    df = await fetch_df(query, (template_id,))
+    if df.empty:
+        return None
+    rows = df.to_dict(orient="records")
+    return rows[0] if rows else None
+
+
+async def get_screen_template_slots(template_id: int) -> list[dict]:
+    query = """
+        SELECT s.slot_id, s.template_id, s.scr_id, s.x_pos, s.y_pos, s.width, s.height,
+               i.scr_nm
+        FROM ts_scr_template_slot_scr s
+        LEFT JOIN ts_scr_info i ON s.scr_id = i.scr_id
+        WHERE s.template_id = $1
+        ORDER BY s.slot_id
+    """
+    df = await fetch_df(query, (template_id,))
+    if df.empty:
+        return []
+    return df.to_dict(orient="records")

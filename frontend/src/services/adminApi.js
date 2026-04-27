@@ -94,6 +94,61 @@ export const resetUserPassword = async (userCd, newPassword) => {
   return response.data;
 };
 
+export const getTemplateList = async () => {
+  const response = await api.get('/api/admin/screen-templates');
+  return response.data;
+};
+
+export const getTemplateSlots = async (templateId) => {
+  const response = await api.get(`/api/admin/screen-templates/${templateId}/slots`);
+  const slotsData = response.data || [];
+  return slotsData.map((slot, idx) => ({
+    ...slot,
+    slot_id: slot.slot_id ?? slot.id ?? `slot_${idx}`,
+    x_pos: slot.x_pos ?? slot.x ?? 0,
+    y_pos: slot.y_pos ?? slot.y ?? 0,
+    width: slot.width ?? slot.w ?? 1,
+    height: slot.height ?? slot.h ?? 1,
+  }));
+};
+
+export const getTemplateById = async (templateId) => {
+  const response = await api.get(`/api/admin/screen-templates/${templateId}`);
+  return response.data;
+};
+
+export const getContentsByType = async (type) => {
+  const response = await api.get('/api/admin/contents', {
+    params: { cnts_tp: type },
+  });
+  return response.data.contents || [];
+};
+
+export const getSqlContents = async () => {
+  const response = await api.get('/api/admin/contents', {
+    params: { cnts_tp: 'sql' },
+  });
+  return response.data.contents || [];
+};
+
+export const executeSqlPreview = async (cntsId) => {
+  const response = await api.get(`/api/admin/contents/${cntsId}/preview`);
+  return response.data;
+};
+
+export const handleApiError = (error, fallbackMessage = '오류가 발생했습니다.') => {
+  if (error.response?.data?.detail) {
+    return error.response.data.detail;
+  }
+  if (error.response?.data?.message) {
+    return error.response.data.message;
+  }
+  if (error.message) {
+    return error.message;
+  }
+  return fallbackMessage;
+};
+
 // --- Contents (Admin) ---
 
 export const createAdminContents = async (payload) => {

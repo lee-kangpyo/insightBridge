@@ -475,3 +475,20 @@ class AdminGroupItem(BaseModel):
     use_yn: Optional[str] = None
     del_fg: str
     description: Optional[str] = None
+
+
+class ScreenTemplateItem(BaseModel):
+    template_id: int
+    name: str
+    slots: Optional[Any] = None
+
+
+class ScreenTemplateSlotItem(BaseModel):
+    slot_id: int
+    template_id: int
+    scr_id: Optional[str] = None
+    x_pos: int
+    y_pos: int
+    width: int
+    height: int
+    scr_nm: Optional[str] = None

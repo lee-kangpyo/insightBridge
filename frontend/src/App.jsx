@@ -25,6 +25,8 @@ import RoleAuthorityMenu from "./pages/admin/RoleAuthorityMenu";
 import RoleUserManagement from "./pages/admin/RoleUserManagement";
 import UserManagement from "./pages/admin/UserManagement";
 import ChartGallery from "./pages/admin/ChartGallery";
+import ScreenConfigPage from "./pages/admin/ScreenConfigPage";
+import SlotLayoutPage from "./pages/admin/SlotLayoutPage";
 
 function App() {
   return (
@@ -152,6 +154,8 @@ function App() {
         <Route path="role-authority-menu" element={<RoleAuthorityMenu />} />
         <Route path="role-users" element={<RoleUserManagement />} />
         <Route path="chart-gallery" element={<ChartGallery />} />
+        <Route path="screen-config" element={<ScreenConfigPage />} />
+        <Route path="screen-config/:templateId" element={<SlotLayoutPage />} />
       </Route>
       <Route path="/signup" element={<SignupPage />} />
       <Route path="*" element={<NotFoundPage />} />
