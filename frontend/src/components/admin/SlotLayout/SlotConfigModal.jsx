@@ -741,9 +741,6 @@ function MappingTab({ selectedCnts, selectedSql, contentDetail, sqlPreviewData, 
               type: 'item'
             });
           });
-        } else {
-          fields.push({ id: 'cardLabel', label: '라벨', type: 'item' });
-          fields.push({ id: 'cardValue', label: '값', type: 'item' });
         }
         break;
       }
@@ -911,7 +908,11 @@ function MappingTab({ selectedCnts, selectedSql, contentDetail, sqlPreviewData, 
           </div>
         ) : (
           <div className="text-on-surface-variant text-sm text-center py-8">
-            형태 탭에서 콘텐츠를 선택하면 매핑 필드가 표시됩니다.
+            {(() => {
+              const ct = contentDetail?.contentType || selectedCnts?.contentType;
+              if (ct === 'card') return '카드 항목(items)이 정의되어야 매핑 필드가 표시됩니다. (카드 설정에서 항목을 추가하세요)';
+              return '형태 탭에서 콘텐츠를 선택하면 매핑 필드가 표시됩니다.';
+            })()}
           </div>
         )}
       </div>
