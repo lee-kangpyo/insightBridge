@@ -1,7 +1,7 @@
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from app.dependencies import require_sys_adm
 from app.schemas import AdminGroupItem, ScreenTemplateItem, ScreenTemplateSlotItem
 from app.services.admin import (
@@ -66,6 +66,15 @@ class AdminMenuCreateBody(BaseModel):
     screen_id: Optional[str] = None
     sort_order: Optional[int] = None
 
+    @model_validator(mode="after")
+    def validate_menu_path_for_non_slot(self):
+        if self.menu_path and self.menu_path.startswith("/view/screen/"):
+            if not self.screen_id:
+                raise ValueError(
+                    "menu_path cannot start with /view/screen/ unless screen_id is provided"
+                )
+        return self
+
 
 class AdminMenuPatchBody(BaseModel):
     menu_cd: Optional[str] = None
@@ -77,6 +86,15 @@ class AdminMenuPatchBody(BaseModel):
     sort_order: Optional[int] = None
     use_yn: Optional[str] = None
     del_fg: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_menu_path_for_non_slot(self):
+        if self.menu_path and self.menu_path.startswith("/view/screen/"):
+            if not self.screen_id:
+                raise ValueError(
+                    "menu_path cannot start with /view/screen/ unless screen_id is provided"
+                )
+        return self
 
 
 class AdminGroupCreateBody(BaseModel):
@@ -518,6 +536,12 @@ async def put_screen_slots(
     return {"ok": True}
 
 
+@router.get("/admin/screens/list")
+async def get_admin_screens_list(_: dict = Depends(require_sys_adm)):
+    rows = await list_screens()
+    return {"screens": rows}
+
+
 @router.get("/admin/screens/{scr_id}/slots")
 async def get_screen_slots_endpoint(scr_id: str, _: dict = Depends(require_sys_adm)):
     rows = await get_screen_slots(scr_id)
@@ -538,12 +562,6 @@ async def get_screen_endpoint(scr_id: str, _: dict = Depends(require_sys_adm)):
 class ScreenCreateBody(BaseModel):
     scr_nm: str = Field(..., min_length=1)
     template_id: int
-
-
-@router.get("/admin/screens/list")
-async def get_admin_screens_list(_: dict = Depends(require_sys_adm)):
-    rows = await list_screens()
-    return {"screens": rows}
 
 
 @router.post("/admin/screens", status_code=status.HTTP_201_CREATED)

@@ -188,15 +188,13 @@ function AddScreenMenuDialog({
   const [selectedScrId, setSelectedScrId] = useState("");
 
   useEffect(() => {
-    if (!open) {
-      setSelectedScrId("");
-      return undefined;
-    }
     const onKeyDown = (e) => {
       if (e.key === "Escape") onClose();
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    if (open) {
+      window.addEventListener("keydown", onKeyDown);
+      return () => window.removeEventListener("keydown", onKeyDown);
+    }
   }, [open, onClose]);
 
   if (!open) return null;

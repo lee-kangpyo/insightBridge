@@ -164,7 +164,9 @@ function App() {
         path="/view/screen/:scrId"
         element={
           <ProtectedRoute>
-            <ScreenViewer />
+            <MainLayout>
+              <ScreenViewer />
+            </MainLayout>
           </ProtectedRoute>
         }
       />

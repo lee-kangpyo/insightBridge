@@ -5,20 +5,24 @@ import { useNavMenuStore } from '../../stores/navMenuStore';
 import MaterialIcon from '../MaterialIcon';
 
 /** pathname에 맞는 1레벨 메뉴 (여러 개 매칭 시 가장 긴 menu_path — /admin vs / 등 충돌 방지) */
-function pickLevel1ForPath(level1Menus, pathname) {
-  const withPath = level1Menus.filter(
-    (m) => typeof m.menu_path === 'string' && m.menu_path.length > 0
-  );
-  if (!withPath.length) return null;
+/** pathname이나 screen_id가 일치하는 메뉴 항목을 찾고 그 조상(Level 1)을 반환 */
+function findLevel1ForCurrentState(level1Menus, pathname, scrId) {
+  const walk = (nodes) => {
+    for (const node of nodes) {
+      // 1. screen_id 매칭 (슬롯 화면)
+      if (scrId && node.screen_id === scrId) return true;
+      // 2. 경로 매칭 (일반 메뉴)
+      if (node.menu_path && pathname.startsWith(node.menu_path)) return true;
+      // 3. 하위 검색
+      if (node.children?.length && walk(node.children)) return true;
+    }
+    return false;
+  };
 
-  const matches = withPath.filter((m) =>
-    pathname.startsWith(m.menu_path)
-  );
-  if (!matches.length) return null;
-
-  return matches.reduce((best, m) =>
-    m.menu_path.length > best.menu_path.length ? m : best
-  );
+  for (const root of level1Menus) {
+    if (walk([root])) return root;
+  }
+  return null;
 }
 
 function LnbMenuEmptyState({ title, hint }) {
@@ -53,10 +57,12 @@ export default function LNBMenu() {
     [navMenus]
   );
 
-  const selectedLevel1 = useMemo(
-    () => pickLevel1ForPath(level1Menus, location.pathname),
-    [level1Menus, location.pathname]
-  );
+  const selectedLevel1 = useMemo(() => {
+    const screenMatch = location.pathname.match(/\/view\/screen\/([^/]+)/);
+    const currentScrId = screenMatch ? screenMatch[1] : null;
+    
+    return findLevel1ForCurrentState(level1Menus, location.pathname, currentScrId);
+  }, [level1Menus, location.pathname]);
 
   const visibleChildren = useMemo(() => {
     const raw = selectedLevel1?.children ?? [];

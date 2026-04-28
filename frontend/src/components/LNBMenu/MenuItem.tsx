@@ -10,13 +10,16 @@ export default function MenuItem({ menu, isAdmin = false, onSelect }) {
   const hasChildren = children.length > 0;
   const hasPath = !!menuPath || !!menu.screen_id;
   const linkTo = menu.screen_id ? `/view/screen/${menu.screen_id}` : menuPath;
-  const isActive = hasPath && location.pathname === menuPath;
+  const isActive = hasPath && location.pathname === linkTo;
 
   useEffect(() => {
     if (hasChildren && hasPath) {
-      const isParentOfActive = children.some(
-        (child) => location.pathname === (child.menu_path || child.path)
-      );
+      const isParentOfActive = children.some((child) => {
+        const childLink = child.screen_id
+          ? `/view/screen/${child.screen_id}`
+          : child.menu_path || child.path;
+        return location.pathname === childLink;
+      });
       if (isParentOfActive && !expanded) {
         setExpanded(true);
       }
@@ -68,9 +71,9 @@ export default function MenuItem({ menu, isAdmin = false, onSelect }) {
           style={{ backgroundColor: '#002c5a' }}
         />
       )}
-      {menu.screen_id && (
-        <span className="material-symbols-outlined text-[14px] text-[#737781]">dashboard</span>
-      )}
+      <span className="material-symbols-outlined text-[14px] text-[#737781]">
+        {menu.screen_id ? 'dashboard' : (hasChildren ? 'folder' : 'description')}
+      </span>
       <span
         className={[
           'text-[13px] font-medium flex-1 transition-colors duration-150',
