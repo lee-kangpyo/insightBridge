@@ -39,6 +39,7 @@ from app.services.screen_items import (
     save_screen_slots,
     get_screen_slots,
     get_screen_with_template,
+    create_screen,
 )
 from app.services.menu import treeify
 
@@ -426,6 +427,11 @@ class ScreenSlotBody(BaseModel):
     item_id: Optional[int] = None
 
 
+class ScreenCreateBody(BaseModel):
+    scr_nm: str
+    template_id: int
+
+
 @router.post("/admin/items", status_code=status.HTTP_201_CREATED)
 async def post_item(
     body: ItemCreateBody,
@@ -531,3 +537,23 @@ async def get_screen_endpoint(scr_id: str, _: dict = Depends(require_sys_adm)):
             detail="Screen not found",
         )
     return {"screen": row}
+
+
+class ScreenCreateBody(BaseModel):
+    scr_nm: str = Field(..., min_length=1)
+    template_id: int
+
+
+@router.post("/admin/screens", status_code=status.HTTP_201_CREATED)
+async def post_screen(
+    body: ScreenCreateBody,
+    _: dict = Depends(require_sys_adm),
+):
+    try:
+        scr_id = await create_screen(scr_nm=body.scr_nm, template_id=body.template_id)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    return {"scr_id": scr_id}

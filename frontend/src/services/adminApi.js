@@ -219,3 +219,8 @@ export const getScreen = async (scrId) => {
   const response = await api.get(`/api/admin/screens/${scrId}`);
   return response.data.screen;
 };
+
+export const createScreen = async (payload) => {
+  const response = await api.post('/api/admin/screens', payload);
+  return response.data;
+};

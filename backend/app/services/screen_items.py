@@ -1,4 +1,5 @@
 import json
+import uuid
 from typing import Any, Optional
 
 from app.database import fetch_df, get_pool
@@ -176,3 +177,21 @@ async def get_screen_with_template(scr_id: str) -> Optional[dict]:
     if df.empty:
         return None
     return df.to_dict(orient="records")[0]
+
+from app.utils.uuid_v7 import generate_uuid_v7
+
+async def create_screen(scr_nm: str, template_id: int) -> str:
+    """화면을 생성하고 UUID v7 스타일의 scr_id를 발급받는다."""
+    scr_id = generate_uuid_v7()
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            """
+            INSERT INTO ts_scr_info (scr_id, scr_nm, template_id, del_fg)
+            VALUES ($1, $2, $3, 'N')
+            """,
+            scr_id,
+            scr_nm,
+            template_id,
+        )
+    return scr_id
