@@ -40,6 +40,7 @@ from app.services.screen_items import (
     get_screen_slots,
     get_screen_with_template,
     create_screen,
+    list_screens,
 )
 from app.services.menu import treeify
 
@@ -537,6 +538,12 @@ async def get_screen_endpoint(scr_id: str, _: dict = Depends(require_sys_adm)):
 class ScreenCreateBody(BaseModel):
     scr_nm: str = Field(..., min_length=1)
     template_id: int
+
+
+@router.get("/admin/screens/list")
+async def get_admin_screens_list(_: dict = Depends(require_sys_adm)):
+    rows = await list_screens()
+    return {"screens": rows}
 
 
 @router.post("/admin/screens", status_code=status.HTTP_201_CREATED)

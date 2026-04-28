@@ -178,6 +178,19 @@ async def get_screen_with_template(scr_id: str) -> Optional[dict]:
         return None
     return df.to_dict(orient="records")[0]
 
+
+async def list_screens() -> list[dict]:
+    query = """
+        SELECT scr_id, scr_nm, menu_id
+        FROM ts_scr_info
+        WHERE del_fg = 'N'
+        ORDER BY scr_nm, scr_id
+    """
+    df = await fetch_df(query, ())
+    if df.empty:
+        return []
+    return df.to_dict(orient="records")
+
 from app.utils.uuid_v7 import generate_uuid_v7
 
 async def create_screen(scr_nm: str, template_id: int) -> str:

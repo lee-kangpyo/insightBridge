@@ -224,3 +224,8 @@ export const createScreen = async (payload) => {
   const response = await api.post('/api/admin/screens', payload);
   return response.data;
 };
+
+export const getAdminScreensList = async () => {
+  const response = await api.get('/api/admin/screens/list');
+  return response.data.screens || [];
+};
