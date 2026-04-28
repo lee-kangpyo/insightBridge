@@ -33,6 +33,11 @@ export default function ItemsManagement() {
     try {
       const list = await getItems();
       const rows = Array.isArray(list) ? list : [];
+      console.groupCollapsed?.('[admin/items] ItemsManagement.reload');
+      console.log('list(from getItems)=', list);
+      console.log('rows(normalized)=', rows);
+      console.log('rows[0]=', rows?.[0]);
+      console.groupEnd?.();
       setItems(rows);
       if (rows.length === 0) {
         setSelectedId(null);

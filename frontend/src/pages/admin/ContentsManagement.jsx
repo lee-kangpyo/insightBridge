@@ -14,16 +14,32 @@ import Modal from '../../components/common/Modal';
 import { createAdminContents, deleteAdminContents, getAdminContentsList } from '../../services/adminApi';
 import { validateContentsBeforeSave } from '../../utils/contentsValidation';
 
-export function ContentsCreate() {
-  const [generalInfo, setGeneralInfo] = useState({
+function toDatetimeLocalValue(date = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return (
+    `${date.getFullYear()}-` +
+    `${pad(date.getMonth() + 1)}-` +
+    `${pad(date.getDate())}T` +
+    `${pad(date.getHours())}:` +
+    `${pad(date.getMinutes())}`
+  );
+}
+
+function getInitialGeneralInfo() {
+  const now = toDatetimeLocalValue();
+  return {
     contentId: '',
     contentName: '',
     creator: '',
-    createdAt: '',
+    createdAt: now,
     isDeleted: 'N',
-    generatedAt: '',
-    memo: ''
-  });
+    generatedAt: now,
+    memo: '',
+  };
+}
+
+export function ContentsCreate() {
+  const [generalInfo, setGeneralInfo] = useState(getInitialGeneralInfo);
   const [contentType, setContentType] = useState('chart');
   const [chartData, setChartData] = useState({ chartTitle: '', chartTitlePosition: 'top', chartType: 'bar', xAxis: '', yAxis: '', legendPosition: 'right' });
   const [gridData, setGridData] = useState({ sectionTitle: '', columns: [] });
@@ -76,7 +92,7 @@ export function ContentsCreate() {
   };
 
   const handleCancel = () => {
-    setGeneralInfo({ contentId: '', contentName: '', creator: '', createdAt: '', isDeleted: 'N', generatedAt: '', memo: '' });
+    setGeneralInfo(getInitialGeneralInfo());
     setContentType('chart');
     setChartData({ chartTitle: '', chartTitlePosition: 'top', chartType: 'bar', xAxis: '', yAxis: '', legendPosition: 'right' });
     setGridData({ sectionTitle: '', columns: [] });

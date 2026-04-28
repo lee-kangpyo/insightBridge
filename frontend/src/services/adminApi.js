@@ -180,6 +180,10 @@ export const deleteAdminContents = async (cntsId) => {
 
 export const getItems = async () => {
   const response = await api.get('/api/admin/items');
+  console.groupCollapsed?.('[admin/items] GET /api/admin/items');
+  console.log('raw response.data =', response?.data);
+  console.log('response.data.items =', response?.data?.items);
+  console.groupEnd?.();
   return response.data.items || [];
 };
 

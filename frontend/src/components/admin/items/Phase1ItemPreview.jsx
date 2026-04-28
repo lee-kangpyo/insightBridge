@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { CardDetail, ChartDetail, GridDetail } from '../../content-detail';
 import { executeSqlPreview, getAdminContentsDetail, handleApiError } from '../../../services/adminApi';
 import KPICard from '../../main/KPICard';
+import ChartRenderer from '../../ChartRenderer';
 
 function chipClass(kind) {
   const base =
@@ -27,11 +28,144 @@ function normalizeMappingItems(mappingItems) {
   return [];
 }
 
+function normalizeMappingColumns(mappingColumns) {
+  if (!mappingColumns) return [];
+  if (Array.isArray(mappingColumns)) return mappingColumns.filter(Boolean);
+  if (typeof mappingColumns === 'object') {
+    return Object.entries(mappingColumns)
+      .map(([dataKey, v]) => ({ dataKey, ...(v || {}) }))
+      .filter(Boolean);
+  }
+  return [];
+}
+
 function getRowValue(row, field) {
   if (!row || field == null) return null;
   const v = row[field];
   if (v === undefined) return null;
   return v;
+}
+
+function buildGridPreviewModel(itemType, item, shapeContent, preview) {
+  if (itemType !== 'grid') return { columns: [], rows: [] };
+
+  const mj = item?.mapping_json;
+  const m = mj && typeof mj === 'object' ? mj.mapping || {} : null;
+  if (!m || typeof m !== 'object') return { columns: [], rows: [] };
+
+  const mappedColumns = normalizeMappingColumns(m.columns);
+  const usableMappings = mappedColumns
+    .map((c) => ({
+      dataKey: typeof c?.dataKey === 'string' ? c.dataKey : null,
+      field: typeof c?.field === 'string' ? c.field : null,
+    }))
+    .filter((c) => !!c.dataKey && !!c.field);
+
+  if (usableMappings.length === 0) return { columns: [], rows: [] };
+
+  const shapeCols = Array.isArray(shapeContent?.data?.columns) ? shapeContent.data.columns : [];
+  const shapeByKey = new Map(
+    shapeCols
+      .map((c) => {
+        const dataKey = c?.dataKey || c?.field;
+        if (!dataKey) return null;
+        const header = c?.displayName || c?.header || c?.title || dataKey;
+        return [String(dataKey), { header: String(header), dataKey: String(dataKey) }];
+      })
+      .filter(Boolean)
+  );
+
+  const columns = usableMappings.map(({ dataKey }) => {
+    const meta = shapeByKey.get(dataKey);
+    return { dataKey, header: meta?.header || dataKey };
+  });
+
+  const sqlRows = Array.isArray(preview?.rows) ? preview.rows : [];
+  const rows = sqlRows.map((row) => {
+    const out = {};
+    for (const { dataKey, field } of usableMappings) {
+      out[dataKey] = getRowValue(row, field);
+    }
+    return out;
+  });
+
+  return { columns, rows };
+}
+
+function normalizeMappingSeries(series) {
+  if (!series) return [];
+  if (Array.isArray(series)) return series.filter(Boolean);
+  if (typeof series === 'object') {
+    return Object.entries(series)
+      .map(([name, v]) => ({ name, ...(v || {}) }))
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function buildChartPreviewModel(itemType, item, shapeContent, preview) {
+  if (itemType !== 'chart') return { chartType: null, data: [], chartConfig: null };
+
+  const mj = item?.mapping_json;
+  const chartType = mj?.chartType;
+  if (typeof chartType !== 'string' || !chartType.trim()) {
+    return { chartType: null, data: [], chartConfig: null };
+  }
+
+  const mapping = mj?.mapping;
+  if (!mapping || typeof mapping !== 'object') {
+    return { chartType, data: [], chartConfig: null };
+  }
+
+  const categoryField = mapping.categoryField;
+  const seriesList = normalizeMappingSeries(mapping.series);
+
+  if (typeof categoryField !== 'string' || !categoryField.trim()) {
+    return { chartType, data: [], chartConfig: null };
+  }
+
+  const sqlRows = Array.isArray(preview?.rows) ? preview.rows : [];
+  if (sqlRows.length === 0) {
+    return { chartType, data: [], chartConfig: null };
+  }
+
+  const title = shapeContent?.data?.chartTitle || item?.item_nm || '';
+
+  // ChartRenderer는 (x,y,groupKey) 기반 pivot을 지원하므로 long-form으로 변환한다.
+  // row: { category, series, value }
+  const long = [];
+  for (const row of sqlRows) {
+    const category = getRowValue(row, categoryField);
+    if (category == null) continue;
+
+    if (seriesList.length === 0) {
+      // series가 없으면 검증 실패/미리보기 불가로 처리 (임의 대체 금지)
+      continue;
+    }
+
+    for (const s of seriesList) {
+      const seriesName = (s?.name || s?.label || '').toString() || '';
+      const field = s?.field;
+      if (typeof field !== 'string' || !field.trim()) continue;
+      const v = getRowValue(row, field);
+      long.push({ category: String(category), series: seriesName || field, value: v == null ? null : Number(v) });
+    }
+  }
+
+  const data = long;
+  if (data.length === 0) {
+    return { chartType, data: [], chartConfig: null };
+  }
+
+  const chartConfig = {
+    type: chartType,
+    title,
+    x: 'category',
+    y: 'value',
+    group: 'series',
+  };
+
+  return { chartType, data, chartConfig };
 }
 
 function buildCardKpis(itemType, item, shapeContent, preview) {
@@ -121,6 +255,13 @@ export default function Phase1ItemPreview({ item }) {
       setSqlLoading(true);
       try {
         const p = await executeSqlPreview(item.sql_cnts_id);
+        console.groupCollapsed?.('[admin/items] SQL preview');
+        console.log('sql_cnts_id =', item?.sql_cnts_id);
+        console.log('result =', p);
+        console.log('columns =', p?.columns);
+        console.log('rows.length =', Array.isArray(p?.rows) ? p.rows.length : null);
+        console.log('rows[0] =', p?.rows?.[0]);
+        console.groupEnd?.();
         if (!cancelled) setSqlPreview(p);
       } catch (e) {
         if (!cancelled) setSqlError(handleApiError(e, 'SQL 미리보기를 실행하지 못했습니다.'));
@@ -137,6 +278,16 @@ export default function Phase1ItemPreview({ item }) {
 
   const cardKpis = useMemo(
     () => buildCardKpis(itemType, item, shapeContent, sqlPreview),
+    [itemType, item, shapeContent, sqlPreview]
+  );
+
+  const gridPreviewModel = useMemo(
+    () => buildGridPreviewModel(itemType, item, shapeContent, sqlPreview),
+    [itemType, item, shapeContent, sqlPreview]
+  );
+
+  const chartPreviewModel = useMemo(
+    () => buildChartPreviewModel(itemType, item, shapeContent, sqlPreview),
     [itemType, item, shapeContent, sqlPreview]
   );
 
@@ -190,54 +341,167 @@ export default function Phase1ItemPreview({ item }) {
       </header>
 
       <div className="p-6 space-y-6">
-        {/* 1) 카드 요약 (가장 쉬운 체감) */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="material-symbols-outlined text-primary text-[20px]">view_agenda</span>
-            <h4 className="font-semibold text-on-surface">카드 요약(결과 느낌)</h4>
-          </div>
+        {/* 1) 타입별 결과(실 결과) */}
+        {itemType === 'card' && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="material-symbols-outlined text-primary text-[20px]">view_agenda</span>
+              <h4 className="font-semibold text-on-surface">카드 미리보기</h4>
+            </div>
 
-          {itemType !== 'card' ? (
-            <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
-              이 아이템은 <span className="font-semibold">card</span> 타입이 아닙니다. (현재: {itemType || '미확정'})
-            </div>
-          ) : !item?.mapping_json ? (
-            <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
-              card 타입은 <span className="font-semibold">맵핑(mapping_json)</span>이 있어야 실 결과를 검증할 수 있습니다.
-            </div>
-          ) : !item?.sql_cnts_id ? (
-            <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
-              card 타입은 <span className="font-semibold">SQL 연결(sql_cnts_id)</span>이 있어야 실 결과를 만들 수 있습니다.
-            </div>
-          ) : sqlLoading ? (
-            <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
-              SQL 실행 중...
-            </div>
-          ) : sqlError ? (
-            <div className="rounded-xl border border-error/25 bg-error-container/30 p-4 text-sm text-error">
-              {sqlError}
-            </div>
-          ) : cardKpis.length === 0 ? (
-            <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
-              실 결과를 만들 수 없습니다. 맵핑 필드(value/items)와 SQL 결과 컬럼이 일치하는지 확인하세요.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              {cardKpis.map((it, idx) => (
-                <div key={`${it.label}-${idx}`} className="space-y-2">
-                  <KPICard
-                    label={it.label}
-                    value={it.value == null ? '' : String(it.value)}
-                    showAverages={false}
-                  />
-                  <div className="text-[11px] text-on-surface-variant truncate" title={it.source}>
-                    {it.source}
+            {!item?.mapping_json ? (
+              <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
+                card 타입은 <span className="font-semibold">맵핑(mapping_json)</span>이 있어야 실 결과를 검증할 수 있습니다.
+              </div>
+            ) : !item?.sql_cnts_id ? (
+              <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
+                card 타입은 <span className="font-semibold">SQL 연결(sql_cnts_id)</span>이 있어야 실 결과를 만들 수 있습니다.
+              </div>
+            ) : sqlLoading ? (
+              <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
+                SQL 실행 중...
+              </div>
+            ) : sqlError ? (
+              <div className="rounded-xl border border-error/25 bg-error-container/30 p-4 text-sm text-error">
+                {sqlError}
+              </div>
+            ) : cardKpis.length === 0 ? (
+              <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
+                실 결과를 만들 수 없습니다. 맵핑 필드(value/items)와 SQL 결과 컬럼이 일치하는지 확인하세요.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {cardKpis.map((it, idx) => (
+                  <div key={`${it.label}-${idx}`} className="space-y-2">
+                    <KPICard
+                      label={it.label}
+                      value={it.value == null ? '' : String(it.value)}
+                      showAverages={false}
+                    />
+                    <div className="text-[11px] text-on-surface-variant truncate" title={it.source}>
+                      {it.source}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {itemType === 'grid' && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="material-symbols-outlined text-primary text-[20px]">table</span>
+              <h4 className="font-semibold text-on-surface">그리드(테이블) 미리보기</h4>
             </div>
-          )}
-        </div>
+
+            {!item?.mapping_json ? (
+              <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
+                grid 타입은 <span className="font-semibold">맵핑(mapping_json)</span>이 있어야 실 결과를 검증할 수 있습니다.
+              </div>
+            ) : !item?.sql_cnts_id ? (
+              <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
+                grid 타입은 <span className="font-semibold">SQL 연결(sql_cnts_id)</span>이 있어야 실 결과를 만들 수 있습니다.
+              </div>
+            ) : sqlLoading ? (
+              <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
+                SQL 실행 중...
+              </div>
+            ) : sqlError ? (
+              <div className="rounded-xl border border-error/25 bg-error-container/30 p-4 text-sm text-error">
+                {sqlError}
+              </div>
+            ) : gridPreviewModel.columns.length === 0 ? (
+              <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
+                미리보기 불가: <span className="font-semibold">매핑 컬럼(columns)</span>이 필요합니다. (원시 테이블 자동 표시는 금지)
+              </div>
+            ) : gridPreviewModel.rows.length === 0 ? (
+              <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
+                조회 결과가 비어 있습니다.
+              </div>
+            ) : (
+              <div className="rounded-xl border border-outline/15 bg-surface p-4 overflow-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-outline/20">
+                      {gridPreviewModel.columns.map((c) => (
+                        <th key={c.dataKey} className="text-left py-2 px-2 whitespace-nowrap">
+                          {c.header || c.dataKey}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {gridPreviewModel.rows.slice(0, 25).map((row, i) => (
+                      <tr key={i} className="border-b border-outline/10">
+                        {gridPreviewModel.columns.map((c) => (
+                          <td key={c.dataKey} className="py-1.5 px-2">
+                            {row?.[c.dataKey] == null || row?.[c.dataKey] === '' ? '—' : String(row[c.dataKey])}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {itemType === 'chart' && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="material-symbols-outlined text-primary text-[20px]">bar_chart</span>
+              <h4 className="font-semibold text-on-surface">차트 미리보기</h4>
+            </div>
+
+            {!item?.mapping_json ? (
+              <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
+                chart 타입은 <span className="font-semibold">맵핑(mapping_json)</span>이 있어야 실 결과를 검증할 수 있습니다.
+              </div>
+            ) : !item?.sql_cnts_id ? (
+              <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
+                chart 타입은 <span className="font-semibold">SQL 연결(sql_cnts_id)</span>이 있어야 실 결과를 만들 수 있습니다.
+              </div>
+            ) : sqlLoading ? (
+              <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
+                SQL 실행 중...
+              </div>
+            ) : sqlError ? (
+              <div className="rounded-xl border border-error/25 bg-error-container/30 p-4 text-sm text-error">
+                {sqlError}
+              </div>
+            ) : !item?.mapping_json?.chartType ? (
+              <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
+                미리보기 불가: <span className="font-semibold">chartType</span>이 필요합니다.
+              </div>
+            ) : !item?.mapping_json?.mapping?.categoryField ? (
+              <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
+                미리보기 불가: <span className="font-semibold">categoryField</span> 매핑이 필요합니다.
+              </div>
+            ) : !item?.mapping_json?.mapping?.series ? (
+              <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
+                미리보기 불가: <span className="font-semibold">series</span> 매핑이 필요합니다.
+              </div>
+            ) : chartPreviewModel.data.length === 0 || !chartPreviewModel.chartConfig ? (
+              <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
+                실 결과를 만들 수 없습니다. 맵핑 필드(category/series)와 SQL 결과 컬럼이 일치하는지 확인하세요.
+              </div>
+            ) : (
+              <div className="rounded-xl border border-outline/15 bg-surface p-4">
+                <div className="h-[360px]">
+                  <ChartRenderer data={chartPreviewModel.data} chartConfig={chartPreviewModel.chartConfig} />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {itemType !== 'card' && itemType !== 'grid' && (
+          <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
+            실 결과 미리보기는 현재 <span className="font-semibold">card / grid / chart</span>만 지원합니다. (현재: {itemType || '미확정'})
+          </div>
+        )}
 
         {/* 2) 형태 설정 요약 */}
         <div>
