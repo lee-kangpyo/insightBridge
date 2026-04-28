@@ -518,6 +518,12 @@ async def put_screen_slots(
     return {"ok": True}
 
 
+@router.get("/admin/screens/list")
+async def get_admin_screens_list(_: dict = Depends(require_sys_adm)):
+    rows = await list_screens()
+    return {"screens": rows}
+
+
 @router.get("/admin/screens/{scr_id}/slots")
 async def get_screen_slots_endpoint(scr_id: str, _: dict = Depends(require_sys_adm)):
     rows = await get_screen_slots(scr_id)
@@ -538,12 +544,6 @@ async def get_screen_endpoint(scr_id: str, _: dict = Depends(require_sys_adm)):
 class ScreenCreateBody(BaseModel):
     scr_nm: str = Field(..., min_length=1)
     template_id: int
-
-
-@router.get("/admin/screens/list")
-async def get_admin_screens_list(_: dict = Depends(require_sys_adm)):
-    rows = await list_screens()
-    return {"screens": rows}
 
 
 @router.post("/admin/screens", status_code=status.HTTP_201_CREATED)

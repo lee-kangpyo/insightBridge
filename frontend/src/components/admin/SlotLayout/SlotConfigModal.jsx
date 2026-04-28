@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { getContentsByType, getSqlContents, executeSqlPreview, handleApiError, getAdminContentsList, createItem, updateItem } from '../../../services/adminApi';
+import React, { useState, useEffect } from 'react';
+import { executeSqlPreview, handleApiError, createItem, updateItem } from '../../../services/adminApi';
 import api from '../../../services/api';
 import { CONTENT_TYPE_MAP } from '../../../constants/contentTypes';
 import { ChartDetail, GridDetail, CardDetail, SqlDetail } from '../../content-detail';

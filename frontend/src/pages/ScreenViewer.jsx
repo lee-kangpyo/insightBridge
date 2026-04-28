@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { getScreen, getScreenSlots } from '../services/adminApi';
 import SlotLayout from '../components/admin/SlotLayout/SlotLayout';
+import PageTitleSection from '../components/main/PageTitleSection';
 
 export default function ScreenViewer() {
   const { scrId } = useParams();
@@ -44,7 +45,7 @@ export default function ScreenViewer() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center py-20">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     );
@@ -52,36 +53,31 @@ export default function ScreenViewer() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-error">{error}</div>
+      <div className="flex items-center justify-center py-20 text-error">
+        {error}
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-surface-container-lowest p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl font-headline font-bold text-primary">
-            {screen?.scr_nm || '화면 보기'}
-          </h1>
-          <p className="text-sm text-on-surface-variant mt-1">
-            ID: {scrId}
-          </p>
-        </div>
-        <SlotLayout
-          slots={slots.map((s, idx) => ({
-            ...s,
-            slot_id: s.slot_id ?? s.id ?? `slot_${idx}`,
-            x_pos: s.x_pos ?? s.x ?? 0,
-            y_pos: s.y_pos ?? s.y ?? 0,
-            width: s.width ?? s.w ?? 1,
-            height: s.height ?? s.h ?? 1,
-          }))}
-          slotAssignments={slotAssignments}
-          onSlotClick={() => {}}
-        />
-      </div>
+    <div className="max-w-[1600px] mx-auto px-8 py-6">
+      <PageTitleSection
+        title={screen?.scr_nm || '화면 보기'}
+        subtitle={`화면 ID: ${scrId}`}
+      />
+      
+      <SlotLayout
+        slots={slots.map((s, idx) => ({
+          ...s,
+          slot_id: s.slot_id ?? s.id ?? `slot_${idx}`,
+          x_pos: s.x_pos ?? s.x ?? 0,
+          y_pos: s.y_pos ?? s.y ?? 0,
+          width: s.width ?? s.w ?? 1,
+          height: s.height ?? s.h ?? 1,
+        }))}
+        slotAssignments={slotAssignments}
+        onSlotClick={() => {}}
+      />
     </div>
   );
 }
