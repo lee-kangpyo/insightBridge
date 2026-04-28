@@ -427,11 +427,6 @@ class ScreenSlotBody(BaseModel):
     item_id: Optional[int] = None
 
 
-class ScreenCreateBody(BaseModel):
-    scr_nm: str
-    template_id: int
-
-
 @router.post("/admin/items", status_code=status.HTTP_201_CREATED)
 async def post_item(
     body: ItemCreateBody,
