@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CardDetail, ChartDetail, GridDetail } from '../../content-detail';
 import { executeSqlPreview, getAdminContentsDetail, handleApiError } from '../../../services/adminApi';
-import KPICard from '../../main/KPICard';
 import ChartRenderer from '../../ChartRenderer';
 
 function chipClass(kind) {
@@ -44,6 +43,80 @@ function getRowValue(row, field) {
   const v = row[field];
   if (v === undefined) return null;
   return v;
+}
+
+function displayText(v) {
+  if (v == null || v === '') return '미공시';
+  return String(v);
+}
+
+function CompositeKpiCardPreview({ title, headline, rows, sources }) {
+  const hasHeadline = headline != null && headline !== '';
+  const hasRows = Array.isArray(rows) && rows.length > 0;
+
+  if (!hasHeadline && !hasRows) return null;
+
+  return (
+    <div className="space-y-2">
+      <div className="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/40 shadow-md hover:shadow-lg hover:border-outline-variant/60 transition-all">
+        <div className="flex justify-between items-start gap-3 min-w-0 mb-1.5 min-h-[2.75rem]">
+          <span
+            className="min-w-0 flex-1 pr-1 text-base font-bold text-on-surface-variant uppercase tracking-wide leading-snug line-clamp-2 break-words"
+            title={title}
+          >
+            {title}
+          </span>
+        </div>
+
+        {hasHeadline && (
+          <div className="text-3xl font-semibold tabular-nums mb-3 text-on-surface">
+            {displayText(headline)}
+          </div>
+        )}
+
+        {hasRows && (
+          <div className="space-y-1.5">
+            {rows.map((r, idx) => {
+              const label = typeof r?.label === 'string' ? r.label : '';
+              const value = r?.value;
+              const kind = r?.kind;
+
+              // label이 없으면 "큰 값" 스타일(값만 강조)
+              if (!label.trim() || kind === 'valueOnly') {
+                return (
+                  <div key={idx} className="text-xl font-semibold tabular-nums text-on-surface">
+                    {displayText(value)}
+                  </div>
+                );
+              }
+
+              // label이 있으면 "권역평균"처럼 (라벨, 값) 2열
+              return (
+                <div key={idx} className="flex justify-between items-baseline gap-2 text-sm">
+                  <span className="text-on-surface-variant font-semibold shrink-0 leading-snug">
+                    {label}
+                  </span>
+                  <span className="text-sm font-semibold tabular-nums text-on-surface">
+                    {displayText(value)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {Array.isArray(sources) && sources.length > 0 && (
+        <div className="space-y-1">
+          {sources.map((s, i) => (
+            <div key={i} className="text-[11px] text-on-surface-variant truncate" title={s}>
+              {s}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function buildGridPreviewModel(itemType, item, shapeContent, preview) {
@@ -168,48 +241,62 @@ function buildChartPreviewModel(itemType, item, shapeContent, preview) {
   return { chartType, data, chartConfig };
 }
 
-function buildCardKpis(itemType, item, shapeContent, preview) {
+function buildCardPreviewModel(itemType, item, shapeContent, preview) {
   const rows = preview?.rows || [];
   const row0 = rows[0] || null;
 
   // Card-only. No arbitrary fallback (must be verifiable).
-  if (itemType !== 'card') return [];
+  if (itemType !== 'card') return null;
 
   // mapping_json for card must exist and be usable.
   const mj = item?.mapping_json;
   const m = mj && typeof mj === 'object' ? mj.mapping || {} : null;
-  if (!m || typeof m !== 'object') return [];
-  if (!row0) return [];
+  if (!m || typeof m !== 'object') return null;
+  if (!row0) return null;
 
-  if (itemType === 'card') {
-    // value (single KPI)
-    if (m.value && typeof m.value === 'string' && row0) {
-      const v = getRowValue(row0, m.value);
-      return [
-        {
-          label: shapeContent?.data?.cardTitle || item?.item_nm || '값',
-          value: v,
-          source: `mapping.value = ${m.value}`,
-        },
-      ];
-    }
+  const title = shapeContent?.data?.cardTitle || item?.item_nm || '카드';
+  const sources = [];
 
-    // items (multiple)
-    const mappedItems = normalizeMappingItems(m.items);
-    if (mappedItems.length > 0 && row0) {
-      return mappedItems.slice(0, 6).map((it, idx) => {
-        const field = it?.field;
-        // header_nm(=label)가 없으면 field로 대체 표시하지 않음(혼란 방지).
-        // 대신 카드 자체는 보여야 하므로 라벨은 "빈칸"으로 유지(공백 문자로 KPICard의 early-return 방지).
-        const labelRaw = it?.label || shapeContent?.data?.items?.[idx]?.label || '';
-        const label = String(labelRaw).trim() ? labelRaw : '\u00A0';
-        const v = field ? getRowValue(row0, field) : null;
-        return { label, value: v, source: field ? `mapping.items.field = ${field}` : 'mapping.items' };
-      });
-    }
+  // 1) value (headline)
+  if (m.value && typeof m.value === 'string') {
+    const v = getRowValue(row0, m.value);
+    sources.push(`mapping.value = ${m.value}`);
+    return { title, headline: v, rows: [], sources };
   }
 
-  return [];
+  // 2) items (single card; rows inside)
+  const mappedItems = normalizeMappingItems(m.items);
+  if (mappedItems.length === 0) return null;
+
+  // 규칙: label이 없으면 "큰 값"처럼 보여야 하므로, 첫 번째 무라벨 item을 headline로 승격한다.
+  let headline = null;
+  let headlineTaken = false;
+  const outRows = [];
+
+  mappedItems.slice(0, 12).forEach((it, idx) => {
+    const field = typeof it?.field === 'string' ? it.field : null;
+    const labelRaw = it?.label || shapeContent?.data?.items?.[idx]?.label || '';
+    const label = typeof labelRaw === 'string' ? labelRaw : String(labelRaw || '');
+    const labelTrim = label.trim();
+    const v = field ? getRowValue(row0, field) : null;
+
+    if (field) sources.push(`mapping.items[${idx}].field = ${field}`);
+    else sources.push(`mapping.items[${idx}]`);
+
+    if (!labelTrim && !headlineTaken) {
+      headline = v;
+      headlineTaken = true;
+      return;
+    }
+
+    outRows.push({
+      label: labelTrim ? label : '',
+      value: v,
+      kind: labelTrim ? 'labeled' : 'valueOnly',
+    });
+  });
+
+  return { title, headline, rows: outRows, sources };
 }
 
 export default function Phase1ItemPreview({ item }) {
@@ -276,8 +363,8 @@ export default function Phase1ItemPreview({ item }) {
 
   const itemType = useMemo(() => resolveItemType(item, shapeContent), [item, shapeContent]);
 
-  const cardKpis = useMemo(
-    () => buildCardKpis(itemType, item, shapeContent, sqlPreview),
+  const cardPreviewModel = useMemo(
+    () => buildCardPreviewModel(itemType, item, shapeContent, sqlPreview),
     [itemType, item, shapeContent, sqlPreview]
   );
 
@@ -365,24 +452,18 @@ export default function Phase1ItemPreview({ item }) {
               <div className="rounded-xl border border-error/25 bg-error-container/30 p-4 text-sm text-error">
                 {sqlError}
               </div>
-            ) : cardKpis.length === 0 ? (
+            ) : !cardPreviewModel ? (
               <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
                 실 결과를 만들 수 없습니다. 맵핑 필드(value/items)와 SQL 결과 컬럼이 일치하는지 확인하세요.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                {cardKpis.map((it, idx) => (
-                  <div key={`${it.label}-${idx}`} className="space-y-2">
-                    <KPICard
-                      label={it.label}
-                      value={it.value == null ? '' : String(it.value)}
-                      showAverages={false}
-                    />
-                    <div className="text-[11px] text-on-surface-variant truncate" title={it.source}>
-                      {it.source}
-                    </div>
-                  </div>
-                ))}
+              <div className="max-w-[720px]">
+                <CompositeKpiCardPreview
+                  title={cardPreviewModel.title}
+                  headline={cardPreviewModel.headline}
+                  rows={cardPreviewModel.rows}
+                  sources={cardPreviewModel.sources}
+                />
               </div>
             )}
           </div>
