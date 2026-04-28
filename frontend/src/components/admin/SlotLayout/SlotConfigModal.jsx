@@ -28,6 +28,8 @@ export default function SlotConfigModal({ slot, assignment, items, onSave, onCan
   // 데이터 연동을 위한 상태
   const [contentDetail, setContentDetail] = useState(null);
   const [sqlPreviewData, setSqlPreviewData] = useState(null);
+  const [prevSelectedCntsId, setPrevSelectedCntsId] = useState(null);
+  const [prevSelectedSqlId, setPrevSelectedSqlId] = useState(null);
 
   useEffect(() => {
     if (selectedItem) {
@@ -37,6 +39,22 @@ export default function SlotConfigModal({ slot, assignment, items, onSave, onCan
       setItemName(selectedItem.item_nm || '');
     }
   }, [selectedItem]);
+
+  useEffect(() => {
+    if (!selectedCnts) return;
+    if (prevSelectedCntsId !== null && prevSelectedCntsId !== selectedCnts.cnts_id) {
+      setMappingJson({ type: '', mapping: {} });
+    }
+    setPrevSelectedCntsId(selectedCnts.cnts_id);
+  }, [selectedCnts]);
+
+  useEffect(() => {
+    if (!selectedSql) return;
+    if (prevSelectedSqlId !== null && prevSelectedSqlId !== selectedSql.cnts_id) {
+      setMappingJson({ type: '', mapping: {} });
+    }
+    setPrevSelectedSqlId(selectedSql.cnts_id);
+  }, [selectedSql]);
 
   // contentDetail 동기화 로직 (기존 유지)
   useEffect(() => {
@@ -53,7 +71,9 @@ export default function SlotConfigModal({ slot, assignment, items, onSave, onCan
         if (contentDetail.contentType === 'chart') {
           newMapping.chartType = contentDetail.data?.chartType || 'bar';
           if (!newMapping.mapping.categoryField) newMapping.mapping.categoryField = '';
-          if (!Array.isArray(newMapping.mapping.series)) newMapping.mapping.series = [];
+          if (typeof newMapping.mapping.series !== 'object' || newMapping.mapping.series === null) {
+            newMapping.mapping.series = {};
+          }
         }
         return newMapping;
       });
@@ -676,17 +696,32 @@ function MappingTab({ selectedCnts, selectedSql, contentDetail, sqlPreviewData, 
     const data = contentDetail?.data;
 
     switch (contentType) {
-      case 'chart':
-        fields.push({ id: 'categoryField', label: '카테고리 필드', type: 'string' });
-        fields.push({ id: 'series', label: '시리즈', type: 'array' });
+      case 'chart': {
+        const xAxisName = data?.xAxis || 'xAxis';
+        const yAxisName = data?.yAxis || 'series';
+        const xAxisLabel = xAxisName;
+        const yAxisLabel = yAxisName;
+        fields.push({
+          id: `category_${xAxisName}`,
+          label: `${xAxisLabel} (X축/카테고리)`,
+          type: 'string'
+        });
+        fields.push({
+          id: `series_${yAxisName}`,
+          label: `${yAxisLabel} (Y축/시리즈)`,
+          type: 'array'
+        });
         break;
-      case 'grid':
-        // 그리드의 columns 정의에서 각 컬럼을 매핑 대상으로 생성
+      }
+      case 'grid': {
         if (data?.columns && Array.isArray(data.columns)) {
           data.columns.forEach((col, idx) => {
+            const label = col.displayName || col.header || col.dataKey || col.field || `컬럼 ${idx + 1}`;
+            const colId = col.dataKey || col.field || `column_${idx}`;
+            const dataKeyStr = col.dataKey ? ` [${col.dataKey}]` : '';
             fields.push({
-              id: `column_${idx}`,
-              label: col.header || col.field || `컬럼 ${idx + 1}`,
+              id: `column_${colId}`,
+              label: `${label}${dataKeyStr}`,
               field: col.field,
               type: 'column'
             });
@@ -695,12 +730,14 @@ function MappingTab({ selectedCnts, selectedSql, contentDetail, sqlPreviewData, 
           fields.push({ id: 'columns', label: '컬럼 목록', type: 'array' });
         }
         break;
-      case 'card':
-        if (data?.items && Array.isArray(data.items)) {
-          data.items.forEach((item, idx) => {
+      }
+      case 'card': {
+        if (data?.items && Array.isArray(data.items) && data.items.length > 0) {
+          data.items.forEach((item) => {
+            const contentKey = item.content || item.label || 'unknown';
             fields.push({
-              id: `card_item_${idx}`,
-              label: item.label || `카드 아이템 ${idx + 1}`,
+              id: `card_item_${contentKey}`,
+              label: item.label || item.content || contentKey,
               type: 'item'
             });
           });
@@ -709,6 +746,7 @@ function MappingTab({ selectedCnts, selectedSql, contentDetail, sqlPreviewData, 
           fields.push({ id: 'cardValue', label: '값', type: 'item' });
         }
         break;
+      }
       default:
         fields.push({ id: 'field_1', label: '필드 1', type: 'string' });
         fields.push({ id: 'field_2', label: '필드 2', type: 'string' });
@@ -732,20 +770,26 @@ function MappingTab({ selectedCnts, selectedSql, contentDetail, sqlPreviewData, 
       newMapping.mapping = {};
     }
 
-    if (fieldId === 'series') {
-      newMapping.mapping[fieldId] = [{ field: draggingColumn }];
-    } else if (fieldId.startsWith('column_')) {
-      if (!Array.isArray(newMapping.mapping.columns)) {
-        newMapping.mapping.columns = [];
+    if (fieldId.startsWith('column_')) {
+      if (!newMapping.mapping.columns || typeof newMapping.mapping.columns !== 'object') {
+        newMapping.mapping.columns = {};
       }
-      const colIdx = parseInt(fieldId.split('_')[1], 10);
-      newMapping.mapping.columns[colIdx] = { field: draggingColumn };
+      const colKey = fieldId.substring(7);
+      newMapping.mapping.columns[colKey] = { field: draggingColumn };
+    } else if (fieldId.startsWith('category_')) {
+      newMapping.mapping.categoryField = draggingColumn;
+    } else if (fieldId.startsWith('series_')) {
+      if (!newMapping.mapping.series || typeof newMapping.mapping.series !== 'object') {
+        newMapping.mapping.series = {};
+      }
+      const seriesKey = fieldId.substring(7);
+      newMapping.mapping.series[seriesKey] = { field: draggingColumn };
     } else if (fieldId.startsWith('card_item_')) {
-      if (!Array.isArray(newMapping.mapping.items)) {
-        newMapping.mapping.items = [];
+      if (!newMapping.mapping.items || typeof newMapping.mapping.items !== 'object') {
+        newMapping.mapping.items = {};
       }
-      const cardIdx = parseInt(fieldId.split('_')[2], 10);
-      newMapping.mapping.items[cardIdx] = { field: draggingColumn };
+      const cardKey = fieldId.substring(10);
+      newMapping.mapping.items[cardKey] = { field: draggingColumn };
     } else {
       newMapping.mapping[fieldId] = draggingColumn;
     }
@@ -757,7 +801,26 @@ function MappingTab({ selectedCnts, selectedSql, contentDetail, sqlPreviewData, 
   const handleRemoveMapping = (fieldId) => {
     const newMapping = { ...mappingJson };
     if (newMapping.mapping) {
-      delete newMapping.mapping[fieldId];
+      if (fieldId.startsWith('column_')) {
+        const colKey = fieldId.substring(7);
+        if (newMapping.mapping.columns) {
+          delete newMapping.mapping.columns[colKey];
+        }
+      } else if (fieldId.startsWith('category_')) {
+        delete newMapping.mapping.categoryField;
+      } else if (fieldId.startsWith('series_')) {
+        const seriesKey = fieldId.substring(7);
+        if (newMapping.mapping.series) {
+          delete newMapping.mapping.series[seriesKey];
+        }
+      } else if (fieldId.startsWith('card_item_')) {
+        const cardKey = fieldId.substring(10);
+        if (newMapping.mapping.items) {
+          delete newMapping.mapping.items[cardKey];
+        }
+      } else {
+        delete newMapping.mapping[fieldId];
+      }
     }
     onMappingJsonChange(newMapping);
   };
@@ -795,34 +858,56 @@ function MappingTab({ selectedCnts, selectedSql, contentDetail, sqlPreviewData, 
         <h3 className="font-semibold text-on-surface mb-4">맵핑 설정</h3>
         {widgetFields.length > 0 ? (
           <div className="space-y-2">
-            {widgetFields.map((field) => (
-              <div
-                key={field.id}
-                onDragOver={handleDragOver}
-                onDrop={() => handleDrop(field.id)}
-                className={`px-3 py-2 rounded-lg border-2 border-dashed transition-colors ${mappingJson.mapping?.[field.id]
-                  ? 'bg-primary-container border-primary'
-                  : 'bg-surface-container border-outline hover:border-primary'
-                  }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium">{field.label}</div>
-                    <div className="text-xs text-on-surface-variant">
-                      {mappingJson.mapping?.[field.id] || '여기에 드롭'}
+            {widgetFields.map((field) => {
+              const isGridColumn = field.id.startsWith('column_');
+              const isCategory = field.id.startsWith('category_');
+              const isSeries = field.id.startsWith('series_');
+              const isCardItem = field.id.startsWith('card_item_');
+              let mappedValue;
+              if (isGridColumn) {
+                mappedValue = mappingJson.mapping?.columns?.[field.id.substring(7)]?.field;
+              } else if (isCategory) {
+                mappedValue = mappingJson.mapping?.categoryField;
+              } else if (isSeries) {
+                mappedValue = mappingJson.mapping?.series?.[field.id.substring(7)]?.field;
+              } else if (isCardItem) {
+                mappedValue = mappingJson.mapping?.items?.[field.id.substring(10)]?.field;
+              } else {
+                mappedValue = mappingJson.mapping?.[field.id];
+              }
+              const isMapped = !!mappedValue;
+
+              return (
+                <div
+                  key={field.id}
+                  onDragOver={handleDragOver}
+                  onDrop={() => handleDrop(field.id)}
+                  className={`px-3 py-2 rounded-lg border-2 border-dashed transition-colors ${isMapped
+                    ? 'bg-primary-container border-primary'
+                    : 'bg-surface-container border-outline hover:border-primary'
+                    }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">{field.label}</div>
+                      <div className="text-xs text-on-surface-variant">
+                        {isMapped && isCardItem
+                          ? `${field.label} → ${mappedValue}`
+                          : (mappedValue || '여기에 드롭')}
+                      </div>
                     </div>
+                    {isMapped && (
+                      <button
+                        onClick={() => handleRemoveMapping(field.id)}
+                        className="text-error hover:text-error/80 transition-colors"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
-                  {mappingJson.mapping?.[field.id] && (
-                    <button
-                      onClick={() => handleRemoveMapping(field.id)}
-                      className="text-error hover:text-error/80 transition-colors"
-                    >
-                      ✕
-                    </button>
-                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="text-on-surface-variant text-sm text-center py-8">
