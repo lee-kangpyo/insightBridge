@@ -28,6 +28,7 @@ import ChartGallery from "./pages/admin/ChartGallery";
 import ScreenConfigPage from "./pages/admin/ScreenConfigPage";
 import SlotLayoutPage from "./pages/admin/SlotLayoutPage";
 import ScreenViewer from "./pages/ScreenViewer";
+import ItemsManagement from "./pages/admin/ItemsManagement";
 
 function App() {
   return (
@@ -157,6 +158,7 @@ function App() {
         <Route path="chart-gallery" element={<ChartGallery />} />
         <Route path="screen-config" element={<ScreenConfigPage />} />
         <Route path="screen-config/:templateId" element={<SlotLayoutPage />} />
+        <Route path="items" element={<ItemsManagement />} />
       </Route>
       <Route
         path="/view/screen/:scrId"

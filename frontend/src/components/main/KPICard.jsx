@@ -56,6 +56,7 @@ export default function KPICard({
   year,
   unit,
   isMainDashboard,
+  showAverages = true,
   accentColor,
   accentColorHex,
   regionalAvg,
@@ -102,7 +103,7 @@ export default function KPICard({
 
   return (
     <div
-      className="bg-surface-container-lowest p-5 rounded-lg border border-transparent hover:border-outline-variant/15 transition-all"
+      className="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/40 shadow-md hover:shadow-lg hover:border-outline-variant/60 transition-all"
       style={cardStyle}
     >
       {/** 같은 그리드 행에서 제목 줄 수(1·2줄)에 따라 본문 수치·구분선 높이가 어긋나지 않도록 2줄 분 min-height + 초과 시 말줄임 */}
@@ -135,51 +136,51 @@ export default function KPICard({
           <span className="text-base font-medium ml-0.5">{unit}</span>
         )}
       </div>
-      <div className="space-y-1.5">
-        {isMainDashboard ? (
-          <>
-            <div className="flex justify-between items-baseline gap-2 text-sm">
-              <span className="text-on-surface-variant font-semibold shrink-0 leading-snug">
-                지역 대비
-              </span>
-              <TrendText
-                value={regionalComparison?.value}
-                status={regionalComparison?.status}
-              />
-            </div>
-            <div className="flex justify-between items-baseline gap-2 text-sm">
-              <span className="text-on-surface-variant font-semibold shrink-0 leading-snug">
-                전국 대비
-              </span>
-              <TrendText
-                value={nationalComparison?.value}
-                status={nationalComparison?.status}
-              />
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="flex justify-between items-baseline gap-2 text-sm">
-              <span className="text-on-surface-variant font-semibold shrink-0 leading-snug">
-                권역평균
-              </span>
-              <span className="text-sm font-semibold tabular-nums text-on-surface">
-                {regionalAvg}
-                {unit}
-              </span>
-            </div>
-            <div className="flex justify-between items-baseline gap-2 text-sm">
-              <span className="text-on-surface-variant font-semibold shrink-0 leading-snug">
-                전국평균
-              </span>
-              <span className="text-sm font-semibold tabular-nums text-on-surface">
-                {nationalAvg}
-                {unit}
-              </span>
-            </div>
-          </>
-        )}
-      </div>
+      {(isMainDashboard || showAverages) && (
+        <div className="space-y-1.5">
+          {isMainDashboard ? (
+            <>
+              <div className="flex justify-between items-baseline gap-2 text-sm">
+                <span className="text-on-surface-variant font-semibold shrink-0 leading-snug">
+                  지역 대비
+                </span>
+                <TrendText
+                  value={regionalComparison?.value}
+                  status={regionalComparison?.status}
+                />
+              </div>
+              <div className="flex justify-between items-baseline gap-2 text-sm">
+                <span className="text-on-surface-variant font-semibold shrink-0 leading-snug">
+                  전국 대비
+                </span>
+                <TrendText
+                  value={nationalComparison?.value}
+                  status={nationalComparison?.status}
+                />
+              </div>
+            </>
+          ) : showAverages ? (
+            <>
+              <div className="flex justify-between items-baseline gap-2 text-sm">
+                <span className="text-on-surface-variant font-semibold shrink-0 leading-snug">
+                  권역평균
+                </span>
+                <span className="text-sm font-semibold tabular-nums text-on-surface">
+                  {regionalAvgText}
+                </span>
+              </div>
+              <div className="flex justify-between items-baseline gap-2 text-sm">
+                <span className="text-on-surface-variant font-semibold shrink-0 leading-snug">
+                  전국평균
+                </span>
+                <span className="text-sm font-semibold tabular-nums text-on-surface">
+                  {nationalAvgText}
+                </span>
+              </div>
+            </>
+          ) : null}
+        </div>
+      )}
       {auxLabel && auxText && (
         <div className="flex justify-between items-baseline gap-2 text-sm mt-2 pt-2 border-t border-outline-variant/70">
           <span className="text-on-surface-variant font-semibold leading-snug">
