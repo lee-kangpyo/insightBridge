@@ -66,7 +66,7 @@ export default function CardSettings({ value, onChange, visible, errors, showErr
         </div>
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <label className="ds-label mb-0">카드 내용</label>
+            <label className="ds-label mb-0">카드 항목</label>
             <button
               type="button"
               onClick={addItem}
@@ -98,13 +98,13 @@ export default function CardSettings({ value, onChange, visible, errors, showErr
                 ) : null}
               </div>
               <div className="flex flex-col w-full">
-                <label className="ds-label">내용</label>
+                <label className="ds-label">데이터 키</label>
                 <input
                   className="ds-input bg-surface-container-low text-on-surface border border-outline-variant focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none rounded-lg px-4 py-3 transition-all"
                   type="text"
                   value={item.content || ''}
                   onChange={(e) => handleItemChange(index, 'content', e.target.value)}
-                  placeholder="내용"
+                  placeholder="예: admission_rate"
                 />
                 {showErrors && errors?.items?.[index]?.content ? (
                   <p className="mt-1 text-xs text-error">{errors.items[index].content}</p>

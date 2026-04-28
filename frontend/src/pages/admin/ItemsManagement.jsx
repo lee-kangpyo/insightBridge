@@ -5,6 +5,7 @@ import { ADMIN_PAGE_CONTAINER_CLASS } from '../../constants/adminLayout';
 import { deleteItem, getItems, handleApiError } from '../../services/adminApi';
 import Modal from '../../components/common/Modal';
 import ScreenItemFormModal from '../../components/admin/items/ScreenItemFormModal';
+import Phase1ItemPreview from '../../components/admin/items/Phase1ItemPreview';
 
 function mappingSummary(mapping) {
   if (!mapping || typeof mapping !== 'object') return '—';
@@ -92,95 +93,97 @@ export default function ItemsManagement() {
           <div className="mb-4 p-3 rounded-lg bg-error-container text-error text-sm">{loadError}</div>
         )}
 
-        <div className="rounded-xl border border-outline/20 bg-surface-container-lowest overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-outline/20 bg-surface-container text-on-surface-variant text-left">
-                  <th className="py-3 px-4 font-semibold w-24">ID</th>
-                  <th className="py-3 px-4 font-semibold">이름</th>
-                  <th className="py-3 px-4 font-semibold w-28">형태 ID</th>
-                  <th className="py-3 px-4 font-semibold w-28">SQL ID</th>
-                  <th className="py-3 px-4 font-semibold w-32">맵핑</th>
-                  <th className="py-3 px-4 font-semibold w-40 text-right">작업</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading && (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-on-surface-variant">
-                      불러오는 중...
-                    </td>
-                  </tr>
-                )}
-                {!loading && items.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-on-surface-variant">
-                      등록된 아이템이 없습니다. &quot;아이템 등록&quot;으로 추가하세요.
-                    </td>
-                  </tr>
-                )}
-                {!loading &&
-                  items.map((row) => (
-                    <tr
-                      key={row.item_id}
-                      onClick={() => setSelectedId(row.item_id)}
-                      className={`border-b border-outline/10 cursor-pointer transition-colors ${
-                        selectedId === row.item_id ? 'bg-primary-container/40' : 'hover:bg-surface-container-high/60'
-                      }`}
-                    >
-                      <td className="py-3 px-4 font-mono text-on-surface-variant">{row.item_id}</td>
-                      <td className="py-3 px-4 font-medium text-on-surface">{row.item_nm}</td>
-                      <td className="py-3 px-4 text-on-surface-variant font-mono text-xs">
-                        {row.shape_cnts_id ?? '—'}
-                      </td>
-                      <td className="py-3 px-4 text-on-surface-variant font-mono text-xs">
-                        {row.sql_cnts_id ?? '—'}
-                      </td>
-                      <td className="py-3 px-4 text-on-surface-variant">{mappingSummary(row.mapping_json)}</td>
-                      <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFormMode('edit');
-                            setEditId(row.item_id);
-                            setFormOpen(true);
-                          }}
-                          className="mr-2 text-primary text-xs font-semibold hover:underline"
-                        >
-                          수정
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDeleteTarget(row);
-                            setDeleteOpen(true);
-                          }}
-                          className="text-error text-xs font-semibold hover:underline"
-                        >
-                          삭제
-                        </button>
-                      </td>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="lg:col-span-6">
+            <div className="rounded-xl border border-outline/20 bg-surface-container-lowest overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-outline/20 bg-surface-container text-on-surface-variant text-left">
+                      <th className="py-3 px-4 font-semibold w-24">ID</th>
+                      <th className="py-3 px-4 font-semibold">이름</th>
+                      <th className="py-3 px-4 font-semibold w-28">형태 ID</th>
+                      <th className="py-3 px-4 font-semibold w-28">SQL ID</th>
+                      <th className="py-3 px-4 font-semibold w-32">맵핑</th>
+                      <th className="py-3 px-4 font-semibold w-40 text-right">작업</th>
                     </tr>
-                  ))}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    {loading && (
+                      <tr>
+                        <td colSpan={6} className="py-12 text-center text-on-surface-variant">
+                          불러오는 중...
+                        </td>
+                      </tr>
+                    )}
+                    {!loading && items.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="py-12 text-center text-on-surface-variant">
+                          등록된 아이템이 없습니다. &quot;아이템 등록&quot;으로 추가하세요.
+                        </td>
+                      </tr>
+                    )}
+                    {!loading &&
+                      items.map((row) => (
+                        <tr
+                          key={row.item_id}
+                          onClick={() => setSelectedId(row.item_id)}
+                          className={`border-b border-outline/10 cursor-pointer transition-colors ${
+                            selectedId === row.item_id
+                              ? 'bg-primary-container/40'
+                              : 'hover:bg-surface-container-high/60'
+                          }`}
+                        >
+                          <td className="py-3 px-4 font-mono text-on-surface-variant">{row.item_id}</td>
+                          <td className="py-3 px-4 font-medium text-on-surface">{row.item_nm}</td>
+                          <td className="py-3 px-4 text-on-surface-variant font-mono text-xs">
+                            {row.shape_cnts_id ?? '—'}
+                          </td>
+                          <td className="py-3 px-4 text-on-surface-variant font-mono text-xs">
+                            {row.sql_cnts_id ?? '—'}
+                          </td>
+                          <td className="py-3 px-4 text-on-surface-variant">{mappingSummary(row.mapping_json)}</td>
+                          <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormMode('edit');
+                                setEditId(row.item_id);
+                                setFormOpen(true);
+                              }}
+                              className="mr-2 text-primary text-xs font-semibold hover:underline"
+                            >
+                              수정
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDeleteTarget(row);
+                                setDeleteOpen(true);
+                              }}
+                              className="text-error text-xs font-semibold hover:underline"
+                            >
+                              삭제
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-6">
+            {!selected || loading ? (
+              <div className="rounded-2xl border border-outline/20 bg-surface-container-lowest shadow-sm p-10 text-center text-on-surface-variant">
+                {loading ? '불러오는 중...' : '아이템을 선택하세요.'}
+              </div>
+            ) : (
+              <Phase1ItemPreview item={selected} />
+            )}
           </div>
         </div>
-
-        {selected && !loading && (
-          <div className="mt-6 p-5 rounded-xl border border-outline/15 bg-surface-container-low text-sm">
-            <h3 className="font-semibold text-on-surface mb-2">선택 미리보기</h3>
-            <p className="text-on-surface-variant mb-3">
-              <span className="font-medium text-on-surface">{selected.item_nm}</span>
-              {' · '}
-              맵핑 요약: {mappingSummary(selected.mapping_json)}
-            </p>
-            <pre className="text-xs bg-surface-container rounded-lg p-3 overflow-auto max-h-48 border border-outline/10">
-              {JSON.stringify(selected.mapping_json ?? {}, null, 2)}
-            </pre>
-          </div>
-        )}
       </main>
 
       <ScreenItemFormModal

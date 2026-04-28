@@ -30,6 +30,10 @@ export default function ScreenItemFormModal({ isOpen, mode, editItemId, onClose,
   const [loadingEdit, setLoadingEdit] = useState(false);
 
   const isMappingEnabled = selectedCnts && selectedSql;
+  const resetMapping = useCallback(() => {
+    // 문서 기준: 형태/SQL 변경 시 매핑 즉시 초기화(데이터 오염 방지)
+    setMappingJson({ type: '', mapping: {} });
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -186,10 +190,22 @@ export default function ScreenItemFormModal({ isOpen, mode, editItemId, onClose,
             <div className="mb-4 p-3 bg-error-container text-error rounded-lg text-sm">{error}</div>
           )}
           {!loadingEdit && activeTab === 'form' && (
-            <FormTab selectedCnts={selectedCnts} onSelectCnts={setSelectedCnts} />
+            <FormTab
+              selectedCnts={selectedCnts}
+              onSelectCnts={(cnts) => {
+                setSelectedCnts(cnts);
+                resetMapping();
+              }}
+            />
           )}
           {!loadingEdit && activeTab === 'sql' && (
-            <SqlTab selectedSql={selectedSql} onSelectSql={setSelectedSql} />
+            <SqlTab
+              selectedSql={selectedSql}
+              onSelectSql={(sql) => {
+                setSelectedSql(sql);
+                resetMapping();
+              }}
+            />
           )}
           {!loadingEdit && activeTab === 'mapping' && isMappingEnabled && (
             <MappingTab

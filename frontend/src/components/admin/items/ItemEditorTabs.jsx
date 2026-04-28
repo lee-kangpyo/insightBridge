@@ -395,6 +395,7 @@ export function SqlTab({ selectedSql, onSelectSql }) {
 
 export function MappingTab({ selectedCnts, selectedSql, mappingJson, onMappingJsonChange }) {
   const [columns, setColumns] = useState([]);
+  const [contentDetail, setContentDetail] = useState(null);
   const [draggingColumn, setDraggingColumn] = useState(null);
 
   useEffect(() => {
@@ -402,30 +403,82 @@ export function MappingTab({ selectedCnts, selectedSql, mappingJson, onMappingJs
       setColumns([]);
       return;
     }
-    const sampleColumns = ['column_1', 'column_2', 'column_3', 'column_4'];
-    setColumns(sampleColumns);
+
+    let cancelled = false;
+    (async () => {
+      try {
+        // 문서 기준: SQL 미리보기 결과에서 실제 컬럼을 추출
+        const data = await executeSqlPreview(selectedSql.cnts_id);
+        if (cancelled) return;
+        const cols = Array.isArray(data?.columns) ? data.columns : [];
+        setColumns(cols);
+      } catch (err) {
+        if (!cancelled) setColumns([]);
+        console.error('Failed to load SQL preview columns:', err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedSql]);
+
+  useEffect(() => {
+    if (!selectedCnts) {
+      setContentDetail(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await api.get(`/api/admin/contents/${selectedCnts.cnts_id}`);
+        if (!cancelled) setContentDetail(response.data.content);
+      } catch (err) {
+        if (!cancelled) setContentDetail(null);
+        console.error('Failed to fetch content detail for mapping:', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCnts]);
 
   const widgetFields = useMemo(() => {
     const fields = [];
-    switch (selectedCnts?.contentType) {
-      case 'chart':
-        fields.push(
-          { id: 'categoryField', label: '카테고리 필드' },
-          { id: 'series', label: '시리즈' }
-        );
+    const contentType = contentDetail?.contentType || selectedCnts?.contentType;
+    const data = contentDetail?.data;
+
+    switch (contentType) {
+      case 'chart': {
+        const xAxisName = data?.xAxis || 'xAxis';
+        const yAxisName = data?.yAxis || 'series';
+        fields.push({ id: `category_${xAxisName}`, label: `${xAxisName} (X축/카테고리)` });
+        fields.push({ id: `series_${yAxisName}`, label: `${yAxisName} (Y축/시리즈)` });
         break;
-      case 'grid':
-        fields.push(
-          { id: 'columns', label: '컬럼' }
-        );
+      }
+      case 'grid': {
+        if (data?.columns && Array.isArray(data.columns)) {
+          data.columns.forEach((col, idx) => {
+            const display = col.displayName || col.header || col.dataKey || col.field || `컬럼 ${idx + 1}`;
+            const dataKey = col.dataKey || col.field || `column_${idx}`;
+            fields.push({ id: `column_${dataKey}`, label: `${display} [${dataKey}]` });
+          });
+        }
         break;
-      case 'card':
-        fields.push(
-          { id: 'value', label: '값' },
-          { id: 'label', label: '라벨' }
-        );
+      }
+      case 'card': {
+        // 문서 기준: Card key는 item.content (고유 키)
+        if (data?.items && Array.isArray(data.items) && data.items.length > 0) {
+          data.items.forEach((it) => {
+            const key = it?.content;
+            if (!key) return;
+            const labelRaw = (it?.label || '').trim();
+            const label = labelRaw ? `${labelRaw} [${key}]` : `[${key}]`;
+            fields.push({ id: `card_item_${key}`, label });
+          });
+        }
         break;
+      }
       default:
         fields.push(
           { id: 'field_1', label: '필드 1' },
@@ -433,7 +486,7 @@ export function MappingTab({ selectedCnts, selectedSql, mappingJson, onMappingJs
         );
     }
     return fields;
-  }, [selectedCnts]);
+  }, [selectedCnts, contentDetail]);
 
   const handleDragStart = (column) => {
     setDraggingColumn(column);
@@ -450,7 +503,32 @@ export function MappingTab({ selectedCnts, selectedSql, mappingJson, onMappingJs
     if (!newMapping.mapping) {
       newMapping.mapping = {};
     }
-    newMapping.mapping[fieldId] = draggingColumn;
+
+    // 문서 기준: key 기반 Object 매핑으로 저장
+    if (fieldId.startsWith('column_')) {
+      if (!newMapping.mapping.columns || typeof newMapping.mapping.columns !== 'object') {
+        newMapping.mapping.columns = {};
+      }
+      const key = fieldId.substring(7);
+      newMapping.mapping.columns[key] = { field: draggingColumn };
+    } else if (fieldId.startsWith('category_')) {
+      newMapping.mapping.categoryField = draggingColumn;
+    } else if (fieldId.startsWith('series_')) {
+      if (!newMapping.mapping.series || typeof newMapping.mapping.series !== 'object') {
+        newMapping.mapping.series = {};
+      }
+      const key = fieldId.substring(7);
+      newMapping.mapping.series[key] = { field: draggingColumn };
+    } else if (fieldId.startsWith('card_item_')) {
+      if (!newMapping.mapping.items || typeof newMapping.mapping.items !== 'object') {
+        newMapping.mapping.items = {};
+      }
+      const key = fieldId.substring(10);
+      newMapping.mapping.items[key] = { field: draggingColumn };
+    } else {
+      newMapping.mapping[fieldId] = draggingColumn;
+    }
+
     onMappingJsonChange(newMapping);
     setDraggingColumn(null);
   };
@@ -458,7 +536,20 @@ export function MappingTab({ selectedCnts, selectedSql, mappingJson, onMappingJs
   const handleRemoveMapping = (fieldId) => {
     const newMapping = { ...mappingJson };
     if (newMapping.mapping) {
-      delete newMapping.mapping[fieldId];
+      if (fieldId.startsWith('column_')) {
+        const key = fieldId.substring(7);
+        if (newMapping.mapping.columns) delete newMapping.mapping.columns[key];
+      } else if (fieldId.startsWith('category_')) {
+        delete newMapping.mapping.categoryField;
+      } else if (fieldId.startsWith('series_')) {
+        const key = fieldId.substring(7);
+        if (newMapping.mapping.series) delete newMapping.mapping.series[key];
+      } else if (fieldId.startsWith('card_item_')) {
+        const key = fieldId.substring(10);
+        if (newMapping.mapping.items) delete newMapping.mapping.items[key];
+      } else {
+        delete newMapping.mapping[fieldId];
+      }
     }
     onMappingJsonChange(newMapping);
   };
@@ -467,18 +558,24 @@ export function MappingTab({ selectedCnts, selectedSql, mappingJson, onMappingJs
     <div className="flex gap-6">
       <div className="w-64">
         <h3 className="font-semibold text-on-surface mb-4">SQL 컬럼</h3>
-        <div className="space-y-2">
-          {columns.map((column) => (
-            <div
-              key={column}
-              draggable
-              onDragStart={() => handleDragStart(column)}
-              className="px-3 py-2 bg-surface-container rounded-lg border border-outline cursor-move hover:border-primary transition-colors"
-            >
-              {column}
-            </div>
-          ))}
-        </div>
+        {columns.length > 0 ? (
+          <div className="space-y-2">
+            {columns.map((column) => (
+              <div
+                key={column}
+                draggable
+                onDragStart={() => handleDragStart(column)}
+                className="px-3 py-2 bg-surface-container rounded-lg border border-outline cursor-move hover:border-primary transition-colors"
+              >
+                {column}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-on-surface-variant text-sm">
+            SQL을 선택하면 컬럼이 표시됩니다. (필요 시 SQL 탭에서 미리보기를 확인하세요)
+          </div>
+        )}
         <p className="mt-4 text-xs text-on-surface-variant">
           컬럼을 드래그하여 우측 필드에 맵핑하세요.
         </p>
@@ -487,36 +584,58 @@ export function MappingTab({ selectedCnts, selectedSql, mappingJson, onMappingJs
       <div className="flex-1">
         <h3 className="font-semibold text-on-surface mb-4">맵핑 설정</h3>
         <div className="space-y-2">
-          {widgetFields.map((field) => (
-            <div
-              key={field.id}
-              onDragOver={handleDragOver}
-              onDrop={() => handleDrop(field.id)}
-              className={`px-3 py-2 rounded-lg border-2 border-dashed transition-colors ${
-                mappingJson.mapping?.[field.id]
-                  ? 'bg-primary-container border-primary'
-                  : 'bg-surface-container border-outline hover:border-primary'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium">{field.label}</div>
-                  <div className="text-xs text-on-surface-variant">
-                    {mappingJson.mapping?.[field.id] || '여기에 드롭'}
+          {widgetFields.map((field) => {
+            const isGridColumn = field.id.startsWith('column_');
+            const isCategory = field.id.startsWith('category_');
+            const isSeries = field.id.startsWith('series_');
+            const isCardItem = field.id.startsWith('card_item_');
+
+            let mappedValue;
+            if (isGridColumn) {
+              mappedValue = mappingJson.mapping?.columns?.[field.id.substring(7)]?.field;
+            } else if (isCategory) {
+              mappedValue = mappingJson.mapping?.categoryField;
+            } else if (isSeries) {
+              mappedValue = mappingJson.mapping?.series?.[field.id.substring(7)]?.field;
+            } else if (isCardItem) {
+              mappedValue = mappingJson.mapping?.items?.[field.id.substring(10)]?.field;
+            } else {
+              mappedValue = mappingJson.mapping?.[field.id];
+            }
+
+            const isMapped = !!mappedValue;
+
+            return (
+              <div
+                key={field.id}
+                onDragOver={handleDragOver}
+                onDrop={() => handleDrop(field.id)}
+                className={`px-3 py-2 rounded-lg border-2 border-dashed transition-colors ${
+                  isMapped
+                    ? 'bg-primary-container border-primary'
+                    : 'bg-surface-container border-outline hover:border-primary'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">{field.label}</div>
+                    <div className="text-xs text-on-surface-variant">
+                      {mappedValue || '여기에 드롭'}
+                    </div>
                   </div>
+                  {isMapped && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveMapping(field.id)}
+                      className="text-error hover:text-error/80 transition-colors"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
-                {mappingJson.mapping?.[field.id] && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveMapping(field.id)}
-                    className="text-error hover:text-error/80 transition-colors"
-                  >
-                    ✕
-                  </button>
-                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
