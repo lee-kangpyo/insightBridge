@@ -25,6 +25,7 @@ export default function ScreenItemFormModal({ isOpen, mode, editItemId, onClose,
   const [selectedCnts, setSelectedCnts] = useState(null);
   const [selectedSql, setSelectedSql] = useState(null);
   const [mappingJson, setMappingJson] = useState({});
+  const [contentDetail, setContentDetail] = useState(null);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [loadingEdit, setLoadingEdit] = useState(false);
@@ -36,10 +37,56 @@ export default function ScreenItemFormModal({ isOpen, mode, editItemId, onClose,
   }, []);
 
   useEffect(() => {
+    // 신규 등록 시: 선택한 형태 정보에 맞춰 mapping_json 최소 스키마를 자동 보정한다.
+    // 주의: SQL/형태 변경 시 resetMapping()이 실행되어 mapping_json이 비워질 수 있으므로,
+    // selectedSql/selectedCnts 변경에도 다시 보정되게 한다.
+    if (!isOpen) return;
+    if (mode !== 'create') return;
+    if (!contentDetail?.contentType) return;
+
+    const ct = contentDetail.contentType;
+    if (!['chart', 'grid', 'card'].includes(ct)) return;
+
+    setMappingJson((prev) => {
+      const base = prev && typeof prev === 'object' ? prev : {};
+      let changed = false;
+      const next = { ...base };
+
+      if (!next.type) {
+        next.type = ct;
+        changed = true;
+      }
+      if (!next.mapping || typeof next.mapping !== 'object') {
+        next.mapping = {};
+        changed = true;
+      }
+
+      if (ct === 'chart') {
+        if (!next.chartType) {
+          const fromShape = contentDetail?.data?.chartType;
+          next.chartType = typeof fromShape === 'string' && fromShape.trim() ? fromShape : 'bar';
+          changed = true;
+        }
+        if (typeof next.mapping.categoryField !== 'string') {
+          next.mapping.categoryField = '';
+          changed = true;
+        }
+        if (!next.mapping.series || typeof next.mapping.series !== 'object') {
+          next.mapping.series = {};
+          changed = true;
+        }
+      }
+
+      return changed ? next : prev;
+    });
+  }, [isOpen, mode, contentDetail, selectedCnts?.cnts_id, selectedSql?.cnts_id]);
+
+  useEffect(() => {
     if (!isOpen) return;
 
     setError(null);
     setActiveTab('form');
+    setContentDetail(null);
 
     if (mode === 'create') {
       setItemName('');
@@ -196,6 +243,7 @@ export default function ScreenItemFormModal({ isOpen, mode, editItemId, onClose,
                 setSelectedCnts(cnts);
                 resetMapping();
               }}
+              onContentDetailChange={setContentDetail}
             />
           )}
           {!loadingEdit && activeTab === 'sql' && (

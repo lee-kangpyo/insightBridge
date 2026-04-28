@@ -7,15 +7,29 @@ import SqlSettings from './SqlSettings';
 import { createAdminContents, patchAdminContents } from '../../services/adminApi';
 import { validateContentsBeforeSave } from '../../utils/contentsValidation';
 
-const INITIAL_GENERAL_INFO = {
-  contentId: '',
-  contentName: '',
-  creator: '',
-  createdAt: '',
-  isDeleted: 'N',
-  generatedAt: '',
-  memo: '',
-};
+function toDatetimeLocalValue(date = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return (
+    `${date.getFullYear()}-` +
+    `${pad(date.getMonth() + 1)}-` +
+    `${pad(date.getDate())}T` +
+    `${pad(date.getHours())}:` +
+    `${pad(date.getMinutes())}`
+  );
+}
+
+function getInitialGeneralInfo() {
+  const now = toDatetimeLocalValue();
+  return {
+    contentId: '',
+    contentName: '',
+    creator: '',
+    createdAt: now,
+    isDeleted: 'N',
+    generatedAt: now,
+    memo: '',
+  };
+}
 
 const INITIAL_CHART_DATA = {
   chartTitle: '',
@@ -58,7 +72,7 @@ export default function ContentsCreateForm({
   onSaved,
   onCancel,
 }) {
-  const [generalInfo, setGeneralInfo] = useState(INITIAL_GENERAL_INFO);
+  const [generalInfo, setGeneralInfo] = useState(getInitialGeneralInfo);
   const [contentType, setContentType] = useState('chart');
   const [chartData, setChartData] = useState(INITIAL_CHART_DATA);
   const [gridData, setGridData] = useState(INITIAL_GRID_DATA);
@@ -102,7 +116,7 @@ export default function ContentsCreateForm({
   }, [contentType, chartData, gridData, cardData, sqlData]);
 
   const resetAll = () => {
-    setGeneralInfo(INITIAL_GENERAL_INFO);
+    setGeneralInfo(getInitialGeneralInfo());
     setContentType('chart');
     setChartData(INITIAL_CHART_DATA);
     setGridData(INITIAL_GRID_DATA);
