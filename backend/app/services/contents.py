@@ -117,20 +117,24 @@ async def create_contents(payload: dict[str, Any]) -> int:
             str(data.get("legendPosition")).strip() if data.get("legendPosition") is not None else None
         )
 
-        x_cols = _as_str_list(data.get("xAxis"))[:6]
-        y_cols = _as_str_list(data.get("yAxis"))[:6]
-        while len(x_cols) < 6:
-            x_cols.append(None)  # type: ignore[arg-type]
-        while len(y_cols) < 6:
-            y_cols.append(None)  # type: ignore[arg-type]
+        # NOTE:
+        # - 기존에는 xAxis/yAxis를 "컬럼명" 리스트로 보고 x_col1..y_col6에 저장했지만,
+        #   현재 요구사항은 x_axis_title/y_axis_title에 저장하는 것.
+        # - 프론트 입력 필드명은 그대로(xAxis/yAxis) 사용하되, DB에는 title로 저장한다.
+        x_axis_title = str(data.get("xAxis")).strip() if data.get("xAxis") is not None else None
+        y_axis_title = str(data.get("yAxis")).strip() if data.get("yAxis") is not None else None
+        if x_axis_title == "":
+            x_axis_title = None
+        if y_axis_title == "":
+            y_axis_title = None
         chart_tp = str(data.get("chartType")).strip() if data.get("chartType") is not None else None
 
         detail_plan = (
             "chart",
             {
                 "chart_tp": chart_tp,
-                "x_cols": x_cols,
-                "y_cols": y_cols,
+                "x_axis_title": x_axis_title,
+                "y_axis_title": y_axis_title,
             },
         )
 
@@ -206,35 +210,23 @@ async def create_contents(payload: dict[str, Any]) -> int:
 
             tp, detail = detail_plan
             if tp == "chart":
-                x_cols: Sequence[Optional[str]] = detail["x_cols"]
-                y_cols: Sequence[Optional[str]] = detail["y_cols"]
+                x_axis_title: Optional[str] = detail.get("x_axis_title")
+                y_axis_title: Optional[str] = detail.get("y_axis_title")
                 await conn.execute(
                     """
                     INSERT INTO ts_cnts_info_chart (
                         cnts_id, chart_tp,
-                        x_col1, x_col2, x_col3, x_col4, x_col5, x_col6,
-                        y_col1, y_col2, y_col3, y_col4, y_col5, y_col6
+                        x_axis_title, y_axis_title
                     )
                     VALUES (
                         $1, $2,
-                        $3, $4, $5, $6, $7, $8,
-                        $9, $10, $11, $12, $13, $14
+                        $3, $4
                     )
                     """,
                     cnts_id,
                     detail.get("chart_tp"),
-                    x_cols[0],
-                    x_cols[1],
-                    x_cols[2],
-                    x_cols[3],
-                    x_cols[4],
-                    x_cols[5],
-                    y_cols[0],
-                    y_cols[1],
-                    y_cols[2],
-                    y_cols[3],
-                    y_cols[4],
-                    y_cols[5],
+                    x_axis_title,
+                    y_axis_title,
                 )
 
             elif tp == "grid":
@@ -248,7 +240,7 @@ async def create_contents(payload: dict[str, Any]) -> int:
                     is_amount = col.get("isAmount")
                     await conn.execute(
                         """
-                        INSERT INTO ts_cnts_info_grid (cnts_id, col_nm, col_header, col_sort, money_fg)
+                        INSERT INTO ts_cnts_info_grid (cnts_id, data_key, col_header, col_sort, money_fg)
                         VALUES ($1, $2, $3, $4, $5)
                         """,
                         cnts_id,
@@ -267,7 +259,7 @@ async def create_contents(payload: dict[str, Any]) -> int:
                     content = item.get("content")
                     await conn.execute(
                         """
-                        INSERT INTO ts_cnts_info_card (cnts_id, header_nm, col_nm, pos)
+                        INSERT INTO ts_cnts_info_card (cnts_id, header_nm, data_key, pos)
                         VALUES ($1, $2, $3, $4)
                         """,
                         cnts_id,
@@ -404,8 +396,7 @@ async def get_contents_detail(cnts_id: int, tp: ContentsType) -> dict[str, Any]:
     if tp == "chart":
         df = await fetch_df(
             """
-            SELECT chart_tp, x_col1, x_col2, x_col3, x_col4, x_col5, x_col6,
-                   y_col1, y_col2, y_col3, y_col4, y_col5, y_col6
+            SELECT chart_tp, x_axis_title, y_axis_title
             FROM ts_cnts_info_chart
             WHERE cnts_id = $1
             ORDER BY chart_id DESC
@@ -416,14 +407,17 @@ async def get_contents_detail(cnts_id: int, tp: ContentsType) -> dict[str, Any]:
         if df.empty:
             return {}
         r = df.to_dict(orient="records")[0]
-        x_cols = [r.get(f"x_col{i}") for i in range(1, 7) if r.get(f"x_col{i}")]
-        y_cols = [r.get(f"y_col{i}") for i in range(1, 7) if r.get(f"y_col{i}")]
-        return {"chartType": r.get("chart_tp"), "xAxis": x_cols[0] if len(x_cols) == 1 else x_cols, "yAxis": y_cols[0] if len(y_cols) == 1 else y_cols}
+        # 프론트 호환: 기존 필드명(xAxis/yAxis)에 "축 제목"을 넣어 내려준다.
+        return {
+            "chartType": r.get("chart_tp"),
+            "xAxis": r.get("x_axis_title") or "",
+            "yAxis": r.get("y_axis_title") or "",
+        }
 
     if tp == "grid":
         df = await fetch_df(
             """
-            SELECT col_nm, col_header, col_sort, money_fg
+            SELECT data_key, col_header, col_sort, money_fg
             FROM ts_cnts_info_grid
             WHERE cnts_id = $1
             ORDER BY grid_id
@@ -445,7 +439,7 @@ async def get_contents_detail(cnts_id: int, tp: ContentsType) -> dict[str, Any]:
                     alignment = sort
                 cols.append(
                     {
-                        "dataKey": r.get("col_nm"),
+                        "dataKey": r.get("data_key"),
                         "displayName": r.get("col_header"),
                         "alignment": alignment,
                         "isAmount": (str(r.get("money_fg") or "").upper() == "Y"),
@@ -456,7 +450,7 @@ async def get_contents_detail(cnts_id: int, tp: ContentsType) -> dict[str, Any]:
     if tp == "card":
         df = await fetch_df(
             """
-            SELECT header_nm, col_nm, pos
+            SELECT header_nm, data_key, pos
             FROM ts_cnts_info_card
             WHERE cnts_id = $1
             ORDER BY (pos::int) NULLS LAST, card_id
@@ -469,7 +463,7 @@ async def get_contents_detail(cnts_id: int, tp: ContentsType) -> dict[str, Any]:
                 items.append(
                     {
                         "label": r.get("header_nm"),
-                        "content": r.get("col_nm"),
+                        "content": r.get("data_key"),
                         "color": "#002c5a",
                     }
                 )
@@ -628,40 +622,28 @@ async def patch_contents(cnts_id: int, payload: dict[str, Any]) -> None:
                     else None,
                     str(d.get("legendPosition")).strip() if d.get("legendPosition") is not None else None,
                 )
-                x_cols = _as_str_list(d.get("xAxis"))[:6]
-                y_cols = _as_str_list(d.get("yAxis"))[:6]
-                while len(x_cols) < 6:
-                    x_cols.append(None)  # type: ignore[arg-type]
-                while len(y_cols) < 6:
-                    y_cols.append(None)  # type: ignore[arg-type]
+                x_axis_title = str(d.get("xAxis")).strip() if d.get("xAxis") is not None else None
+                y_axis_title = str(d.get("yAxis")).strip() if d.get("yAxis") is not None else None
+                if x_axis_title == "":
+                    x_axis_title = None
+                if y_axis_title == "":
+                    y_axis_title = None
                 chart_tp = str(d.get("chartType")).strip() if d.get("chartType") is not None else None
                 await conn.execute(
                     """
                     INSERT INTO ts_cnts_info_chart (
                         cnts_id, chart_tp,
-                        x_col1, x_col2, x_col3, x_col4, x_col5, x_col6,
-                        y_col1, y_col2, y_col3, y_col4, y_col5, y_col6
+                        x_axis_title, y_axis_title
                     )
                     VALUES (
                         $1, $2,
-                        $3, $4, $5, $6, $7, $8,
-                        $9, $10, $11, $12, $13, $14
+                        $3, $4
                     )
                     """,
                     cnts_id,
                     chart_tp,
-                    x_cols[0],
-                    x_cols[1],
-                    x_cols[2],
-                    x_cols[3],
-                    x_cols[4],
-                    x_cols[5],
-                    y_cols[0],
-                    y_cols[1],
-                    y_cols[2],
-                    y_cols[3],
-                    y_cols[4],
-                    y_cols[5],
+                    x_axis_title,
+                    y_axis_title,
                 )
 
             elif tp == "grid":
@@ -686,7 +668,7 @@ async def patch_contents(cnts_id: int, payload: dict[str, Any]) -> None:
                         continue
                     await conn.execute(
                         """
-                        INSERT INTO ts_cnts_info_grid (cnts_id, col_nm, col_header, col_sort, money_fg)
+                        INSERT INTO ts_cnts_info_grid (cnts_id, data_key, col_header, col_sort, money_fg)
                         VALUES ($1, $2, $3, $4, $5)
                         """,
                         cnts_id,
@@ -721,7 +703,7 @@ async def patch_contents(cnts_id: int, payload: dict[str, Any]) -> None:
                         continue
                     await conn.execute(
                         """
-                        INSERT INTO ts_cnts_info_card (cnts_id, header_nm, col_nm, pos)
+                        INSERT INTO ts_cnts_info_card (cnts_id, header_nm, data_key, pos)
                         VALUES ($1, $2, $3, $4)
                         """,
                         cnts_id,

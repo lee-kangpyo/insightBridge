@@ -4,7 +4,7 @@ import api from '../../../services/api';
 import { CONTENT_TYPE_MAP } from '../../../constants/contentTypes';
 import { ChartDetail, GridDetail, CardDetail, SqlDetail } from '../../content-detail';
 
-export function FormTab({ selectedCnts, onSelectCnts }) {
+export function FormTab({ selectedCnts, onSelectCnts, onContentDetailChange }) {
   const [contents, setContents] = useState([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(false);
@@ -45,18 +45,21 @@ export function FormTab({ selectedCnts, onSelectCnts }) {
   useEffect(() => {
     if (!selectedCnts) {
       setContentDetail(null);
+      onContentDetailChange?.(null);
       return;
     }
     const fetchDetail = async () => {
       try {
         const response = await api.get(`/api/admin/contents/${selectedCnts.cnts_id}`);
         setContentDetail(response.data.content);
+        onContentDetailChange?.(response.data.content);
       } catch (err) {
         console.error('Failed to fetch content detail:', err);
+        onContentDetailChange?.(null);
       }
     };
     fetchDetail();
-  }, [selectedCnts]);
+  }, [selectedCnts, onContentDetailChange]);
 
   const filters = [
     { id: 'all', label: '전체' },
