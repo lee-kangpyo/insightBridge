@@ -7,6 +7,7 @@ import {
   createAdminMenu,
   patchAdminMenu,
   deleteAdminMenu,
+  getAdminScreensList,
 } from "../../services/adminApi";
 
 function Toast({ toast, onClose }) {
@@ -175,7 +176,154 @@ function AddRootMenuDialog({
   );
 }
 
+function AddScreenMenuDialog({
+  open,
+  screens,
+  loading,
+  saving,
+  error,
+  onClose,
+  onSubmit,
+}) {
+  const [selectedScrId, setSelectedScrId] = useState("");
+
+  useEffect(() => {
+    if (!open) {
+      setSelectedScrId("");
+      return undefined;
+    }
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const selectedScreen = screens.find((s) => s.scr_id === selectedScrId);
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <button
+        type="button"
+        className="absolute inset-0 bg-surface/60 backdrop-blur-[2px]"
+        aria-label="닫기"
+        onClick={onClose}
+      />
+      <div className="relative mx-auto mt-[10vh] w-[min(560px,calc(100%-2rem))] rounded-2xl border border-outline-variant/40 bg-surface-container-lowest shadow-[0_24px_80px_rgba(0,0,0,0.25)] overflow-hidden">
+        <div className="h-1.5 w-full bg-gradient-to-r from-primary to-primary-container" />
+        <div className="p-6 sm:p-7 flex flex-col gap-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-xs font-medium tracking-wider text-on-surface-variant uppercase">
+                Slot Screen
+              </div>
+              <h2 className="mt-1 text-xl sm:text-2xl font-headline font-bold text-primary">
+                슬롯 화면 추가
+              </h2>
+              <p className="mt-2 text-sm text-on-surface-variant leading-relaxed">
+                연동할 슬롯 화면을 선택하면 메뉴가 자동 생성됩니다.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              onClick={onClose}
+              aria-label="닫기"
+              disabled={saving}
+            >
+              <span className="material-symbols-outlined text-[20px]">
+                close
+              </span>
+            </button>
+          </div>
+
+          {error && (
+            <div className="p-3 bg-error/10 border border-error rounded-lg text-error text-sm">
+              {error}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">
+              화면 선택
+            </label>
+            {loading ? (
+              <p className="text-sm text-on-surface-variant py-4">불러오는 중…</p>
+            ) : screens.length === 0 ? (
+              <p className="text-sm text-on-surface-variant py-4">
+                사용 가능한 슬롯 화면이 없습니다.
+              </p>
+            ) : (
+              <div className="max-h-60 overflow-y-auto border border-outline-variant/40 rounded-lg">
+                {screens.map((screen) => (
+                  <button
+                    key={screen.scr_id}
+                    type="button"
+                    onClick={() => setSelectedScrId(screen.scr_id)}
+                    className={`w-full text-left px-4 py-3 flex items-center gap-3 transition-colors border-b border-outline-variant/10 last:border-0 ${
+                      selectedScrId === screen.scr_id
+                        ? "bg-primary-container/20 text-primary"
+                        : "hover:bg-surface-container-high text-on-surface"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[18px] text-on-surface-variant">
+                      dashboard
+                    </span>
+                    <span className="text-sm font-medium">{screen.scr_nm}</span>
+                    <span className="text-xs font-mono text-on-surface-variant ml-auto">
+                      {screen.scr_id}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {selectedScreen && (
+            <div className="bg-surface-container-low rounded-lg p-4 flex flex-col gap-2">
+              <span className="text-[11px] uppercase tracking-wider text-on-surface-variant font-medium">
+                자동 생성 정보
+              </span>
+              <div className="text-sm text-on-surface">
+                <div>경로: <code className="text-primary font-mono">/view/screen/{selectedScreen.scr_id}</code></div>
+                <div>화면 ID: <code className="text-primary font-mono">{selectedScreen.scr_id}</code></div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-end pt-2">
+            <button
+              type="button"
+              className="h-11 px-4 rounded-lg border border-outline-variant/40 bg-surface-container-lowest text-on-surface hover:bg-surface-container-high transition-colors font-medium"
+              onClick={onClose}
+              disabled={saving}
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              className={`h-11 px-5 rounded-lg text-on-primary font-semibold transition-colors inline-flex items-center justify-center gap-2 ${
+                saving || !selectedScrId
+                  ? "bg-primary/60 cursor-not-allowed"
+                  : "bg-primary hover:bg-primary/90"
+              }`}
+              onClick={() => onSubmit(selectedScrId)}
+              disabled={saving || !selectedScrId}
+            >
+              <span className="material-symbols-outlined text-[18px]">add</span>
+              {saving ? "추가 중…" : "메뉴 추가"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function menuIcon(node) {
+  if (node.screen_id) return "dashboard";
   if (node.children && node.children.length > 0) return "folder";
   return "description";
 }
@@ -260,6 +408,9 @@ function MenuTreeNode({ node, level = 0, selectedId, onSelect, searchTerm }) {
         >
           {node.menu_nm}
         </span>
+        {node.screen_id ? (
+          <span className="text-[10px] uppercase bg-secondary-container text-on-secondary-container px-1.5 py-0.5 rounded ml-1">슬롯</span>
+        ) : null}
         {isDeleted ? (
           <span className="text-[10px] uppercase text-outline ml-1">del</span>
         ) : isDisabled ? (
@@ -292,6 +443,7 @@ function MenuTree({
   onSearchChange,
   onExpandAll,
   onAddRoot,
+  onAddScreen,
   loading,
 }) {
   return (
@@ -336,16 +488,28 @@ function MenuTree({
           ))
         )}
       </div>
-      <button
-        type="button"
-        className="mt-auto pt-4 flex items-center justify-center gap-2 text-sm font-medium text-secondary hover:text-primary transition-colors border-t border-outline-variant/15"
-        onClick={onAddRoot}
-      >
-        <span className="material-symbols-outlined text-[18px]">
-          add_circle
-        </span>
-        최상위 메뉴 추가
-      </button>
+      <div className="mt-auto pt-4 flex flex-col gap-2 border-t border-outline-variant/15">
+        <button
+          type="button"
+          className="flex items-center justify-center gap-2 text-sm font-medium text-secondary hover:text-primary transition-colors"
+          onClick={onAddRoot}
+        >
+          <span className="material-symbols-outlined text-[18px]">
+            add_circle
+          </span>
+          최상위 메뉴 추가
+        </button>
+        <button
+          type="button"
+          className="flex items-center justify-center gap-2 text-sm font-medium text-tertiary hover:text-primary transition-colors"
+          onClick={onAddScreen}
+        >
+          <span className="material-symbols-outlined text-[18px]">
+            dashboard_customize
+          </span>
+          슬롯 화면 추가
+        </button>
+      </div>
     </aside>
   );
 }
@@ -384,6 +548,7 @@ function MenuDetailForm({
   const savedEnabled = String(node.use_yn ?? "Y").toUpperCase() !== "N";
   const isEnabled = Boolean(formData.useYn);
   const isUseYnDirty = savedEnabled !== isEnabled;
+  const isSlotScreen = !!node.screen_id;
 
   return (
     <div className="flex-1 bg-surface-container-lowest rounded-lg flex flex-col relative overflow-hidden shadow-[0_8px_32px_rgba(24,28,30,0.04)] min-h-0">
@@ -442,18 +607,26 @@ function MenuDetailForm({
             <h3 className="text-lg font-headline font-semibold text-primary">
               Node Configuration
             </h3>
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
-                isDeleted
-                  ? "bg-surface-container text-outline"
-                  : "bg-tertiary-fixed text-on-tertiary-fixed"
-              }`}
-            >
-              <span className="material-symbols-outlined text-[14px]">
-                {isDeleted ? "block" : "check_circle"}
+            <div className="flex items-center gap-2">
+              {isSlotScreen && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-secondary-container text-on-secondary-container flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[12px]">dashboard</span>
+                  슬롯
+                </span>
+              )}
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
+                  isDeleted
+                    ? "bg-surface-container text-outline"
+                    : "bg-tertiary-fixed text-on-tertiary-fixed"
+                }`}
+              >
+                <span className="material-symbols-outlined text-[14px]">
+                  {isDeleted ? "block" : "check_circle"}
+                </span>
+                {isDeleted ? "DELETED" : "ACTIVE"}
               </span>
-              {isDeleted ? "DELETED" : "ACTIVE"}
-            </span>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col gap-2">
@@ -578,12 +751,16 @@ function MenuDetailForm({
               URL / 라우트 (menu_path)
             </label>
             <input
-              className="border-0 border-b border-outline focus:border-primary focus:ring-0 px-0 py-2 bg-transparent text-on-surface font-mono text-sm"
+              className={`border-0 border-b border-outline focus:border-primary focus:ring-0 px-0 py-2 bg-transparent text-on-surface font-mono text-sm ${
+                isSlotScreen ? "opacity-60 cursor-not-allowed" : ""
+              }`}
               type="text"
               value={formData.menuUrl}
               onChange={(e) =>
                 onChange({ ...formData, menuUrl: e.target.value })
               }
+              disabled={isSlotScreen}
+              readOnly={isSlotScreen}
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -591,13 +768,28 @@ function MenuDetailForm({
               화면 / 컴포넌트 (screen_id)
             </label>
             <input
-              className="border-0 border-b border-outline focus:border-primary focus:ring-0 px-0 py-2 bg-transparent text-on-surface font-mono text-sm"
+              className={`border-0 border-b border-outline focus:border-primary focus:ring-0 px-0 py-2 bg-transparent text-on-surface font-mono text-sm ${
+                isSlotScreen ? "opacity-60 cursor-not-allowed" : ""
+              }`}
               type="text"
               value={formData.component}
               onChange={(e) =>
                 onChange({ ...formData, component: e.target.value })
               }
+              disabled={isSlotScreen}
+              readOnly={isSlotScreen}
             />
+            {isSlotScreen && node.screen_id && (
+              <a
+                href={`/admin/screen-config/${node.screen_id}`}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-secondary hover:text-primary transition-colors mt-1"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                레이아웃 편집기 열기
+              </a>
+            )}
           </div>
           <div className="bg-surface-container-low rounded-lg p-5 flex flex-wrap gap-x-12 gap-y-6 items-center">
             <div className="flex items-center gap-4">
@@ -734,6 +926,10 @@ export default function MenuManagement() {
     menuCd: "",
     menuName: "",
   });
+  const [addScreenOpen, setAddScreenOpen] = useState(false);
+  const [screens, setScreens] = useState([]);
+  const [addScreenLoading, setAddScreenLoading] = useState(false);
+  const [addScreenError, setAddScreenError] = useState(null);
 
   const showToast = useCallback((message, type = "success") => {
     setToast({ message, type });
@@ -916,6 +1112,67 @@ export default function MenuManagement() {
     /* 트리 펼침 상태는 노드 로컬 state — 전역 펼침은 후속 작업 */
   };
 
+  const openAddScreen = async () => {
+    if (saving) return;
+    setAddScreenOpen(true);
+    setAddScreenLoading(true);
+    setAddScreenError(null);
+    try {
+      const data = await getAdminScreensList();
+      setScreens(data);
+    } catch (err) {
+      const msg = err.response?.data?.detail || err.message || "화면 목록을 불러오지 못했습니다.";
+      setAddScreenError(typeof msg === "string" ? msg : JSON.stringify(msg));
+      setScreens([]);
+    } finally {
+      setAddScreenLoading(false);
+    }
+  };
+
+  const closeAddScreen = () => {
+    if (saving) return;
+    setAddScreenOpen(false);
+    setAddScreenError(null);
+  };
+
+  const handleSubmitAddScreen = async (scrId) => {
+    if (!scrId) return;
+    const screen = screens.find((s) => s.scr_id === scrId);
+    if (!screen) return;
+    try {
+      setSaving(true);
+      setError(null);
+      const menu_cd = `SCR_${scrId.replace(/-/g, "_")}`;
+      const menu_nm = screen.scr_nm || scrId;
+      const { menu_id } = await createAdminMenu({
+        menu_cd,
+        menu_nm,
+        parent_menu_id: null,
+        screen_id: scrId,
+        menu_path: `/view/screen/${scrId}`,
+      });
+      const tree = await loadTree();
+      const created = findNodeById(tree, menu_id);
+      if (created) {
+        setSelectedNode(created);
+        setFormData(nodeToForm(created));
+      }
+      setAddScreenOpen(false);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+      showToast(`슬롯 화면 메뉴가 추가되었습니다: ${menu_nm}`, "success");
+    } catch (err) {
+      const msg = err.response?.data?.detail || err.message || "추가 실패";
+      setAddScreenError(typeof msg === "string" ? msg : JSON.stringify(msg));
+      showToast(
+        typeof msg === "string" ? msg : "추가에 실패했습니다.",
+        "error",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className={ADMIN_PAGE_CONTAINER_CLASS}>
       <PageHeader
@@ -936,6 +1193,7 @@ export default function MenuManagement() {
           onSearchChange={setSearchTerm}
           onExpandAll={handleExpandAll}
           onAddRoot={openAddRoot}
+          onAddScreen={openAddScreen}
           loading={loading}
         />
         <MenuDetailForm
@@ -972,6 +1230,15 @@ export default function MenuManagement() {
         }}
         onClose={closeAddRoot}
         onSubmit={handleSubmitAddRoot}
+      />
+      <AddScreenMenuDialog
+        open={addScreenOpen}
+        screens={screens}
+        loading={addScreenLoading}
+        saving={saving}
+        error={addScreenError}
+        onClose={closeAddScreen}
+        onSubmit={handleSubmitAddScreen}
       />
     </div>
   );

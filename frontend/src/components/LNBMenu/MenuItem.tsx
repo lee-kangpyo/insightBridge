@@ -8,7 +8,8 @@ export default function MenuItem({ menu, isAdmin = false, onSelect }) {
   const menuPath = menu.menu_path || menu.path;
   const children = menu.children || [];
   const hasChildren = children.length > 0;
-  const hasPath = !!menuPath;
+  const hasPath = !!menuPath || !!menu.screen_id;
+  const linkTo = menu.screen_id ? `/view/screen/${menu.screen_id}` : menuPath;
   const isActive = hasPath && location.pathname === menuPath;
 
   useEffect(() => {
@@ -67,6 +68,9 @@ export default function MenuItem({ menu, isAdmin = false, onSelect }) {
           style={{ backgroundColor: '#002c5a' }}
         />
       )}
+      {menu.screen_id && (
+        <span className="material-symbols-outlined text-[14px] text-[#737781]">dashboard</span>
+      )}
       <span
         className={[
           'text-[13px] font-medium flex-1 transition-colors duration-150',
@@ -80,6 +84,9 @@ export default function MenuItem({ menu, isAdmin = false, onSelect }) {
       >
         {menu.menu_nm}
       </span>
+      {menu.screen_id && (
+        <span className="text-[10px] uppercase bg-blue-100 text-blue-700 px-1 py-0.5 rounded">슬롯</span>
+      )}
       {hasChildren && (
         <MaterialIcon
           name={expanded ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}
@@ -95,7 +102,7 @@ export default function MenuItem({ menu, isAdmin = false, onSelect }) {
   if (hasPath && !hasChildren) {
     return (
       <Link
-        to={menuPath}
+        to={linkTo}
         className="block"
         onClick={() => onSelect?.(menu)}
       >

@@ -139,24 +139,32 @@ async def create_menu(
     pool = await get_pool()
     parent = _norm_parent_for_db(parent_menu_id)
     async with pool.acquire() as conn:
-        row = await conn.fetchrow(
-            """
-            INSERT INTO ts_menu_info (
-                menu_cd, menu_nm, parent_menu_id, menu_level,
-                menu_path, screen_id, sort_order, use_yn, del_fg
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                """
+                INSERT INTO ts_menu_info (
+                    menu_cd, menu_nm, parent_menu_id, menu_level,
+                    menu_path, screen_id, sort_order, use_yn, del_fg
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, 'Y', 'N')
+                RETURNING menu_id
+                """,
+                menu_cd.strip(),
+                menu_nm.strip(),
+                parent,
+                menu_level,
+                menu_path.strip() if menu_path else None,
+                screen_id.strip() if screen_id else None,
+                sort_order,
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, 'Y', 'N')
-            RETURNING menu_id
-            """,
-            menu_cd.strip(),
-            menu_nm.strip(),
-            parent,
-            menu_level,
-            menu_path.strip() if menu_path else None,
-            screen_id.strip() if screen_id else None,
-            sort_order,
-        )
-        return int(row["menu_id"])
+            menu_id = int(row["menu_id"])
+            if screen_id and str(screen_id).strip():
+                await conn.execute(
+                    "UPDATE ts_scr_info SET menu_id = $1 WHERE scr_id = $2",
+                    menu_id,
+                    str(screen_id).strip(),
+                )
+            return menu_id
 
 
 async def patch_menu(menu_id: int, updates: dict[str, Any]) -> None:
@@ -213,7 +221,17 @@ async def patch_menu(menu_id: int, updates: dict[str, Any]) -> None:
 
 
 async def soft_delete_menu(menu_id: int) -> None:
-    await patch_menu(menu_id, {"del_fg": "Y"})
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await conn.execute(
+                "UPDATE ts_scr_info SET menu_id = NULL WHERE menu_id = $1",
+                menu_id,
+            )
+            await conn.execute(
+                "UPDATE ts_menu_info SET del_fg = 'Y' WHERE menu_id = $1",
+                menu_id,
+            )
 
 
 async def toggle_role_menu(menu_id: int, grp_id: int, enabled: bool) -> None:

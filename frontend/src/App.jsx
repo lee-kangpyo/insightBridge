@@ -27,6 +27,7 @@ import UserManagement from "./pages/admin/UserManagement";
 import ChartGallery from "./pages/admin/ChartGallery";
 import ScreenConfigPage from "./pages/admin/ScreenConfigPage";
 import SlotLayoutPage from "./pages/admin/SlotLayoutPage";
+import ScreenViewer from "./pages/ScreenViewer";
 import ItemsManagement from "./pages/admin/ItemsManagement";
 
 function App() {
@@ -159,6 +160,14 @@ function App() {
         <Route path="screen-config/:templateId" element={<SlotLayoutPage />} />
         <Route path="items" element={<ItemsManagement />} />
       </Route>
+      <Route
+        path="/view/screen/:scrId"
+        element={
+          <ProtectedRoute>
+            <ScreenViewer />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

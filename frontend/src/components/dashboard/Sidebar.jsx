@@ -46,6 +46,9 @@ const SidebarMenuItem = React.memo(function SidebarMenuItem({ menu, level, activ
             expand_more
           </span>
         )}
+        {menu.screen_id && (
+          <span className="material-symbols-outlined text-[14px] text-[#737781]">dashboard</span>
+        )}
         <span
           className={[
             'text-[13px] font-medium flex-1 transition-colors duration-150',
@@ -55,6 +58,9 @@ const SidebarMenuItem = React.memo(function SidebarMenuItem({ menu, level, activ
         >
           {menu.menu_nm}
         </span>
+        {menu.screen_id && (
+          <span className="text-[10px] uppercase bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">슬롯</span>
+        )}
         {isDisabled && (
           <span className="text-[10px] uppercase text-[#737781]">off</span>
         )}
