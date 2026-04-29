@@ -15,14 +15,72 @@ export interface UniversalChartProps {
   };
 }
 
+const CHART_COLORS = [
+  '#60a5fa', // blue-400
+  '#34d399', // emerald-400
+  '#f472b6', // pink-400
+  '#fb923c', // orange-400
+  '#a78bfa', // violet-400
+  '#38bdf8', // sky-400
+  '#fbbf24', // amber-400
+  '#4ade80', // green-400
+];
+
+const C = {
+  axisLabel: '#475569',
+  axisName: '#1e3a5f',
+  gridLine: 'rgba(219,228,240,0.55)',
+  axisLine: '#dbe4f0',
+};
+
+function grad(hex: string, fromAlpha = 'cc', toAlpha = '18'): object {
+  return {
+    type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+    colorStops: [
+      { offset: 0, color: `${hex}${fromAlpha}` },
+      { offset: 1, color: `${hex}${toAlpha}` },
+    ],
+  };
+}
+
+const TOOLTIP_BASE = {
+  backgroundColor: 'rgba(255,255,255,0.94)',
+  borderColor: 'rgba(219,228,240,0.7)',
+  borderWidth: 1,
+  borderRadius: 12,
+  padding: [10, 14],
+  textStyle: { color: '#0f172a', fontSize: 12 },
+  extraCssText: 'box-shadow:0 12px 32px rgba(2,132,199,0.12);backdrop-filter:blur(12px);',
+};
+
+const LEGEND_BASE = {
+  icon: 'roundRect',
+  textStyle: { color: '#475569', fontSize: 11 },
+  itemWidth: 12,
+  itemHeight: 8,
+};
+
+const AXIS_SPLIT_LINE = { lineStyle: { color: C.gridLine, type: 'dashed' as const } };
+const AXIS_LINE_STYLE = { lineStyle: { color: C.axisLine } };
+const AXIS_TICK_STYLE = { lineStyle: { color: C.axisLine } };
+
 const COMMON_THEME = {
+  color: CHART_COLORS,
+  backgroundColor: 'transparent',
   tooltip: {
     trigger: 'axis',
-    axisPointer: { type: 'shadow' },
+    axisPointer: {
+      type: 'cross',
+      crossStyle: { color: '#94a3b8', opacity: 0.5 },
+      lineStyle: { color: C.axisLine, type: 'dashed' },
+      shadowStyle: { color: 'rgba(2,132,199,0.04)' },
+    },
+    ...TOOLTIP_BASE,
   },
   animation: true,
-  animationDuration: 800,
+  animationDuration: 900,
   animationEasing: 'cubicOut' as const,
+  animationDelay: (idx: number) => idx * 40,
 };
 
 function buildLegendOption(
@@ -35,11 +93,11 @@ function buildLegendOption(
    * `legend=top` + `title.top=10` 조합에서 서로 겹치지 않도록,
    * 제목이 있으면 범례를 제목 아래로 내린다.
    */
-  if (legendPos === 'top') return { top: hasTitle ? 42 : 10, left: 'center', orient };
-  if (legendPos === 'bottom') return { bottom: 8, left: 'center', orient };
+  if (legendPos === 'top') return { ...LEGEND_BASE, top: hasTitle ? 42 : 10, left: 'center', orient };
+  if (legendPos === 'bottom') return { ...LEGEND_BASE, bottom: 8, left: 'center', orient };
   /** 왼쪽 세로 범례는 고정 폭으로 두고, 그리드 `left`와 맞물려 Y축 이름과 겹치지 않게 함 */
-  if (legendPos === 'left') return { left: 6, top: 'middle', orient, width: 88, padding: [4, 4, 4, 0] };
-  return { right: 6, top: 'middle', orient, width: 88, padding: [4, 0, 4, 4] }; // right
+  if (legendPos === 'left') return { ...LEGEND_BASE, left: 6, top: 'middle', orient, width: 88, padding: [4, 4, 4, 0] };
+  return { ...LEGEND_BASE, right: 6, top: 'middle', orient, width: 88, padding: [4, 0, 4, 4] }; // right
 }
 
 /** 타일(~300px)에서도 범례·축 이름·축 눈금이 겹치지 않도록 픽셀 기준으로 여백 계산 */
@@ -105,7 +163,7 @@ function buildCommonOption(config: UniversalChartProps['config']) {
       text: config.title,
       left: titlePos,
       top: 10,
-      textStyle: { fontSize: 16, fontWeight: 600 },
+      textStyle: { fontSize: 14, fontWeight: 700, color: '#0f172a' },
     } : undefined,
     legend: {
       show: true,
@@ -130,22 +188,30 @@ function buildBarOption(data: any, config: UniversalChartProps['config']) {
       name: xName || undefined,
       nameLocation: 'middle',
       nameGap: xName ? 36 : 28,
-      nameTextStyle: { fontSize: 12, color: '#374151' },
-      axisLabel: { fontSize: 11, color: '#4b5563', margin: 6 },
+      nameTextStyle: { fontSize: 11, color: C.axisName, fontWeight: 500 },
+      axisLabel: { fontSize: 10, color: C.axisLabel, margin: 6 },
+      axisLine: AXIS_LINE_STYLE,
+      axisTick: AXIS_TICK_STYLE,
     },
     yAxis: {
       type: 'value',
       name: yName || undefined,
       nameLocation: 'middle',
       nameGap: 40,
-      nameTextStyle: { fontSize: 12, color: '#374151' },
-      axisLabel: { fontSize: 11, color: '#4b5563' },
+      nameTextStyle: { fontSize: 11, color: C.axisName, fontWeight: 500 },
+      axisLabel: { fontSize: 10, color: C.axisLabel },
+      axisLine: { show: false },
+      splitLine: AXIS_SPLIT_LINE,
     },
     series: series.map((s: any, i: number) => ({
       type: 'bar',
       data: s.data,
       name: s.name || `Series ${i + 1}`,
-      itemStyle: { borderRadius: [4, 4, 0, 0] },
+      barMaxWidth: 40,
+      itemStyle: {
+        borderRadius: [6, 6, 0, 0],
+        color: grad(CHART_COLORS[i % CHART_COLORS.length]),
+      },
     })),
   };
 }
@@ -165,32 +231,77 @@ function buildLineOption(data: any, config: UniversalChartProps['config'], optio
       name: xName || undefined,
       nameLocation: 'middle',
       nameGap: xName ? 36 : 28,
-      nameTextStyle: { fontSize: 12, color: '#374151' },
-      axisLabel: { fontSize: 11, color: '#4b5563', margin: 6 },
+      nameTextStyle: { fontSize: 11, color: C.axisName, fontWeight: 500 },
+      axisLabel: { fontSize: 10, color: C.axisLabel, margin: 6 },
+      axisLine: AXIS_LINE_STYLE,
+      axisTick: AXIS_TICK_STYLE,
+      boundaryGap: false,
     },
     yAxis: {
       type: 'value',
       name: yName || undefined,
       nameLocation: 'middle',
       nameGap: 40,
-      nameTextStyle: { fontSize: 12, color: '#374151' },
-      axisLabel: { fontSize: 11, color: '#4b5563' },
+      nameTextStyle: { fontSize: 11, color: C.axisName, fontWeight: 500 },
+      axisLabel: { fontSize: 10, color: C.axisLabel },
+      axisLine: { show: false },
+      splitLine: AXIS_SPLIT_LINE,
     },
     series: series.map((s: any, i: number) => ({
       type: 'line',
       data: s.data,
       name: s.name || `Series ${i + 1}`,
       smooth: true,
+      lineStyle: { width: 2.5, color: CHART_COLORS[i % CHART_COLORS.length] },
+      itemStyle: { color: CHART_COLORS[i % CHART_COLORS.length], borderWidth: 2, borderColor: '#fff' },
+      symbolSize: 6,
       ...options,
     })),
   };
 }
 
 function buildAreaOption(data: any, config: UniversalChartProps['config']) {
-  return buildLineOption(data, config, {
-    areaStyle: {},
-    lineStyle: { width: 2 },
-  });
+  const categories = data.categories || data.xAxis?.data || [];
+  const series = data.series || (data.values ? [{ data: data.values }] : []);
+  const xName = config.xAxisName?.trim() || '';
+  const yName = config.yAxisName?.trim() || '';
+
+  return {
+    ...COMMON_THEME,
+    ...buildCommonOption(config),
+    xAxis: {
+      type: 'category',
+      data: categories,
+      name: xName || undefined,
+      nameLocation: 'middle',
+      nameGap: xName ? 36 : 28,
+      nameTextStyle: { fontSize: 11, color: C.axisName, fontWeight: 500 },
+      axisLabel: { fontSize: 10, color: C.axisLabel, margin: 6 },
+      axisLine: AXIS_LINE_STYLE,
+      axisTick: AXIS_TICK_STYLE,
+      boundaryGap: false,
+    },
+    yAxis: {
+      type: 'value',
+      name: yName || undefined,
+      nameLocation: 'middle',
+      nameGap: 40,
+      nameTextStyle: { fontSize: 11, color: C.axisName, fontWeight: 500 },
+      axisLabel: { fontSize: 10, color: C.axisLabel },
+      axisLine: { show: false },
+      splitLine: AXIS_SPLIT_LINE,
+    },
+    series: series.map((s: any, i: number) => ({
+      type: 'line',
+      data: s.data,
+      name: s.name || `Series ${i + 1}`,
+      smooth: true,
+      lineStyle: { width: 2.5, color: CHART_COLORS[i % CHART_COLORS.length] },
+      itemStyle: { color: CHART_COLORS[i % CHART_COLORS.length], borderWidth: 2, borderColor: '#fff' },
+      symbolSize: 6,
+      areaStyle: { color: grad(CHART_COLORS[i % CHART_COLORS.length], '44', '06') },
+    })),
+  };
 }
 
 function buildStackedColumnOption(data: any, config: UniversalChartProps['config']) {
@@ -208,23 +319,31 @@ function buildStackedColumnOption(data: any, config: UniversalChartProps['config
       name: xName || undefined,
       nameLocation: 'middle',
       nameGap: xName ? 36 : 28,
-      nameTextStyle: { fontSize: 12, color: '#374151' },
-      axisLabel: { fontSize: 11, color: '#4b5563', margin: 6 },
+      nameTextStyle: { fontSize: 11, color: C.axisName, fontWeight: 500 },
+      axisLabel: { fontSize: 10, color: C.axisLabel, margin: 6 },
+      axisLine: AXIS_LINE_STYLE,
+      axisTick: AXIS_TICK_STYLE,
     },
     yAxis: {
       type: 'value',
       name: yName || undefined,
       nameLocation: 'middle',
       nameGap: 40,
-      nameTextStyle: { fontSize: 12, color: '#374151' },
-      axisLabel: { fontSize: 11, color: '#4b5563' },
+      nameTextStyle: { fontSize: 11, color: C.axisName, fontWeight: 500 },
+      axisLabel: { fontSize: 10, color: C.axisLabel },
+      axisLine: { show: false },
+      splitLine: AXIS_SPLIT_LINE,
     },
     series: series.map((s: any, i: number) => ({
       type: 'bar',
       data: s.data,
       name: s.name || `Series ${i + 1}`,
       stack: 'total',
-      itemStyle: { borderRadius: [0, 0, 0, 0] },
+      barMaxWidth: 48,
+      itemStyle: {
+        borderRadius: i === series.length - 1 ? [6, 6, 0, 0] : [0, 0, 0, 0],
+        color: CHART_COLORS[i % CHART_COLORS.length],
+      },
     })),
   };
 }
@@ -238,23 +357,35 @@ function buildStackedHorizontalBarOption(data: any, config: UniversalChartProps[
     ...buildCommonOption(config),
     xAxis: {
       type: 'value',
-      name: config.xAxisName || '',
+      name: config.xAxisName || undefined,
       nameLocation: 'middle',
       nameGap: 30,
+      nameTextStyle: { fontSize: 11, color: C.axisName, fontWeight: 500 },
+      axisLabel: { fontSize: 10, color: C.axisLabel },
+      axisLine: { show: false },
+      splitLine: AXIS_SPLIT_LINE,
     },
     yAxis: {
       type: 'category',
       data: categories,
-      name: config.yAxisName || '',
+      name: config.yAxisName || undefined,
       nameLocation: 'middle',
       nameGap: 40,
+      nameTextStyle: { fontSize: 11, color: C.axisName, fontWeight: 500 },
+      axisLabel: { fontSize: 10, color: C.axisLabel },
+      axisLine: AXIS_LINE_STYLE,
+      axisTick: AXIS_TICK_STYLE,
     },
     series: series.map((s: any, i: number) => ({
       type: 'bar',
       data: s.data,
       name: s.name || `Series ${i + 1}`,
       stack: 'total',
-      itemStyle: { borderRadius: [0, 4, 4, 0] },
+      barMaxWidth: 32,
+      itemStyle: {
+        borderRadius: i === series.length - 1 ? [0, 6, 6, 0] : [0, 0, 0, 0],
+        color: CHART_COLORS[i % CHART_COLORS.length],
+      },
     })),
   };
 }
@@ -274,16 +405,21 @@ function buildStackedAreaOption(data: any, config: UniversalChartProps['config']
       name: xName || undefined,
       nameLocation: 'middle',
       nameGap: xName ? 36 : 28,
-      nameTextStyle: { fontSize: 12, color: '#374151' },
-      axisLabel: { fontSize: 11, color: '#4b5563', margin: 6 },
+      nameTextStyle: { fontSize: 11, color: C.axisName, fontWeight: 500 },
+      axisLabel: { fontSize: 10, color: C.axisLabel, margin: 6 },
+      axisLine: AXIS_LINE_STYLE,
+      axisTick: AXIS_TICK_STYLE,
+      boundaryGap: false,
     },
     yAxis: {
       type: 'value',
       name: yName || undefined,
       nameLocation: 'middle',
       nameGap: 40,
-      nameTextStyle: { fontSize: 12, color: '#374151' },
-      axisLabel: { fontSize: 11, color: '#4b5563' },
+      nameTextStyle: { fontSize: 11, color: C.axisName, fontWeight: 500 },
+      axisLabel: { fontSize: 10, color: C.axisLabel },
+      axisLine: { show: false },
+      splitLine: AXIS_SPLIT_LINE,
     },
     series: series.map((s: any, i: number) => ({
       type: 'line',
@@ -291,8 +427,9 @@ function buildStackedAreaOption(data: any, config: UniversalChartProps['config']
       name: s.name || `Series ${i + 1}`,
       stack: 'total',
       smooth: true,
-      areaStyle: {},
-      lineStyle: { width: 2 },
+      lineStyle: { width: 2, color: CHART_COLORS[i % CHART_COLORS.length] },
+      itemStyle: { color: CHART_COLORS[i % CHART_COLORS.length] },
+      areaStyle: { color: grad(CHART_COLORS[i % CHART_COLORS.length], '55', '18') },
     })),
   };
 }
@@ -306,22 +443,34 @@ function buildHorizontalBarOption(data: any, config: UniversalChartProps['config
     ...buildCommonOption(config),
     xAxis: {
       type: 'value',
-      name: config.xAxisName || '',
+      name: config.xAxisName || undefined,
       nameLocation: 'middle',
       nameGap: 30,
+      nameTextStyle: { fontSize: 11, color: C.axisName, fontWeight: 500 },
+      axisLabel: { fontSize: 10, color: C.axisLabel },
+      axisLine: { show: false },
+      splitLine: AXIS_SPLIT_LINE,
     },
     yAxis: {
       type: 'category',
       data: categories,
-      name: config.yAxisName || '',
+      name: config.yAxisName || undefined,
       nameLocation: 'middle',
       nameGap: 40,
+      nameTextStyle: { fontSize: 11, color: C.axisName, fontWeight: 500 },
+      axisLabel: { fontSize: 10, color: C.axisLabel },
+      axisLine: AXIS_LINE_STYLE,
+      axisTick: AXIS_TICK_STYLE,
     },
     series: series.map((s: any, i: number) => ({
       type: 'bar',
       data: s.data,
       name: s.name || `Series ${i + 1}`,
-      itemStyle: { borderRadius: [0, 4, 4, 0] },
+      barMaxWidth: 28,
+      itemStyle: {
+        borderRadius: [0, 6, 6, 0],
+        color: grad(CHART_COLORS[i % CHART_COLORS.length]),
+      },
     })),
   };
 }
@@ -331,13 +480,16 @@ function buildPieOption(data: any, config: UniversalChartProps['config']) {
 
   return {
     ...COMMON_THEME,
-    tooltip: { trigger: 'item' },
+    tooltip: { trigger: 'item', ...TOOLTIP_BASE },
     ...buildCommonOption(config),
     series: [{
       type: 'pie',
-      radius: '60%',
+      radius: ['0%', '62%'],
       data: pieData,
-      label: { fontSize: 11 },
+      label: { fontSize: 11, color: C.axisLabel },
+      labelLine: { lineStyle: { color: C.axisLine } },
+      itemStyle: { borderWidth: 2, borderColor: 'rgba(255,255,255,0.8)' },
+      emphasis: { itemStyle: { shadowBlur: 16, shadowColor: 'rgba(2,132,199,0.25)' } },
     }],
   };
 }
@@ -347,13 +499,16 @@ function buildDonutOption(data: any, config: UniversalChartProps['config']) {
 
   return {
     ...COMMON_THEME,
-    tooltip: { trigger: 'item' },
+    tooltip: { trigger: 'item', ...TOOLTIP_BASE },
     ...buildCommonOption(config),
     series: [{
       type: 'pie',
-      radius: ['40%', '70%'],
+      radius: ['42%', '68%'],
       data: pieData,
-      label: { fontSize: 11 },
+      label: { fontSize: 11, color: C.axisLabel },
+      labelLine: { lineStyle: { color: C.axisLine } },
+      itemStyle: { borderWidth: 3, borderColor: 'rgba(255,255,255,0.95)' },
+      emphasis: { itemStyle: { shadowBlur: 20, shadowColor: 'rgba(96,165,250,0.35)' } },
     }],
   };
 }
@@ -363,14 +518,17 @@ function buildNightingaleRoseOption(data: any, config: UniversalChartProps['conf
 
   return {
     ...COMMON_THEME,
-    tooltip: { trigger: 'item' },
+    tooltip: { trigger: 'item', ...TOOLTIP_BASE },
     ...buildCommonOption(config),
     series: [{
       type: 'pie',
-      radius: ['20%', '70%'],
+      radius: ['18%', '68%'],
       data: pieData,
       roseType: 'area',
-      label: { fontSize: 10 },
+      label: { fontSize: 10, color: C.axisLabel },
+      labelLine: { lineStyle: { color: C.axisLine } },
+      itemStyle: { borderWidth: 2, borderColor: 'rgba(255,255,255,0.8)' },
+      emphasis: { itemStyle: { shadowBlur: 12, shadowColor: 'rgba(2,132,199,0.2)' } },
     }],
   };
 }
@@ -383,20 +541,30 @@ function buildScatterOption(data: any, config: UniversalChartProps['config']) {
     ...buildCommonOption(config),
     xAxis: {
       type: 'value',
-      name: config.xAxisName || '',
+      name: config.xAxisName || undefined,
       nameLocation: 'middle',
       nameGap: 30,
+      nameTextStyle: { fontSize: 11, color: C.axisName, fontWeight: 500 },
+      axisLabel: { fontSize: 10, color: C.axisLabel },
+      splitLine: AXIS_SPLIT_LINE,
+      axisLine: AXIS_LINE_STYLE,
     },
     yAxis: {
       type: 'value',
-      name: config.yAxisName || '',
+      name: config.yAxisName || undefined,
       nameLocation: 'middle',
       nameGap: 40,
+      nameTextStyle: { fontSize: 11, color: C.axisName, fontWeight: 500 },
+      axisLabel: { fontSize: 10, color: C.axisLabel },
+      splitLine: AXIS_SPLIT_LINE,
+      axisLine: { show: false },
     },
     series: [{
       type: 'scatter',
       data: scatterData,
       symbolSize: 10,
+      itemStyle: { color: CHART_COLORS[0], opacity: 0.75, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)' },
+      emphasis: { itemStyle: { shadowBlur: 12, shadowColor: 'rgba(2,132,199,0.3)' } },
     }],
   };
 }
@@ -410,20 +578,30 @@ function buildBubbleOption(data: any, config: UniversalChartProps['config']) {
     ...buildCommonOption(config),
     xAxis: {
       type: 'value',
-      name: config.xAxisName || '',
+      name: config.xAxisName || undefined,
       nameLocation: 'middle',
       nameGap: 30,
+      nameTextStyle: { fontSize: 11, color: C.axisName, fontWeight: 500 },
+      axisLabel: { fontSize: 10, color: C.axisLabel },
+      splitLine: AXIS_SPLIT_LINE,
+      axisLine: AXIS_LINE_STYLE,
     },
     yAxis: {
       type: 'value',
-      name: config.yAxisName || '',
+      name: config.yAxisName || undefined,
       nameLocation: 'middle',
       nameGap: 40,
+      nameTextStyle: { fontSize: 11, color: C.axisName, fontWeight: 500 },
+      axisLabel: { fontSize: 10, color: C.axisLabel },
+      splitLine: AXIS_SPLIT_LINE,
+      axisLine: { show: false },
     },
     series: [{
       type: 'scatter',
       data: bubbleData,
       symbolSize: (val: number[]) => Math.sqrt(val[2]) * 2,
+      itemStyle: { color: CHART_COLORS[1], opacity: 0.7, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)' },
+      emphasis: { itemStyle: { shadowBlur: 14, shadowColor: 'rgba(5,150,105,0.3)' } },
     }],
   };
 }
@@ -584,8 +762,8 @@ function buildHeatmapVisualMap(
     min: 0,
     max,
     calculable: true,
-    inRange: { color: ['#50a3ba', '#eac736', '#d94e5d'] },
-    textStyle: { fontSize: 11 },
+    inRange: { color: ['#e0f2fe', '#0284c7', '#132337'] },
+    textStyle: { fontSize: 11, color: C.axisLabel },
   };
 
   switch (vmPos) {
@@ -645,8 +823,10 @@ function buildHeatmapOption(data: any, config: UniversalChartProps['config']) {
       name: xName || undefined,
       nameLocation: 'middle',
       nameGap: xName ? 36 : 28,
-      nameTextStyle: { fontSize: 12, color: '#374151' },
-      axisLabel: { fontSize: 11, color: '#4b5563', margin: 6 },
+      nameTextStyle: { fontSize: 11, color: C.axisName, fontWeight: 500 },
+      axisLabel: { fontSize: 10, color: C.axisLabel, margin: 6 },
+      axisLine: AXIS_LINE_STYLE,
+      axisTick: AXIS_TICK_STYLE,
     },
     yAxis: {
       type: 'category',
@@ -654,15 +834,18 @@ function buildHeatmapOption(data: any, config: UniversalChartProps['config']) {
       name: yName || undefined,
       nameLocation: 'middle',
       nameGap: yName ? 44 : 36,
-      nameTextStyle: { fontSize: 12, color: '#374151' },
-      axisLabel: { fontSize: 11, color: '#4b5563', margin: 6 },
+      nameTextStyle: { fontSize: 11, color: C.axisName, fontWeight: 500 },
+      axisLabel: { fontSize: 10, color: C.axisLabel, margin: 6 },
+      axisLine: AXIS_LINE_STYLE,
+      axisTick: AXIS_TICK_STYLE,
     },
     visualMap: buildHeatmapVisualMap(config, maxValue),
     series: [{
       type: 'heatmap',
       data: heatmapData,
       label: { show: false },
-      emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.5)' } },
+      itemStyle: { borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)', borderRadius: 3 },
+      emphasis: { itemStyle: { shadowBlur: 12, shadowColor: 'rgba(2,132,199,0.3)' } },
     }],
   };
 }
@@ -706,7 +889,7 @@ function buildCalendarHeatmapOption(data: any, config: UniversalChartProps['conf
     },
     visualMap: {
       ...buildHeatmapVisualMap(config, maxValue, { hasTopCaption: hasCalendarCaption }),
-      inRange: { color: ['#ebedf0', '#9ec8e5', '#4a96c6', '#d94e5d'] },
+      inRange: { color: ['#f0fdf4', '#6ee7b7', '#059669', '#132337'] },
     },
     series: [{
       type: 'heatmap',
@@ -752,13 +935,20 @@ function buildRadarOption(data: any, config: UniversalChartProps['config']) {
       indicator,
       center: radarLayout.center,
       radius: radarLayout.radius,
+      axisNameGap: 6,
+      axisName: { color: C.axisLabel, fontSize: 11 },
+      axisLine: { lineStyle: { color: C.gridLine } },
+      splitLine: { lineStyle: { color: C.gridLine } },
+      splitArea: { areaStyle: { color: ['rgba(219,228,240,0.08)', 'rgba(219,228,240,0.03)'] } },
     },
     series: [{
       type: 'radar',
       data: seriesData.map((s: any, i: number) => ({
         value: s.data || s,
         name: s.name || `Series ${i + 1}`,
-        areaStyle: { opacity: 0.3 },
+        lineStyle: { color: CHART_COLORS[i % CHART_COLORS.length], width: 2 },
+        itemStyle: { color: CHART_COLORS[i % CHART_COLORS.length] },
+        areaStyle: { color: CHART_COLORS[i % CHART_COLORS.length], opacity: 0.18 },
       })),
     }],
   };
@@ -788,10 +978,10 @@ function buildCandlestickOption(data: any, config: UniversalChartProps['config']
       type: 'candlestick',
       data: candleData,
       itemStyle: {
-        color: '#d94e5d',
-        color0: '#4a96c6',
-        borderColor: '#d94e5d',
-        borderColor0: '#4a96c6',
+        color: CHART_COLORS[4],
+        color0: CHART_COLORS[0],
+        borderColor: CHART_COLORS[4],
+        borderColor0: CHART_COLORS[0],
       },
     }],
   };
@@ -815,15 +1005,26 @@ function buildGaugeOption(data: any, config: UniversalChartProps['config']) {
       splitNumber: 8,
       axisLine: {
         lineStyle: {
-          width: 6,
-          color: [[1, '#4a96c6']],
+          width: 10,
+          color: [
+            [0.3, '#e0f2fe'],
+            [0.7, CHART_COLORS[0]],
+            [1, '#132337'],
+          ],
         },
       },
-      pointer: { itemStyle: { color: '#d94e5d' }, width: 5 },
+      pointer: { itemStyle: { color: CHART_COLORS[4] }, width: 5, length: '65%' },
+      progress: { show: true, width: 10 },
       axisTick: { show: false },
       splitLine: { show: false },
-      axisLabel: { distance: 20, fontSize: 10 },
-      detail: { valueAnimation: true, fontSize: 24, offsetCenter: [0, 0] },
+      axisLabel: { distance: 20, fontSize: 10, color: C.axisLabel },
+      detail: {
+        valueAnimation: true,
+        fontSize: 22,
+        fontWeight: 700,
+        color: '#132337',
+        offsetCenter: [0, 0],
+      },
     }],
   };
 }
@@ -869,21 +1070,23 @@ function buildWaterfallOption(data: any, config: UniversalChartProps['config']) 
         type: 'bar',
         data: subtotals,
         itemStyle: { color: 'transparent', borderWidth: 0 },
-        barWidth: '50%',
+        barMaxWidth: 40,
         stack: 'total',
       },
       {
         type: 'bar',
         data: positive,
         name: '증가',
-        itemStyle: { color: '#4a96c6', borderRadius: [0, 0, 0, 0] },
+        itemStyle: { color: grad(CHART_COLORS[0]), borderRadius: [6, 6, 0, 0] },
+        barMaxWidth: 40,
         stack: 'total',
       },
       {
         type: 'bar',
         data: negative.map((v: number) => Math.abs(v)),
         name: '감소',
-        itemStyle: { color: '#d94e5d', borderRadius: [0, 0, 0, 0] },
+        itemStyle: { color: grad(CHART_COLORS[4]), borderRadius: [6, 6, 0, 0] },
+        barMaxWidth: 40,
         stack: 'total',
       },
     ],
@@ -990,7 +1193,7 @@ function buildPopulationPyramidOption(data: any, config: UniversalChartProps['co
         name: 'Male',
         xAxisIndex: 0,
         yAxisIndex: 0,
-        itemStyle: { color: '#4a96c6', borderRadius: [0, 2, 2, 0] },
+        itemStyle: { color: CHART_COLORS[0], borderRadius: [0, 4, 4, 0] },
       },
       {
         type: 'bar',
@@ -998,7 +1201,7 @@ function buildPopulationPyramidOption(data: any, config: UniversalChartProps['co
         name: 'Female',
         xAxisIndex: 1,
         yAxisIndex: 1,
-        itemStyle: { color: '#d94e5d', borderRadius: [2, 0, 0, 2] },
+        itemStyle: { color: CHART_COLORS[4], borderRadius: [4, 0, 0, 4] },
       },
     ],
   };
@@ -1065,22 +1268,29 @@ function buildHistogramOption(data: any, config: UniversalChartProps['config']) 
       name: xName || undefined,
       nameLocation: 'middle',
       nameGap: xName ? 36 : 28,
-      nameTextStyle: { fontSize: 12, color: '#374151' },
-      axisLabel: { fontSize: 11, color: '#4b5563', margin: 6 },
+      nameTextStyle: { fontSize: 11, color: C.axisName, fontWeight: 500 },
+      axisLabel: { fontSize: 10, color: C.axisLabel, margin: 6 },
+      axisLine: AXIS_LINE_STYLE,
+      axisTick: AXIS_TICK_STYLE,
     },
     yAxis: {
       type: 'value',
       name: yName || undefined,
       nameLocation: 'middle',
       nameGap: 40,
-      nameTextStyle: { fontSize: 12, color: '#374151' },
-      axisLabel: { fontSize: 11, color: '#4b5563' },
+      nameTextStyle: { fontSize: 11, color: C.axisName, fontWeight: 500 },
+      axisLabel: { fontSize: 10, color: C.axisLabel },
+      axisLine: { show: false },
+      splitLine: AXIS_SPLIT_LINE,
     },
     series: [{
       type: 'bar',
       data: values,
-      barCategoryGap: '10%',
-      itemStyle: { borderRadius: [0, 0, 0, 0] },
+      barCategoryGap: '8%',
+      itemStyle: {
+        borderRadius: [4, 4, 0, 0],
+        color: grad(CHART_COLORS[0]),
+      },
     }],
   };
 }

@@ -24,7 +24,7 @@ const FILTERS: { type: ChartFilterType; label: string }[] = [
 ];
 
 const baseBtn =
-  "rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-surface";
+  "rounded-xl px-3 py-1.5 text-sm font-semibold backdrop-blur-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-transparent";
 
 export default function ChartTypeFilter({
   selectedFilter,
@@ -46,8 +46,8 @@ export default function ChartTypeFilter({
             aria-pressed={isActive}
             className={
               isActive
-                ? `${baseBtn} bg-secondary text-on-secondary shadow-sm hover:brightness-95`
-                : `${baseBtn} border border-outline-variant bg-surface-container-lowest text-on-surface shadow-sm hover:border-secondary hover:text-secondary`
+                ? `${baseBtn} bg-secondary/85 text-white border border-secondary/40 shadow-md shadow-sky-500/20`
+                : `${baseBtn} border border-white/60 bg-white/50 text-on-surface hover:bg-white/72 hover:border-white/80 shadow-sm`
             }
           >
             {label}

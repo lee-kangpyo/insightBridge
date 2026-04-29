@@ -37,59 +37,61 @@ export function CompositeKpiCardPreview({ title, headline, rows, sources }) {
   if (!hasHeadline && !hasRows) return null;
 
   return (
-    <div className="space-y-2">
-      <div className="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/40 shadow-md hover:shadow-lg hover:border-outline-variant/60 transition-all">
-        <div className="flex justify-between items-start gap-3 min-w-0 mb-1.5 min-h-[2.75rem]">
-          <span
-            className="min-w-0 flex-1 pr-1 text-base font-bold text-on-surface-variant uppercase tracking-wide leading-snug line-clamp-2 break-words"
-            title={title}
-          >
-            {title}
-          </span>
+    <div className="h-full flex flex-col p-4 gap-3">
+      {/* 상단 컬러 액센트 바 */}
+      <div className="h-0.5 w-10 rounded-full bg-gradient-to-r from-sky-400 to-blue-500 opacity-70 -mt-1" />
+
+      {/* 제목 */}
+      {title && (
+        <span
+          className="text-[10px] font-bold tracking-[0.12em] uppercase text-on-surface-variant/70 leading-snug line-clamp-2 break-words"
+          title={title}
+        >
+          {title}
+        </span>
+      )}
+
+      {/* 헤드라인 수치 */}
+      {hasHeadline && (
+        <div className="text-[2rem] font-extrabold tabular-nums leading-none text-primary tracking-tight">
+          {displayText(headline)}
         </div>
+      )}
 
-        {hasHeadline && (
-          <div className="text-3xl font-semibold tabular-nums mb-3 text-on-surface">
-            {displayText(headline)}
-          </div>
-        )}
+      {/* 비교 행 */}
+      {hasRows && (
+        <div className="mt-auto space-y-1.5 border-t border-outline/10 pt-2.5">
+          {rows.map((r, idx) => {
+            const label = typeof r?.label === 'string' ? r.label : '';
+            const value = r?.value;
+            const kind = r?.kind;
 
-        {hasRows && (
-          <div className="space-y-1.5">
-            {rows.map((r, idx) => {
-              const label = typeof r?.label === 'string' ? r.label : '';
-              const value = r?.value;
-              const kind = r?.kind;
-
-              // label이 없으면 "큰 값" 스타일(값만 강조)
-              if (!label.trim() || kind === 'valueOnly') {
-                return (
-                  <div key={idx} className="text-xl font-semibold tabular-nums text-on-surface">
-                    {displayText(value)}
-                  </div>
-                );
-              }
-
-              // label이 있으면 "권역평균"처럼 (라벨, 값) 2열
+            if (!label.trim() || kind === 'valueOnly') {
               return (
-                <div key={idx} className="flex justify-between items-baseline gap-2 text-sm">
-                  <span className="text-on-surface-variant font-semibold shrink-0 leading-snug">
-                    {label}
-                  </span>
-                  <span className="text-sm font-semibold tabular-nums text-on-surface">
-                    {displayText(value)}
-                  </span>
+                <div key={idx} className="text-lg font-bold tabular-nums text-on-surface">
+                  {displayText(value)}
                 </div>
               );
-            })}
-          </div>
-        )}
-      </div>
+            }
+
+            return (
+              <div key={idx} className="flex justify-between items-baseline gap-2">
+                <span className="text-[11px] text-on-surface-variant font-medium shrink-0">
+                  {label}
+                </span>
+                <span className="text-xs font-bold tabular-nums text-on-surface/80">
+                  {displayText(value)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {Array.isArray(sources) && sources.length > 0 && (
-        <div className="space-y-1">
+        <div className="space-y-0.5 mt-1">
           {sources.map((s, i) => (
-            <div key={i} className="text-[11px] text-on-surface-variant truncate" title={s}>
+            <div key={i} className="text-[10px] text-on-surface-variant/50 truncate" title={s}>
               {s}
             </div>
           ))}

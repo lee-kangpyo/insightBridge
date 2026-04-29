@@ -77,12 +77,16 @@ function SlotItemRenderer({ itemId }) {
 
   if (data.type === 'grid') {
     return (
-      <div className="w-full h-full p-2 overflow-auto">
+      <div className="w-full h-full overflow-auto">
         <table className="w-full text-xs">
-          <thead>
-            <tr className="border-b border-outline/20">
-              {data.columns.map((c) => (
-                <th key={c.dataKey} className="text-left py-2 px-2 whitespace-nowrap">
+          <thead className="sticky top-0 z-10">
+            <tr className="bg-white/70 backdrop-blur-sm">
+              {data.columns.map((c, i) => (
+                <th
+                  key={c.dataKey}
+                  className="py-2.5 px-3 text-left text-[10px] font-semibold tracking-wider uppercase text-on-surface-variant whitespace-nowrap border-b border-white/60"
+                  style={{ borderRadius: i === 0 ? '0' : undefined }}
+                >
                   {c.header || c.dataKey}
                 </th>
               ))}
@@ -90,10 +94,15 @@ function SlotItemRenderer({ itemId }) {
           </thead>
           <tbody>
             {data.rows.map((row, i) => (
-              <tr key={i} className="border-b border-outline/10">
+              <tr
+                key={i}
+                className={`border-b border-outline/8 transition-colors hover:bg-sky-50/40 ${i % 2 === 0 ? '' : 'bg-white/20'}`}
+              >
                 {data.columns.map((c) => (
-                  <td key={c.dataKey} className="py-1.5 px-2">
-                    {row?.[c.dataKey] == null || row?.[c.dataKey] === '' ? '—' : String(row[c.dataKey])}
+                  <td key={c.dataKey} className="py-2 px-3 text-on-surface tabular-nums">
+                    {row?.[c.dataKey] == null || row?.[c.dataKey] === '' ? (
+                      <span className="text-on-surface-variant/40">—</span>
+                    ) : String(row[c.dataKey])}
                   </td>
                 ))}
               </tr>
@@ -106,7 +115,7 @@ function SlotItemRenderer({ itemId }) {
 
   if (data.type === 'card') {
     return (
-      <div className="w-full h-full p-2 overflow-auto">
+      <div className="w-full h-full overflow-auto">
         <CompositeKpiCardPreview
           title={data.title}
           headline={data.headline}
