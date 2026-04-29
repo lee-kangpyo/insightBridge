@@ -95,13 +95,38 @@ export default function ScreenViewer() {
   }
 
   return (
-    <div className="max-w-[1600px] mx-auto px-8 py-6">
-      <PageTitleSection
-        title={screen?.scr_nm || '화면 보기'}
-        subtitle={`화면 ID: ${scrId}`}
-      />
+    <div className="relative max-w-[1600px] mx-auto px-8 py-6 overflow-hidden">
+      {/* Glassmorphism depth: gradient orbs */}
+      <div className="pointer-events-none absolute -top-32 -right-32 h-[420px] w-[420px] rounded-full bg-sky-400/20 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 -left-32 h-[360px] w-[360px] rounded-full bg-blue-900/15 blur-3xl" />
+      <div className="pointer-events-none absolute top-1/3 right-1/3 h-[280px] w-[280px] rounded-full bg-emerald-400/10 blur-3xl" />
 
-      <ScreenRenderer slots={slots} />
+      <div className="relative z-10">
+        <PageTitleSection
+          title={screen?.scr_nm || '화면 보기'}
+          subtitle={`화면 ID: ${scrId?.slice(0, 8)}…`}
+        />
+
+        <div
+          className="grid gap-4 rounded-2xl border border-white/50 bg-white/35 p-6 shadow-2xl shadow-black/5 backdrop-blur-2xl"
+          style={{
+            gridTemplateColumns: 'repeat(12, 1fr)',
+            gridTemplateRows: 'repeat(6, minmax(120px, 1fr))',
+          }}
+        >
+          {slots.map((slot) =>
+            slot.item_id ? (
+              <div
+                key={slot.slot_id}
+                className="rounded-xl border border-white/55 bg-white/60 shadow-md shadow-black/5 backdrop-blur-xl overflow-hidden min-h-[120px]"
+                style={slotToGridStyle(slot)}
+              >
+                <SlotItemRenderer itemId={slot.item_id} />
+              </div>
+            ) : null
+          )}
+        </div>
+      </div>
     </div>
   );
 }

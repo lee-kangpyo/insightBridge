@@ -61,30 +61,93 @@ function resolveChartConfig(data, chartConfig) {
   return result;
 }
 
-const COMMON_THEME = {
-  tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
-  animation: true,
-  animationDuration: 300,
+const CHART_COLORS = [
+  '#60a5fa',
+  '#34d399',
+  '#f472b6',
+  '#fb923c',
+  '#a78bfa',
+  '#38bdf8',
+  '#fbbf24',
+  '#4ade80',
+];
+
+const AXIS_LABEL_COLOR = '#475569';
+const GRID_LINE = 'rgba(219,228,240,0.5)';
+const AXIS_LINE_COLOR = '#dbe4f0';
+
+const TOOLTIP_STYLE = {
+  backgroundColor: 'rgba(255,255,255,0.94)',
+  borderColor: 'rgba(219,228,240,0.7)',
+  borderWidth: 1,
+  borderRadius: 12,
+  padding: [10, 14],
+  textStyle: { color: '#0f172a', fontSize: 12 },
+  extraCssText: 'box-shadow:0 12px 32px rgba(2,132,199,0.12);backdrop-filter:blur(12px);',
 };
+
+const COMMON_THEME = {
+  color: CHART_COLORS,
+  backgroundColor: 'transparent',
+  tooltip: {
+    trigger: 'axis',
+    axisPointer: { type: 'cross', crossStyle: { color: '#94a3b8', opacity: 0.5 }, lineStyle: { color: AXIS_LINE_COLOR, type: 'dashed' } },
+    ...TOOLTIP_STYLE,
+  },
+  animation: true,
+  animationDuration: 700,
+  animationEasing: 'cubicOut',
+};
+
+const AXIS_X = (xValues) => ({
+  type: 'category',
+  data: xValues,
+  axisLabel: { rotate: xValues.length > 8 ? 30 : 0, color: AXIS_LABEL_COLOR, fontSize: 10 },
+  axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
+  axisTick: { lineStyle: { color: AXIS_LINE_COLOR } },
+  boundaryGap: true,
+});
+
+const AXIS_Y = {
+  type: 'value',
+  axisLabel: { color: AXIS_LABEL_COLOR, fontSize: 10 },
+  axisLine: { show: false },
+  splitLine: { lineStyle: { color: GRID_LINE, type: 'dashed' } },
+};
+
+const LEGEND_BASE = {
+  icon: 'roundRect',
+  textStyle: { color: AXIS_LABEL_COLOR, fontSize: 11 },
+  itemWidth: 12,
+  itemHeight: 8,
+  bottom: 0,
+};
+
+function gradColor(hex) {
+  return {
+    type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+    colorStops: [{ offset: 0, color: `${hex}cc` }, { offset: 1, color: `${hex}22` }],
+  };
+}
 
 function buildBarOption(data, config) {
   const { xValues, groups, series } = config.groupKey
     ? pivotData(data, config.x, config.y, config.groupKey)
     : { xValues: data.map(r => r[config.x]), groups: [null], series: { [null]: data.map(r => Number(r[config.y])) } };
 
-  const seriesData = groups.map(g => ({
-    name: g,
-    type: 'bar',
-    data: series[g],
-  }));
-
   return {
     ...COMMON_THEME,
-    title: { text: config.title || '', left: 'center' },
-    legend: { data: groups.filter(g => g !== null), bottom: 0 },
-    xAxis: { type: 'category', data: xValues, axisLabel: { rotate: xValues.length > 8 ? 30 : 0 } },
-    yAxis: { type: 'value' },
-    series: seriesData,
+    title: config.title ? { text: config.title, left: 'center', textStyle: { fontSize: 13, fontWeight: 700, color: '#0f172a' } } : undefined,
+    legend: { ...LEGEND_BASE, data: groups.filter(g => g !== null) },
+    xAxis: AXIS_X(xValues),
+    yAxis: AXIS_Y,
+    series: groups.map((g, i) => ({
+      name: g,
+      type: 'bar',
+      data: series[g],
+      barMaxWidth: 36,
+      itemStyle: { borderRadius: [5, 5, 0, 0], color: gradColor(CHART_COLORS[i % CHART_COLORS.length]) },
+    })),
   };
 }
 
@@ -93,20 +156,21 @@ function buildLineOption(data, config) {
     ? pivotData(data, config.x, config.y, config.groupKey)
     : { xValues: data.map(r => r[config.x]), groups: [null], series: { [null]: data.map(r => Number(r[config.y])) } };
 
-  const seriesData = groups.map(g => ({
-    name: g,
-    type: 'line',
-    data: series[g],
-    smooth: true,
-  }));
-
   return {
     ...COMMON_THEME,
-    title: { text: config.title || '', left: 'center' },
-    legend: { data: groups.filter(g => g !== null), bottom: 0 },
-    xAxis: { type: 'category', data: xValues, axisLabel: { rotate: xValues.length > 8 ? 30 : 0 } },
-    yAxis: { type: 'value' },
-    series: seriesData,
+    title: config.title ? { text: config.title, left: 'center', textStyle: { fontSize: 13, fontWeight: 700, color: '#0f172a' } } : undefined,
+    legend: { ...LEGEND_BASE, data: groups.filter(g => g !== null) },
+    xAxis: { ...AXIS_X(xValues), boundaryGap: false },
+    yAxis: AXIS_Y,
+    series: groups.map((g, i) => ({
+      name: g,
+      type: 'line',
+      data: series[g],
+      smooth: true,
+      lineStyle: { width: 2.5, color: CHART_COLORS[i % CHART_COLORS.length] },
+      itemStyle: { color: CHART_COLORS[i % CHART_COLORS.length], borderWidth: 2, borderColor: '#fff' },
+      symbolSize: 5,
+    })),
   };
 }
 
@@ -114,14 +178,16 @@ function buildPieOption(data, config) {
   const yKey = config.y;
   return {
     ...COMMON_THEME,
-    title: { text: config.title || '', left: 'center' },
-    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-    legend: { orient: 'vertical', left: 'left' },
+    title: config.title ? { text: config.title, left: 'center', textStyle: { fontSize: 13, fontWeight: 700, color: '#0f172a' } } : undefined,
+    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)', ...TOOLTIP_STYLE },
+    legend: { ...LEGEND_BASE, orient: 'vertical', left: 'left', bottom: 'auto', top: 'middle' },
     series: [{
       type: 'pie',
-      radius: '60%',
+      radius: ['0%', '60%'],
       data: data.map(row => ({ name: row[config.x], value: Number(row[yKey]) })),
-      emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.5)' } },
+      label: { fontSize: 11, color: AXIS_LABEL_COLOR },
+      itemStyle: { borderWidth: 2, borderColor: 'rgba(255,255,255,0.85)' },
+      emphasis: { itemStyle: { shadowBlur: 16, shadowColor: 'rgba(96,165,250,0.3)' } },
     }],
   };
 }
@@ -131,21 +197,25 @@ function buildAreaOption(data, config) {
     ? pivotData(data, config.x, config.y, config.groupKey)
     : { xValues: data.map(r => r[config.x]), groups: [null], series: { [null]: data.map(r => Number(r[config.y])) } };
 
-  const seriesData = groups.map(g => ({
-    name: g,
-    type: 'line',
-    data: series[g],
-    smooth: true,
-    areaStyle: {},
-  }));
-
   return {
     ...COMMON_THEME,
-    title: { text: config.title || '', left: 'center' },
-    legend: { data: groups.filter(g => g !== null), bottom: 0 },
-    xAxis: { type: 'category', data: xValues, axisLabel: { rotate: xValues.length > 8 ? 30 : 0 } },
-    yAxis: { type: 'value' },
-    series: seriesData,
+    title: config.title ? { text: config.title, left: 'center', textStyle: { fontSize: 13, fontWeight: 700, color: '#0f172a' } } : undefined,
+    legend: { ...LEGEND_BASE, data: groups.filter(g => g !== null) },
+    xAxis: { ...AXIS_X(xValues), boundaryGap: false },
+    yAxis: AXIS_Y,
+    series: groups.map((g, i) => ({
+      name: g,
+      type: 'line',
+      data: series[g],
+      smooth: true,
+      lineStyle: { width: 2.5, color: CHART_COLORS[i % CHART_COLORS.length] },
+      itemStyle: { color: CHART_COLORS[i % CHART_COLORS.length] },
+      areaStyle: {
+        color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [{ offset: 0, color: `${CHART_COLORS[i % CHART_COLORS.length]}44` }, { offset: 1, color: `${CHART_COLORS[i % CHART_COLORS.length]}06` }] },
+      },
+      symbolSize: 5,
+    })),
   };
 }
 
@@ -154,20 +224,23 @@ function buildStackedBarOption(data, config) {
     ? pivotData(data, config.x, config.y, config.groupKey)
     : { xValues: data.map(r => r[config.x]), groups: [null], series: { [null]: data.map(r => Number(r[config.y])) } };
 
-  const seriesData = groups.map(g => ({
-    name: g,
-    type: 'bar',
-    stack: 'total',
-    data: series[g],
-  }));
-
   return {
     ...COMMON_THEME,
-    title: { text: config.title || '', left: 'center' },
-    legend: { data: groups.filter(g => g !== null), bottom: 0 },
-    xAxis: { type: 'category', data: xValues, axisLabel: { rotate: xValues.length > 8 ? 30 : 0 } },
-    yAxis: { type: 'value' },
-    series: seriesData,
+    title: config.title ? { text: config.title, left: 'center', textStyle: { fontSize: 13, fontWeight: 700, color: '#0f172a' } } : undefined,
+    legend: { ...LEGEND_BASE, data: groups.filter(g => g !== null) },
+    xAxis: AXIS_X(xValues),
+    yAxis: AXIS_Y,
+    series: groups.map((g, i) => ({
+      name: g,
+      type: 'bar',
+      stack: 'total',
+      data: series[g],
+      barMaxWidth: 40,
+      itemStyle: {
+        color: CHART_COLORS[i % CHART_COLORS.length],
+        borderRadius: i === groups.length - 1 ? [5, 5, 0, 0] : [0, 0, 0, 0],
+      },
+    })),
   };
 }
 
@@ -199,14 +272,16 @@ function buildDonutOption(data, config) {
   const yKey = config.y;
   return {
     ...COMMON_THEME,
-    title: { text: config.title || '', left: 'center' },
-    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-    legend: { orient: 'vertical', left: 'left' },
+    title: config.title ? { text: config.title, left: 'center', textStyle: { fontSize: 13, fontWeight: 700, color: '#0f172a' } } : undefined,
+    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)', ...TOOLTIP_STYLE },
+    legend: { ...LEGEND_BASE, orient: 'vertical', left: 'left', bottom: 'auto', top: 'middle' },
     series: [{
       type: 'pie',
-      radius: ['40%', '70%'],
+      radius: ['42%', '68%'],
       data: data.map(row => ({ name: row[config.x], value: Number(row[yKey]) })),
-      emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.5)' } },
+      label: { fontSize: 11, color: AXIS_LABEL_COLOR },
+      itemStyle: { borderWidth: 3, borderColor: 'rgba(255,255,255,0.95)' },
+      emphasis: { itemStyle: { shadowBlur: 20, shadowColor: 'rgba(96,165,250,0.35)' } },
     }],
   };
 }
