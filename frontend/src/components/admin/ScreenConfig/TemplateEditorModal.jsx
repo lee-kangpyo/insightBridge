@@ -161,25 +161,43 @@ export default function TemplateEditorModal({ isOpen, onClose, onSave }) {
 
   const handleSlotMouseMove = useCallback(
     (e) => {
-      if (dragState?.type === 'move') {
-        const pos = getGridPos(e.clientX, e.clientY);
-        const dx = pos.x - dragState.startPos.x;
-        const dy = pos.y - dragState.startPos.y;
-        const newX = Math.max(0, Math.min(GRID_COLS - dragState.slot.w, dragState.slot.x + dx));
-        const newY = Math.max(0, Math.min(GRID_ROWS - dragState.slot.h, dragState.slot.y + dy));
-        const newRect = { x: newX, y: newY, w: dragState.slot.w, h: dragState.slot.h };
-        const hasOverlap = slots.some(
-          (s) => s.id !== dragState.slotId && rectsOverlap(newRect, slotToRect(s))
-        );
-        if (!hasOverlap) {
-          setSlots((prev) =>
-            prev.map((s) => (s.id === dragState.slotId ? { ...s, x: newX, y: newY } : s))
+      if (!dragState || dragState.type !== 'move') return;
+
+      const pos = getGridPos(e.clientX, e.clientY);
+      
+      // Use functional update to ensure we use the freshest dragState
+      setDragState((prev) => {
+        if (!prev || prev.type !== 'move') return prev;
+
+        const dx = pos.x - prev.startPos.x;
+        const dy = pos.y - prev.startPos.y;
+        
+        // Calculate potential new position
+        const newX = Math.max(0, Math.min(GRID_COLS - prev.slot.w, prev.slot.x + dx));
+        const newY = Math.max(0, Math.min(GRID_ROWS - prev.slot.h, prev.slot.y + dy));
+        
+        if (newX === prev.slot.x && newY === prev.slot.y) return prev;
+
+        const newRect = { x: newX, y: newY, w: prev.slot.w, h: prev.slot.h };
+
+        // We still need to check overlap with current slots.
+        // To do this perfectly without stale 'slots', we'd need more complex logic,
+        // but using functional update for slots separately is a good middle ground.
+        let overlapped = false;
+        setSlots((currentSlots) => {
+          overlapped = currentSlots.some(
+            (s) => s.id !== prev.slotId && rectsOverlap(newRect, slotToRect(s))
           );
-          setDragState((prev) => ({ ...prev, startPos: pos, slot: { ...prev.slot, x: newX, y: newY } }));
-        }
-      }
+          if (overlapped) return currentSlots;
+          return currentSlots.map((s) => (s.id === prev.slotId ? { ...s, x: newX, y: newY } : s));
+        });
+
+        if (overlapped) return prev;
+
+        return { ...prev, startPos: pos, slot: { ...prev.slot, x: newX, y: newY } };
+      });
     },
-    [dragState, getGridPos, slots]
+    [dragState, getGridPos]
   );
 
   const handleSlotMouseUp = useCallback(() => {

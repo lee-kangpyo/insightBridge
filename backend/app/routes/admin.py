@@ -413,10 +413,7 @@ async def get_admin_screen_templates(
     is_default: Optional[str] = None,
     _: dict = Depends(require_sys_adm),
 ):
-    rows = await get_all_screen_templates()
-    if is_default is not None:
-        yn = is_default.strip().upper()
-        rows = [r for r in rows if (r.get("is_default") or "N") == yn]
+    rows = await get_all_screen_templates(is_default)
     return [ScreenTemplateItem(**r) for r in rows]
 
 
