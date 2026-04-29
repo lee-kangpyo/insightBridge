@@ -99,6 +99,28 @@ export const getTemplateList = async () => {
   return response.data;
 };
 
+export const getTemplatesByDefault = async (isDefault) => {
+  const response = await api.get('/api/admin/screen-templates', {
+    params: { is_default: isDefault ? 'Y' : 'N' },
+  });
+  return response.data;
+};
+
+export const createTemplate = async (payload) => {
+  const response = await api.post('/api/admin/screen-templates', payload);
+  return response.data;
+};
+
+export const deleteTemplate = async (templateId) => {
+  const response = await api.delete(`/api/admin/screen-templates/${templateId}`);
+  return response.data;
+};
+
+export const getTemplateReferenceCount = async (templateId) => {
+  const response = await api.get(`/api/admin/screen-templates/${templateId}/reference-count`);
+  return response.data;
+};
+
 export const getTemplateSlots = async (templateId) => {
   const response = await api.get(`/api/admin/screen-templates/${templateId}/slots`);
   const slotsData = response.data || [];
