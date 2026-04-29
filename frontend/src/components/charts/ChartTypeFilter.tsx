@@ -24,7 +24,7 @@ const FILTERS: { type: ChartFilterType; label: string }[] = [
 ];
 
 const baseBtn =
-  "rounded-xl px-3 py-1.5 text-sm font-semibold backdrop-blur-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-transparent";
+  "rounded-xl px-3 py-1.5 text-sm font-semibold backdrop-blur-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-white/80";
 
 export default function ChartTypeFilter({
   selectedFilter,
