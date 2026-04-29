@@ -22,6 +22,7 @@ export default function SlotLayoutPage() {
   const [scrNm, setScrNm] = useState('');
   const [isScreenCreated, setIsScreenCreated] = useState(false);
   const [isCreatingScreen, setIsCreatingScreen] = useState(false);
+  const [initialFetchDone, setInitialFetchDone] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -44,14 +45,35 @@ export default function SlotLayoutPage() {
           height: s.height ?? s.h ?? 1,
         }));
         setSlots(blueprintSlots);
+
+        // 만약 특정 화면 정보를 편집 중이라면 기존 할당 정보 가져오기
+        // (현재는 templateId 기반이지만, scrId가 이미 정해진 상태로 진입하는 케이스 대응)
+        if (scrId) {
+          const existingSlots = await getScreenSlots(scrId);
+          const assignmentMap = new Map();
+          existingSlots.forEach(asgn => {
+            if (asgn.item_id) {
+              const item = allItems.find(i => i.item_id === asgn.item_id);
+              if (item) {
+                assignmentMap.set(asgn.slot_id, {
+                  item_id: item.item_id,
+                  cnts_nm: item.item_nm,
+                  cnts_tp: item.mapping_json?.type || 'chart' // 기본값 처리
+                });
+              }
+            }
+          });
+          setSlotAssignments(assignmentMap);
+        }
       } catch (error) {
         console.error('Failed to fetch template:', error);
       } finally {
         setLoading(false);
+        setInitialFetchDone(true);
       }
     };
     fetchData();
-  }, [templateId]);
+  }, [templateId, scrId]);
 
   const handleCreateScreen = useCallback(async () => {
     if (!scrNm.trim()) {

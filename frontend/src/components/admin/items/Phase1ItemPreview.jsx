@@ -2,6 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { CardDetail, ChartDetail, GridDetail } from '../../content-detail';
 import { executeSqlPreview, getAdminContentsDetail, handleApiError } from '../../../services/adminApi';
 import ChartRenderer from '../../ChartRenderer';
+import {
+  buildChartPreviewModel,
+  buildGridPreviewModel,
+  buildCardPreviewModel,
+} from '../../../utils/itemDataTransformers';
 
 function chipClass(kind) {
   const base =
@@ -20,37 +25,12 @@ function resolveItemType(item, shapeContent) {
   return null;
 }
 
-function normalizeMappingItems(mappingItems) {
-  if (!mappingItems) return [];
-  if (Array.isArray(mappingItems)) return mappingItems.filter(Boolean);
-  if (typeof mappingItems === 'object') return Object.values(mappingItems).filter(Boolean);
-  return [];
-}
-
-function normalizeMappingColumns(mappingColumns) {
-  if (!mappingColumns) return [];
-  if (Array.isArray(mappingColumns)) return mappingColumns.filter(Boolean);
-  if (typeof mappingColumns === 'object') {
-    return Object.entries(mappingColumns)
-      .map(([dataKey, v]) => ({ dataKey, ...(v || {}) }))
-      .filter(Boolean);
-  }
-  return [];
-}
-
-function getRowValue(row, field) {
-  if (!row || field == null) return null;
-  const v = row[field];
-  if (v === undefined) return null;
-  return v;
-}
-
 function displayText(v) {
   if (v == null || v === '') return '미공시';
   return String(v);
 }
 
-function CompositeKpiCardPreview({ title, headline, rows, sources }) {
+export function CompositeKpiCardPreview({ title, headline, rows, sources }) {
   const hasHeadline = headline != null && headline !== '';
   const hasRows = Array.isArray(rows) && rows.length > 0;
 
@@ -117,186 +97,6 @@ function CompositeKpiCardPreview({ title, headline, rows, sources }) {
       )}
     </div>
   );
-}
-
-function buildGridPreviewModel(itemType, item, shapeContent, preview) {
-  if (itemType !== 'grid') return { columns: [], rows: [] };
-
-  const mj = item?.mapping_json;
-  const m = mj && typeof mj === 'object' ? mj.mapping || {} : null;
-  if (!m || typeof m !== 'object') return { columns: [], rows: [] };
-
-  const mappedColumns = normalizeMappingColumns(m.columns);
-  const usableMappings = mappedColumns
-    .map((c) => ({
-      dataKey: typeof c?.dataKey === 'string' ? c.dataKey : null,
-      field: typeof c?.field === 'string' ? c.field : null,
-    }))
-    .filter((c) => !!c.dataKey && !!c.field);
-
-  if (usableMappings.length === 0) return { columns: [], rows: [] };
-
-  const shapeCols = Array.isArray(shapeContent?.data?.columns) ? shapeContent.data.columns : [];
-  const shapeByKey = new Map(
-    shapeCols
-      .map((c) => {
-        const dataKey = c?.dataKey || c?.field;
-        if (!dataKey) return null;
-        const header = c?.displayName || c?.header || c?.title || dataKey;
-        return [String(dataKey), { header: String(header), dataKey: String(dataKey) }];
-      })
-      .filter(Boolean)
-  );
-
-  const columns = usableMappings.map(({ dataKey }) => {
-    const meta = shapeByKey.get(dataKey);
-    return { dataKey, header: meta?.header || dataKey };
-  });
-
-  const sqlRows = Array.isArray(preview?.rows) ? preview.rows : [];
-  const rows = sqlRows.map((row) => {
-    const out = {};
-    for (const { dataKey, field } of usableMappings) {
-      out[dataKey] = getRowValue(row, field);
-    }
-    return out;
-  });
-
-  return { columns, rows };
-}
-
-function normalizeMappingSeries(series) {
-  if (!series) return [];
-  if (Array.isArray(series)) return series.filter(Boolean);
-  if (typeof series === 'object') {
-    return Object.entries(series)
-      .map(([name, v]) => ({ name, ...(v || {}) }))
-      .filter(Boolean);
-  }
-  return [];
-}
-
-function buildChartPreviewModel(itemType, item, shapeContent, preview) {
-  if (itemType !== 'chart') return { chartType: null, data: [], chartConfig: null };
-
-  const mj = item?.mapping_json;
-  const chartType = mj?.chartType;
-  if (typeof chartType !== 'string' || !chartType.trim()) {
-    return { chartType: null, data: [], chartConfig: null };
-  }
-
-  const mapping = mj?.mapping;
-  if (!mapping || typeof mapping !== 'object') {
-    return { chartType, data: [], chartConfig: null };
-  }
-
-  const categoryField = mapping.categoryField;
-  const seriesList = normalizeMappingSeries(mapping.series);
-
-  if (typeof categoryField !== 'string' || !categoryField.trim()) {
-    return { chartType, data: [], chartConfig: null };
-  }
-
-  const sqlRows = Array.isArray(preview?.rows) ? preview.rows : [];
-  if (sqlRows.length === 0) {
-    return { chartType, data: [], chartConfig: null };
-  }
-
-  const title = shapeContent?.data?.chartTitle || item?.item_nm || '';
-
-  // ChartRenderer는 (x,y,groupKey) 기반 pivot을 지원하므로 long-form으로 변환한다.
-  // row: { category, series, value }
-  const long = [];
-  for (const row of sqlRows) {
-    const category = getRowValue(row, categoryField);
-    if (category == null) continue;
-
-    if (seriesList.length === 0) {
-      // series가 없으면 검증 실패/미리보기 불가로 처리 (임의 대체 금지)
-      continue;
-    }
-
-    for (const s of seriesList) {
-      const seriesName = (s?.name || s?.label || '').toString() || '';
-      const field = s?.field;
-      if (typeof field !== 'string' || !field.trim()) continue;
-      const v = getRowValue(row, field);
-      long.push({ category: String(category), series: seriesName || field, value: v == null ? null : Number(v) });
-    }
-  }
-
-  const data = long;
-  if (data.length === 0) {
-    return { chartType, data: [], chartConfig: null };
-  }
-
-  const chartConfig = {
-    type: chartType,
-    title,
-    x: 'category',
-    y: 'value',
-    group: 'series',
-  };
-
-  return { chartType, data, chartConfig };
-}
-
-function buildCardPreviewModel(itemType, item, shapeContent, preview) {
-  const rows = preview?.rows || [];
-  const row0 = rows[0] || null;
-
-  // Card-only. No arbitrary fallback (must be verifiable).
-  if (itemType !== 'card') return null;
-
-  // mapping_json for card must exist and be usable.
-  const mj = item?.mapping_json;
-  const m = mj && typeof mj === 'object' ? mj.mapping || {} : null;
-  if (!m || typeof m !== 'object') return null;
-  if (!row0) return null;
-
-  const title = shapeContent?.data?.cardTitle || item?.item_nm || '카드';
-  const sources = [];
-
-  // 1) value (headline)
-  if (m.value && typeof m.value === 'string') {
-    const v = getRowValue(row0, m.value);
-    sources.push(`mapping.value = ${m.value}`);
-    return { title, headline: v, rows: [], sources };
-  }
-
-  // 2) items (single card; rows inside)
-  const mappedItems = normalizeMappingItems(m.items);
-  if (mappedItems.length === 0) return null;
-
-  // 규칙: label이 없으면 "큰 값"처럼 보여야 하므로, 첫 번째 무라벨 item을 headline로 승격한다.
-  let headline = null;
-  let headlineTaken = false;
-  const outRows = [];
-
-  mappedItems.slice(0, 12).forEach((it, idx) => {
-    const field = typeof it?.field === 'string' ? it.field : null;
-    const labelRaw = it?.label || shapeContent?.data?.items?.[idx]?.label || '';
-    const label = typeof labelRaw === 'string' ? labelRaw : String(labelRaw || '');
-    const labelTrim = label.trim();
-    const v = field ? getRowValue(row0, field) : null;
-
-    if (field) sources.push(`mapping.items[${idx}].field = ${field}`);
-    else sources.push(`mapping.items[${idx}]`);
-
-    if (!labelTrim && !headlineTaken) {
-      headline = v;
-      headlineTaken = true;
-      return;
-    }
-
-    outRows.push({
-      label: labelTrim ? label : '',
-      value: v,
-      kind: labelTrim ? 'labeled' : 'valueOnly',
-    });
-  });
-
-  return { title, headline, rows: outRows, sources };
 }
 
 export default function Phase1ItemPreview({ item }) {
