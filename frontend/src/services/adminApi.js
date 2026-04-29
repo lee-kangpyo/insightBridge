@@ -240,6 +240,16 @@ export const getAdminScreensList = async () => {
   return response.data.screens || [];
 };
 
+export const deleteScreen = async (scrId) => {
+  const response = await api.delete(`/api/admin/screens/${scrId}`);
+  return response.data;
+};
+
+export const patchScreen = async (scrId, payload) => {
+  const response = await api.patch(`/api/admin/screens/${scrId}`, payload);
+  return response.data;
+};
+
 // --- Viewer API ---
 
 export const getItemRender = async (itemId) => {
