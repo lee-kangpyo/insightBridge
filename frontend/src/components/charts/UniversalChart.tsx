@@ -1,4 +1,12 @@
 import ReactECharts from 'echarts-for-react';
+import {
+  CHART_COLORS,
+  AXIS_NAME_COLOR,
+  GRID_LINE_COLOR,
+  AXIS_LINE_COLOR,
+  TOOLTIP_STYLE,
+  LEGEND_STYLE,
+} from '../../constants/chartTheme';
 
 export interface UniversalChartProps {
   chartType: string;
@@ -15,22 +23,11 @@ export interface UniversalChartProps {
   };
 }
 
-const CHART_COLORS = [
-  '#60a5fa', // blue-400
-  '#34d399', // emerald-400
-  '#f472b6', // pink-400
-  '#fb923c', // orange-400
-  '#a78bfa', // violet-400
-  '#38bdf8', // sky-400
-  '#fbbf24', // amber-400
-  '#4ade80', // green-400
-];
-
 const C = {
   axisLabel: '#475569',
-  axisName: '#1e3a5f',
-  gridLine: 'rgba(219,228,240,0.55)',
-  axisLine: '#dbe4f0',
+  axisName: AXIS_NAME_COLOR,
+  gridLine: GRID_LINE_COLOR,
+  axisLine: AXIS_LINE_COLOR,
 };
 
 function grad(hex: string, fromAlpha = 'cc', toAlpha = '18'): object {
@@ -43,22 +40,9 @@ function grad(hex: string, fromAlpha = 'cc', toAlpha = '18'): object {
   };
 }
 
-const TOOLTIP_BASE = {
-  backgroundColor: 'rgba(255,255,255,0.94)',
-  borderColor: 'rgba(219,228,240,0.7)',
-  borderWidth: 1,
-  borderRadius: 12,
-  padding: [10, 14],
-  textStyle: { color: '#0f172a', fontSize: 12 },
-  extraCssText: 'box-shadow:0 12px 32px rgba(2,132,199,0.12);backdrop-filter:blur(12px);',
-};
+const TOOLTIP_BASE = TOOLTIP_STYLE;
 
-const LEGEND_BASE = {
-  icon: 'roundRect',
-  textStyle: { color: '#475569', fontSize: 11 },
-  itemWidth: 12,
-  itemHeight: 8,
-};
+const LEGEND_BASE = LEGEND_STYLE;
 
 const AXIS_SPLIT_LINE = { lineStyle: { color: C.gridLine, type: 'dashed' as const } };
 const AXIS_LINE_STYLE = { lineStyle: { color: C.axisLine } };
