@@ -180,26 +180,45 @@ async def list_screens() -> list[dict]:
         SELECT
             s.scr_id,
             s.scr_nm,
-            s.menu_id,
             t.name AS template_nm,
-            m.menu_nm AS linked_menu_nm,
-            COALESCE(si.slot_count, 0) AS used_slot_cnt
+            COALESCE(si.slot_count, 0) AS used_slot_cnt,
+            COALESCE(lm.linked_menu_cnt, 0) AS linked_menu_cnt,
+            COALESCE(lm.linked_menus, ARRAY[]::varchar[]) AS linked_menus
         FROM ts_scr_info s
         LEFT JOIN ts_scr_template_info t ON s.template_id = t.template_id
-        LEFT JOIN ts_menu_info m ON s.menu_id = m.menu_id
         LEFT JOIN (
             SELECT scr_id, COUNT(*) AS slot_count
             FROM ts_scr_slot_item
             WHERE item_id IS NOT NULL
             GROUP BY scr_id
         ) si ON s.scr_id = si.scr_id
+        LEFT JOIN (
+            SELECT
+                screen_id,
+                COUNT(*) AS linked_menu_cnt,
+                ARRAY_AGG(menu_nm ORDER BY menu_id) AS linked_menus
+            FROM ts_menu_info
+            WHERE del_fg = 'N'
+            GROUP BY screen_id
+        ) lm ON s.scr_id = lm.screen_id
         WHERE s.del_fg = 'N'
         ORDER BY s.scr_nm, s.scr_id
     """
     df = await fetch_df(query, ())
     if df.empty:
         return []
-    return df.to_dict(orient="records")
+    rows = df.to_dict(orient="records")
+    for r in rows:
+        lm = r.get("linked_menus")
+        if lm is None:
+            r["linked_menus"] = []
+        elif isinstance(lm, str):
+            # Defensive: some DB drivers may return array as string
+            try:
+                r["linked_menus"] = json.loads(lm)
+            except (json.JSONDecodeError, TypeError):
+                r["linked_menus"] = []
+    return rows
 
 from app.utils.uuid_v7 import generate_uuid_v7
 

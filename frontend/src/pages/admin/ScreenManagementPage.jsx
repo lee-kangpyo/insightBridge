@@ -80,7 +80,8 @@ export default function ScreenManagementPage() {
       (s) =>
         (s.scr_nm || '').toLowerCase().includes(q) ||
         (s.template_nm || '').toLowerCase().includes(q) ||
-        (s.linked_menu_nm || '').toLowerCase().includes(q)
+        (s.linked_menus || []).some((m) => (m || '').toLowerCase().includes(q)) ||
+        String(s.linked_menu_cnt ?? 0).includes(q)
     );
   }, [screens, searchTerm]);
 
@@ -223,10 +224,14 @@ export default function ScreenManagementPage() {
                         <span className="material-symbols-outlined text-[14px]">grid_view</span>
                         {screen.template_nm || '템플릿 미지정'}
                       </span>
-                      {screen.linked_menu_nm && (
-                        <span className="flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[14px]">menu</span>
-                          {screen.linked_menu_nm}
+                      <span className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[14px]">menu</span>
+                        연동 메뉴: {screen.linked_menu_cnt ?? 0}개
+                      </span>
+                      {screen.linked_menus && screen.linked_menus.length > 0 && (
+                        <span className="flex items-center gap-1 max-w-xs truncate" title={screen.linked_menus.join(', ')}>
+                          <span className="material-symbols-outlined text-[14px]">list</span>
+                          {screen.linked_menus.join(', ')}
                         </span>
                       )}
                       <span className="flex items-center gap-1">
@@ -290,7 +295,7 @@ export default function ScreenManagementPage() {
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         title="화면 삭제"
-        description={`"${deleteTarget?.scr_nm}" 화면을 삭제하시겠습니까? 관련 슬롯 설정 및 메뉴 연동 정보가 함께 정리됩니다. 이 작업은 되돌릴 수 없습니다.`}
+        description={`"${deleteTarget?.scr_nm}" 화면을 삭제하시겠습니까? 연동된 ${deleteTarget?.linked_menu_cnt ?? 0}개 메뉴가 함께 소프트 삭제되고 권한 매핑이 정리됩니다. 슬롯 설정은 유지됩니다. 이 작업은 되돌릴 수 없습니다.`}
         variant="dialog"
         footer={
           <div className="flex justify-end gap-3">

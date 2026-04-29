@@ -158,12 +158,6 @@ async def create_menu(
                 sort_order,
             )
             menu_id = int(row["menu_id"])
-            if screen_id and str(screen_id).strip():
-                await conn.execute(
-                    "UPDATE ts_scr_info SET menu_id = $1 WHERE scr_id = $2",
-                    menu_id,
-                    str(screen_id).strip(),
-                )
             return menu_id
 
 
@@ -224,10 +218,6 @@ async def soft_delete_menu(menu_id: int) -> None:
     pool = await get_pool()
     async with pool.acquire() as conn:
         async with conn.transaction():
-            await conn.execute(
-                "UPDATE ts_scr_info SET menu_id = NULL WHERE menu_id = $1",
-                menu_id,
-            )
             await conn.execute(
                 "UPDATE ts_menu_info SET del_fg = 'Y' WHERE menu_id = $1",
                 menu_id,
