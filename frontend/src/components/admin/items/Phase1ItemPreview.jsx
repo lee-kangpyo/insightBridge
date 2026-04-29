@@ -6,6 +6,7 @@ import {
   buildChartPreviewModel,
   buildGridPreviewModel,
   buildCardPreviewModel,
+  selectCardRow,
 } from '../../../utils/itemDataTransformers';
 
 function chipClass(kind) {
@@ -183,14 +184,18 @@ export default function Phase1ItemPreview({ item }) {
   const sqlMeta = useMemo(() => {
     const cols = sqlPreview?.columns || [];
     const rows = sqlPreview?.rows || [];
+    const rowSelector = item?.mapping_json?.mapping?.rowSelector;
+    const selectedCardRow = itemType === 'card' ? selectCardRow(rows, rowSelector) : null;
+    const selectedRow = selectedCardRow?.row || rows[0] || null;
     return {
       colCount: cols.length,
       rowCount: rows.length,
       truncated: !!sqlPreview?.truncated,
       cols,
-      row0: rows[0] || null,
+      selectedRow,
+      selectedReason: selectedCardRow?.reason || (rows.length > 0 ? 'default:first' : 'empty'),
     };
-  }, [sqlPreview]);
+  }, [sqlPreview, itemType, item?.mapping_json?.mapping?.rowSelector]);
 
   return (
     <section className="rounded-2xl border border-outline/20 bg-surface-container-lowest shadow-sm overflow-hidden">
@@ -431,7 +436,7 @@ export default function Phase1ItemPreview({ item }) {
         <div>
           <div className="flex items-center gap-2 mb-3">
             <span className="material-symbols-outlined text-primary text-[20px]">dataset</span>
-            <h4 className="font-semibold text-on-surface">SQL 샘플</h4>
+            <h4 className="font-semibold text-on-surface">SQL 샘플(대표 행)</h4>
           </div>
 
           {!item?.sql_cnts_id && (
@@ -464,16 +469,24 @@ export default function Phase1ItemPreview({ item }) {
                 )}
               </div>
 
-              {/* row0 key:value */}
-              {sqlMeta.row0 ? (
+              <div className="text-xs text-on-surface-variant">
+                기준 행 선택: <span className="font-mono text-on-surface">{sqlMeta.selectedReason}</span>
+              </div>
+
+              {sqlMeta.selectedRow ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {sqlMeta.cols.slice(0, 8).map((c) => (
                     <div key={c} className="rounded-lg border border-outline/10 bg-surface-container-lowest px-3 py-2">
                       <div className="text-[10px] font-semibold uppercase tracking-wide text-on-surface-variant truncate">
                         {c}
                       </div>
-                      <div className="text-sm font-medium text-on-surface truncate" title={String(sqlMeta.row0[c] ?? '')}>
-                        {sqlMeta.row0[c] == null || sqlMeta.row0[c] === '' ? '—' : String(sqlMeta.row0[c])}
+                      <div
+                        className="text-sm font-medium text-on-surface truncate"
+                        title={String(sqlMeta.selectedRow[c] ?? '')}
+                      >
+                        {sqlMeta.selectedRow[c] == null || sqlMeta.selectedRow[c] === ''
+                          ? '—'
+                          : String(sqlMeta.selectedRow[c])}
                       </div>
                     </div>
                   ))}

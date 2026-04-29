@@ -40,6 +40,115 @@ export function getRowValue(row, field) {
   return v;
 }
 
+function toComparableValue(v) {
+  if (v == null) return null;
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  const asNumber = Number(v);
+  if (Number.isFinite(asNumber) && String(v).trim() !== '') return asNumber;
+  const asTime = Date.parse(String(v));
+  if (!Number.isNaN(asTime)) return asTime;
+  return String(v);
+}
+
+function normalizeWhereConditions(where) {
+  if (!Array.isArray(where)) return [];
+  return where
+    .map((cond) => {
+      const field = typeof cond?.field === 'string' ? cond.field.trim() : '';
+      const value = cond?.value;
+      if (!field) return null;
+      return { field, value: value == null ? '' : String(value) };
+    })
+    .filter(Boolean);
+}
+
+function matchesWhere(row, conditions) {
+  if (!row || !Array.isArray(conditions) || conditions.length === 0) return false;
+  return conditions.every((cond) => String(getRowValue(row, cond.field) ?? '') === String(cond.value ?? ''));
+}
+
+export function selectCardRow(rows, selector) {
+  if (!Array.isArray(rows) || rows.length === 0) return { row: null, reason: 'empty' };
+  if (!selector || typeof selector !== 'object') return { row: rows[0], reason: 'default:first' };
+
+  const modeRaw = selector.mode;
+  const mode = typeof modeRaw === 'string' ? modeRaw.trim() : '';
+  const field = typeof selector.field === 'string' ? selector.field.trim() : '';
+  const value = selector.value;
+  const where = normalizeWhereConditions(selector.where);
+
+  if (!mode || mode === 'first') return { row: rows[0], reason: 'selector:first' };
+  if (mode === 'last') return { row: rows[rows.length - 1], reason: 'selector:last' };
+
+  if ((mode === 'max' || mode === 'min') && !field) {
+    return { row: rows[0], reason: `selector:${mode}:fallback(no-field)` };
+  }
+  if (mode === 'equals' && !field) {
+    return { row: rows[0], reason: 'selector:equals:fallback(no-field)' };
+  }
+  if ((mode === 'where' || mode === 'equalsAll') && where.length === 0) {
+    return { row: rows[0], reason: `selector:${mode}:fallback(no-conditions)` };
+  }
+
+  if (mode === 'equals') {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const fromObject = Object.entries(value)
+        .map(([k, v]) => ({
+          field: typeof k === 'string' ? k.trim() : '',
+          value: v == null ? '' : String(v),
+        }))
+        .filter((cond) => !!cond.field);
+      if (fromObject.length > 0) {
+        const foundByObject = rows.find((r) => matchesWhere(r, fromObject));
+        return foundByObject
+          ? {
+              row: foundByObject,
+              reason: `selector:equals:object(${fromObject.map((c) => `${c.field}=${c.value}`).join('&')})`,
+            }
+          : { row: rows[0], reason: 'selector:equals:fallback(not-found:object)' };
+      }
+    }
+
+    const target = String(value ?? '');
+    const found = rows.find((r) => String(getRowValue(r, field) ?? '') === target);
+    return found
+      ? { row: found, reason: `selector:equals:${field}=${target}` }
+      : { row: rows[0], reason: `selector:equals:fallback(not-found:${field}=${target})` };
+  }
+
+  if (mode === 'where' || mode === 'equalsAll') {
+    const found = rows.find((r) => matchesWhere(r, where));
+    const reasonExpr = where.map((c) => `${c.field}=${c.value}`).join('&');
+    return found
+      ? { row: found, reason: `selector:${mode}:${reasonExpr}` }
+      : { row: rows[0], reason: `selector:${mode}:fallback(not-found:${reasonExpr})` };
+  }
+
+  if (mode === 'max' || mode === 'min') {
+    let chosen = null;
+    let chosenComp = null;
+    for (const r of rows) {
+      const raw = getRowValue(r, field);
+      const comp = toComparableValue(raw);
+      if (comp == null) continue;
+      if (chosen == null) {
+        chosen = r;
+        chosenComp = comp;
+        continue;
+      }
+      if (mode === 'max' ? comp > chosenComp : comp < chosenComp) {
+        chosen = r;
+        chosenComp = comp;
+      }
+    }
+    return chosen
+      ? { row: chosen, reason: `selector:${mode}:${field}` }
+      : { row: rows[0], reason: `selector:${mode}:fallback(no-comparable:${field})` };
+  }
+
+  return { row: rows[0], reason: `selector:fallback(unknown-mode:${mode})` };
+}
+
 export function buildGridPreviewModel(itemType, item, shapeContent, preview) {
   if (itemType !== 'grid') return { columns: [], rows: [] };
 
@@ -150,20 +259,26 @@ export function buildChartPreviewModel(itemType, item, shapeContent, preview) {
 
 export function buildCardPreviewModel(itemType, item, shapeContent, preview) {
   const rows = preview?.rows || [];
-  const row0 = rows[0] || null;
 
   if (itemType !== 'card') return null;
 
   const mj = item?.mapping_json;
   const m = mj && typeof mj === 'object' ? mj.mapping || {} : null;
   if (!m || typeof m !== 'object') return null;
-  if (!row0) return null;
 
   const title = shapeContent?.data?.cardTitle || item?.item_nm || '카드';
-  const sources = [];
+  const defaultSelected = selectCardRow(rows, m.rowSelector);
+  const defaultRow = defaultSelected.row;
+  const sources = [`rowSelector = ${defaultSelected.reason}`];
 
   if (m.value && typeof m.value === 'string') {
-    const v = getRowValue(row0, m.value);
+    const valueSelector =
+      m.valueRowSelector && typeof m.valueRowSelector === 'object' ? m.valueRowSelector : m.rowSelector;
+    const selectedForValue = selectCardRow(rows, valueSelector);
+    const targetRow = selectedForValue.row;
+    if (!targetRow) return null;
+    const v = getRowValue(targetRow, m.value);
+    sources.push(`value.rowSelector = ${selectedForValue.reason}`);
     sources.push(`mapping.value = ${m.value}`);
     return { title, headline: v, rows: [], sources };
   }
@@ -180,10 +295,14 @@ export function buildCardPreviewModel(itemType, item, shapeContent, preview) {
     const labelRaw = it?.label || shapeContent?.data?.items?.[idx]?.label || '';
     const label = typeof labelRaw === 'string' ? labelRaw : String(labelRaw || '');
     const labelTrim = label.trim();
-    const v = field ? getRowValue(row0, field) : null;
+    const itemSelector = it?.rowSelector && typeof it.rowSelector === 'object' ? it.rowSelector : m.rowSelector;
+    const selectedForItem = selectCardRow(rows, itemSelector);
+    const itemRow = selectedForItem.row || defaultRow;
+    const v = field && itemRow ? getRowValue(itemRow, field) : null;
 
     if (field) sources.push(`mapping.items[${idx}].field = ${field}`);
     else sources.push(`mapping.items[${idx}]`);
+    sources.push(`mapping.items[${idx}].rowSelector = ${selectedForItem.reason}`);
 
     if (!labelTrim && !headlineTaken) {
       headline = v;
