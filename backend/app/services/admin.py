@@ -530,19 +530,24 @@ async def get_screen_template_slots(template_id: int) -> list[dict]:
         return []
 
     if isinstance(slots_json, str):
-        slots = json.loads(slots_json)
+        try:
+            slots = json.loads(slots_json)
+        except (json.JSONDecodeError, TypeError):
+            return []
     else:
         slots = slots_json
 
-    # JSON 필드명 매핑: id → slot_id, x → x_pos, y → y_pos, w → width, h → height
+    if not isinstance(slots, list):
+        return []
+
     return [
         {
-            "slot_id": s.get("id"),
+            "slot_id": s.get("id") if isinstance(s, dict) else None,
             "template_id": template_id,
-            "x_pos": s.get("x", 0),
-            "y_pos": s.get("y", 0),
-            "width": s.get("w", 1),
-            "height": s.get("h", 1),
+            "x_pos": s.get("x", 0) if isinstance(s, dict) else 0,
+            "y_pos": s.get("y", 0) if isinstance(s, dict) else 0,
+            "width": s.get("w", 1) if isinstance(s, dict) else 1,
+            "height": s.get("h", 1) if isinstance(s, dict) else 1,
         }
         for s in slots
     ]

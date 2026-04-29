@@ -144,10 +144,14 @@ def _build_chart_model(item_type: str, item: dict, shape_content: dict, preview:
             if not isinstance(field, str) or not field.strip():
                 continue
             v = _get_row_value(row, field)
+            try:
+                num_value = float(v) if v is not None else None
+            except (ValueError, TypeError):
+                num_value = None
             long.append({
                 "category": str(category),
                 "series": series_name or field,
-                "value": None if v is None else float(v),
+                "value": num_value,
             })
 
     data = long
@@ -245,7 +249,7 @@ async def render_item(item_id: int) -> dict:
                 "contentType": master.cnts_tp,
                 "data": detail,
             }
-        except LookupError:
+        except Exception:
             shape_content = None
 
     # SQL 실행
@@ -254,7 +258,7 @@ async def render_item(item_id: int) -> dict:
     if sql_cnts_id:
         try:
             preview = await execute_sql_preview(sql_cnts_id)
-        except ValueError:
+        except Exception:
             preview = {"columns": [], "rows": []}
 
     # 타입 결정

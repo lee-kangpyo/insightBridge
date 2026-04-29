@@ -21,9 +21,11 @@ function mergeSlots(templateSlots, assignedSlots) {
     assignedMap.set(s.slot_id, s);
   }
 
+  const templateSlotIds = new Set(templateSlots.map((ts) => ts.slot_id));
+
   // 템플릿에 없는 할당 정보 경고
   for (const s of assignedSlots) {
-    if (!templateSlots.some((ts) => ts.slot_id === s.slot_id)) {
+    if (!templateSlotIds.has(s.slot_id)) {
       console.warn(
         `[ScreenViewer] 할당된 slot_id "${s.slot_id}"가 템플릿에 없습니다.`
       );
