@@ -79,7 +79,7 @@ export default function ScreenPreviewModal({ isOpen, onClose, scrId }) {
       title={screen?.scr_nm || '화면 미리보기'}
       description={scrId ? `화면 ID: ${scrId}` : undefined}
       variant="form"
-      size="full"
+      size="xl"
       showCloseButton
     >
       {loading ? (

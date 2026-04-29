@@ -1,4 +1,11 @@
 import ReactECharts from 'echarts-for-react';
+import {
+  CHART_COLORS,
+  AXIS_LABEL_COLOR,
+  AXIS_LINE_COLOR,
+  GRID_LINE_COLOR,
+  TOOLTIP_STYLE,
+} from '../constants/chartTheme';
 
 function pivotData(data, xKey, yKey, groupKey) {
   if (!data || data.length === 0) return { xValues: [], groups: [], series: {} };
@@ -61,31 +68,6 @@ function resolveChartConfig(data, chartConfig) {
   return result;
 }
 
-const CHART_COLORS = [
-  '#60a5fa',
-  '#34d399',
-  '#f472b6',
-  '#fb923c',
-  '#a78bfa',
-  '#38bdf8',
-  '#fbbf24',
-  '#4ade80',
-];
-
-const AXIS_LABEL_COLOR = '#475569';
-const GRID_LINE = 'rgba(219,228,240,0.5)';
-const AXIS_LINE_COLOR = '#dbe4f0';
-
-const TOOLTIP_STYLE = {
-  backgroundColor: 'rgba(255,255,255,0.94)',
-  borderColor: 'rgba(219,228,240,0.7)',
-  borderWidth: 1,
-  borderRadius: 12,
-  padding: [10, 14],
-  textStyle: { color: '#0f172a', fontSize: 12 },
-  extraCssText: 'box-shadow:0 12px 32px rgba(2,132,199,0.12);backdrop-filter:blur(12px);',
-};
-
 const COMMON_THEME = {
   color: CHART_COLORS,
   backgroundColor: 'transparent',
@@ -112,7 +94,7 @@ const AXIS_Y = {
   type: 'value',
   axisLabel: { color: AXIS_LABEL_COLOR, fontSize: 10 },
   axisLine: { show: false },
-  splitLine: { lineStyle: { color: GRID_LINE, type: 'dashed' } },
+  splitLine: { lineStyle: { color: GRID_LINE_COLOR, type: 'dashed' } },
 };
 
 const LEGEND_BASE = {

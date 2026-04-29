@@ -107,25 +107,13 @@ export default function ScreenViewer() {
           subtitle={`화면 ID: ${scrId?.slice(0, 8)}…`}
         />
 
-        <div
-          className="grid gap-4 rounded-2xl border border-white/50 bg-white/35 p-6 shadow-2xl shadow-black/5 backdrop-blur-2xl"
+        <ScreenRenderer
+          slots={slots}
+          className="border-white/50 bg-white/35 shadow-2xl shadow-black/5 backdrop-blur-2xl"
           style={{
-            gridTemplateColumns: 'repeat(12, 1fr)',
             gridTemplateRows: 'repeat(6, minmax(120px, 1fr))',
           }}
-        >
-          {slots.map((slot) =>
-            slot.item_id ? (
-              <div
-                key={slot.slot_id}
-                className="rounded-xl border border-white/55 bg-white/60 shadow-md shadow-black/5 backdrop-blur-xl overflow-hidden min-h-[120px]"
-                style={slotToGridStyle(slot)}
-              >
-                <SlotItemRenderer itemId={slot.item_id} />
-              </div>
-            ) : null
-          )}
-        </div>
+        />
       </div>
     </div>
   );

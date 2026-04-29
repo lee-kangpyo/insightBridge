@@ -17,7 +17,7 @@ export default function ScreenRenderer({ slots, className = '', style = {} }) {
       className={`grid gap-4 bg-surface-container-lowest rounded-2xl border border-outline/10 p-6 shadow-lg ${className}`}
       style={{
         gridTemplateColumns: 'repeat(12, 1fr)',
-        gridTemplateRows: 'repeat(6, minmax(120px, 1fr))',
+        gridTemplateRows: 'repeat(6, 70px)',
         ...style,
       }}
     >
@@ -25,7 +25,7 @@ export default function ScreenRenderer({ slots, className = '', style = {} }) {
         slot.item_id ? (
           <div
             key={slot.slot_id}
-            className="bg-surface rounded-xl border border-outline/15 overflow-hidden min-h-[120px]"
+            className="bg-surface rounded-xl border border-outline/15 overflow-hidden"
             style={slotToGridStyle(slot)}
           >
             <SlotItemRenderer itemId={slot.item_id} />
