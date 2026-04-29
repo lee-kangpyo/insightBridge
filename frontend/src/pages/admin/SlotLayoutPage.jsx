@@ -2,13 +2,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/common/PageHeader';
 import { ADMIN_PAGE_CONTAINER_CLASS } from '../../constants/adminLayout';
-import { getTemplateById, getTemplateSlots, getItems, getScreenSlots, saveScreenSlots, createScreen } from '../../services/adminApi';
+import { getTemplateById, getTemplateSlots, getItems, getScreenSlots, saveScreenSlots, createScreen, getScreen } from '../../services/adminApi';
 import SlotLayout from '../../components/admin/SlotLayout/SlotLayout';
 import SlotConfigModal from '../../components/admin/SlotLayout/SlotConfigModal';
 
 export default function SlotLayoutPage() {
-  const { templateId } = useParams();
+  const { templateId, scrId } = useParams();
   const navigate = useNavigate();
+  const isEditMode = !!scrId;
+
   const [template, setTemplate] = useState(null);
   const [slots, setSlots] = useState([]);
   const [slotAssignments, setSlotAssignments] = useState(new Map());
@@ -16,9 +18,9 @@ export default function SlotLayoutPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
-  
+
   // 화면 생성 관련 상태
-  const [scrId, setScrId] = useState(null);
+  const [screenScrId, setScreenScrId] = useState(null);
   const [scrNm, setScrNm] = useState('');
   const [isScreenCreated, setIsScreenCreated] = useState(false);
   const [isCreatingScreen, setIsCreatingScreen] = useState(false);
@@ -27,13 +29,28 @@ export default function SlotLayoutPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [templateData, allItems] = await Promise.all([
-          getTemplateById(templateId),
-          getItems(),
-        ]);
-
-        setTemplate(templateData);
+        const allItems = await getItems();
         setItems(allItems);
+
+        let resolvedTemplateId = templateId;
+
+        if (isEditMode) {
+          // 수정 모드: scrId로 화면 정보 조회 → template_id 획득
+          const screenData = await getScreen(scrId);
+          if (!screenData?.template_id) {
+            console.error('Screen has no template_id');
+            setLoading(false);
+            setInitialFetchDone(true);
+            return;
+          }
+          resolvedTemplateId = screenData.template_id;
+          setScreenScrId(scrId);
+          setScrNm(screenData.scr_nm || '');
+          setIsScreenCreated(true);
+        }
+
+        const templateData = await getTemplateById(resolvedTemplateId);
+        setTemplate(templateData);
 
         // Normalize blueprint slots
         const blueprintSlots = (templateData.slots || []).map((s, idx) => ({
@@ -46,10 +63,10 @@ export default function SlotLayoutPage() {
         }));
         setSlots(blueprintSlots);
 
-        // 만약 특정 화면 정보를 편집 중이라면 기존 할당 정보 가져오기
-        // (현재는 templateId 기반이지만, scrId가 이미 정해진 상태로 진입하는 케이스 대응)
-        if (scrId) {
-          const existingSlots = await getScreenSlots(scrId);
+        // 기존 화면 편집 중이라면 할당 정보 가져오기
+        const targetScrId = isEditMode ? scrId : screenScrId;
+        if (targetScrId) {
+          const existingSlots = await getScreenSlots(targetScrId);
           const assignmentMap = new Map();
           existingSlots.forEach(asgn => {
             if (asgn.item_id) {
@@ -58,7 +75,7 @@ export default function SlotLayoutPage() {
                 assignmentMap.set(asgn.slot_id, {
                   item_id: item.item_id,
                   cnts_nm: item.item_nm,
-                  cnts_tp: item.mapping_json?.type || 'chart' // 기본값 처리
+                  cnts_tp: item.mapping_json?.type || 'chart'
                 });
               }
             }
@@ -73,6 +90,7 @@ export default function SlotLayoutPage() {
       }
     };
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templateId, scrId]);
 
   const handleCreateScreen = useCallback(async () => {
@@ -86,7 +104,7 @@ export default function SlotLayoutPage() {
         scr_nm: scrNm,
         template_id: parseInt(templateId, 10),
       });
-      setScrId(result.scr_id);
+      setScreenScrId(result.scr_id);
       setIsScreenCreated(true);
     } catch (error) {
       console.error('Failed to create screen:', error);
@@ -105,18 +123,20 @@ export default function SlotLayoutPage() {
     setIsModalOpen(true);
   }, [isScreenCreated]);
 
+  const activeScrId = isEditMode ? scrId : screenScrId;
+
   const handleModalSave = useCallback(async (slotId, assignment) => {
-    if (!scrId) {
+    if (!activeScrId) {
       alert('화면 ID가 없습니다. 화면을 먼저 생성해주세요.');
       return;
     }
-    
+
     try {
-      // 즉시 DB 반영 (Decision 7)
-      await saveScreenSlots(scrId, [
+      // 즉시 DB 반영
+      await saveScreenSlots(activeScrId, [
         { slot_id: slotId, item_id: assignment?.item_id || null }
       ]);
-      
+
       setSlotAssignments((prev) => {
         const next = new Map(prev);
         if (assignment) {
@@ -132,7 +152,7 @@ export default function SlotLayoutPage() {
       console.error('Failed to save slot:', error);
       alert('슬롯 저장 중 오류가 발생했습니다.');
     }
-  }, [scrId]);
+  }, [activeScrId]);
 
   const handleModalCancel = useCallback(() => {
     setIsModalOpen(false);
@@ -164,13 +184,13 @@ export default function SlotLayoutPage() {
             className="group flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-on-surface bg-white rounded-xl border border-outline/20 shadow-sm hover:bg-surface-container-low hover:border-primary/30 transition-all duration-300"
           >
             <span className="group-hover:-translate-x-1 transition-transform duration-300">←</span>
-            템플릿 목록
+            화면 관리
           </button>
         </div>
       </div>
 
-      {/* 화면 생성 UI (Decision 6) */}
-      {!isScreenCreated && (
+      {/* 화면 생성 UI (신규 모드만) */}
+      {!isEditMode && !isScreenCreated && (
         <div className="mb-6 p-6 bg-surface-container rounded-xl border border-outline/20">
           <h3 className="font-semibold text-on-surface mb-3">화면 생성</h3>
           <p className="text-sm text-on-surface-variant mb-4">
@@ -198,7 +218,7 @@ export default function SlotLayoutPage() {
       {isScreenCreated && (
         <div className="mb-4 flex items-center gap-2 px-4 py-3 bg-primary-container border border-primary/20 rounded-xl text-primary text-xs font-medium">
           <span className="flex h-2 w-2 rounded-full bg-primary"></span>
-          화면: {scrNm} (ID: {scrId}) — 슬롯을 클릭하여 아이템을 설정하세요.
+          화면: {scrNm} (ID: {activeScrId}) — 슬롯을 클릭하여 아이템을 설정하세요.
         </div>
       )}
 

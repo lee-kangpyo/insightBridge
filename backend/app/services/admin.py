@@ -1,3 +1,4 @@
+import logging
 import math
 import json
 from typing import Any, Optional
@@ -6,6 +7,7 @@ import pandas as pd
 from app.database import fetch_df, get_pool
 from app.services.menu import _sanitize_menu_record
 
+_logger = logging.getLogger(__name__)
 _PATCH_UNSET = object()
 
 
@@ -158,12 +160,6 @@ async def create_menu(
                 sort_order,
             )
             menu_id = int(row["menu_id"])
-            if screen_id and str(screen_id).strip():
-                await conn.execute(
-                    "UPDATE ts_scr_info SET menu_id = $1 WHERE scr_id = $2",
-                    menu_id,
-                    str(screen_id).strip(),
-                )
             return menu_id
 
 
@@ -224,10 +220,6 @@ async def soft_delete_menu(menu_id: int) -> None:
     pool = await get_pool()
     async with pool.acquire() as conn:
         async with conn.transaction():
-            await conn.execute(
-                "UPDATE ts_scr_info SET menu_id = NULL WHERE menu_id = $1",
-                menu_id,
-            )
             await conn.execute(
                 "UPDATE ts_menu_info SET del_fg = 'Y' WHERE menu_id = $1",
                 menu_id,
@@ -530,19 +522,34 @@ async def get_screen_template_slots(template_id: int) -> list[dict]:
         return []
 
     if isinstance(slots_json, str):
-        slots = json.loads(slots_json)
+        try:
+            slots = json.loads(slots_json)
+        except (json.JSONDecodeError, TypeError) as e:
+            _logger.warning(
+                "get_screen_template_slots: invalid slots JSON for template %s: %s",
+                template_id,
+                e,
+            )
+            return []
     else:
         slots = slots_json
 
-    # JSON 필드명 매핑: id → slot_id, x → x_pos, y → y_pos, w → width, h → height
+    if not isinstance(slots, list):
+        _logger.warning(
+            "get_screen_template_slots: slots is not a list for template %s (type=%s)",
+            template_id,
+            type(slots).__name__,
+        )
+        return []
+
     return [
         {
-            "slot_id": s.get("id"),
+            "slot_id": s.get("id") if isinstance(s, dict) else None,
             "template_id": template_id,
-            "x_pos": s.get("x", 0),
-            "y_pos": s.get("y", 0),
-            "width": s.get("w", 1),
-            "height": s.get("h", 1),
+            "x_pos": s.get("x", 0) if isinstance(s, dict) else 0,
+            "y_pos": s.get("y", 0) if isinstance(s, dict) else 0,
+            "width": s.get("w", 1) if isinstance(s, dict) else 1,
+            "height": s.get("h", 1) if isinstance(s, dict) else 1,
         }
         for s in slots
     ]
