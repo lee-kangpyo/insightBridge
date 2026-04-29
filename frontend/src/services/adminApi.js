@@ -233,3 +233,10 @@ export const getAdminScreensList = async () => {
   const response = await api.get('/api/admin/screens/list');
   return response.data.screens || [];
 };
+
+// --- Viewer API ---
+
+export const getItemRender = async (itemId) => {
+  const response = await api.get(`/api/items/${itemId}/render`);
+  return response.data;
+};

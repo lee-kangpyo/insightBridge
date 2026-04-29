@@ -134,10 +134,6 @@ async def save_screen_slots(scr_id: str, slots: list[dict]) -> None:
     pool = await get_pool()
     async with pool.acquire() as conn:
         async with conn.transaction():
-            await conn.execute(
-                "DELETE FROM ts_scr_slot_item WHERE scr_id = $1",
-                scr_id,
-            )
             for slot in slots:
                 await conn.execute(
                     """

@@ -517,14 +517,32 @@ async def get_screen_template_by_id(template_id: int) -> Optional[dict]:
 
 async def get_screen_template_slots(template_id: int) -> list[dict]:
     query = """
-        SELECT s.slot_id, s.template_id, s.item_id,
-               i.scr_nm
-        FROM ts_scr_template_slot_scr s
-        LEFT JOIN ts_scr_info i ON s.item_id = i.scr_id
-        WHERE s.template_id = $1
-        ORDER BY s.slot_id
+        SELECT slots
+        FROM ts_scr_template_info
+        WHERE template_id = $1 AND del_fg = 'N'
     """
     df = await fetch_df(query, (template_id,))
     if df.empty:
         return []
-    return df.to_dict(orient="records")
+
+    slots_json = df.iloc[0]["slots"]
+    if slots_json is None:
+        return []
+
+    if isinstance(slots_json, str):
+        slots = json.loads(slots_json)
+    else:
+        slots = slots_json
+
+    # JSON 필드명 매핑: id → slot_id, x → x_pos, y → y_pos, w → width, h → height
+    return [
+        {
+            "slot_id": s.get("id"),
+            "template_id": template_id,
+            "x_pos": s.get("x", 0),
+            "y_pos": s.get("y", 0),
+            "width": s.get("w", 1),
+            "height": s.get("h", 1),
+        }
+        for s in slots
+    ]
