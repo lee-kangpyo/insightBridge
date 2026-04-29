@@ -1,6 +1,6 @@
 import TemplateCard from './TemplateCard';
 
-export default function TemplateGrid({ templates, selectedTemplate, onSelectTemplate }) {
+export default function TemplateGrid({ templates, selectedTemplate, onSelectTemplate, onDeleteTemplate, showDelete }) {
   if (!templates || templates.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-on-surface-variant">
@@ -17,6 +17,8 @@ export default function TemplateGrid({ templates, selectedTemplate, onSelectTemp
           template={template}
           isSelected={selectedTemplate?.template_id === template.template_id}
           onClick={() => onSelectTemplate(template)}
+          onDelete={showDelete ? () => onDeleteTemplate?.(template) : undefined}
+          showDelete={showDelete}
         />
       ))}
     </div>

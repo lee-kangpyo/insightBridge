@@ -1,4 +1,4 @@
-export default function TemplateCard({ template, isSelected, onClick }) {
+export default function TemplateCard({ template, isSelected, onClick, onDelete, showDelete }) {
   const parseSlots = (slotsData) => {
     let parsed = [];
     if (typeof slotsData === 'string') {
@@ -61,13 +61,30 @@ export default function TemplateCard({ template, isSelected, onClick }) {
               </h3>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 {slots.length} zones · {gridCols}×{gridRows} grid
+                {typeof template.reference_count === 'number' && template.reference_count > 0 && (
+                  <span className="ml-2 text-red-500">({template.reference_count}개 사용중)</span>
+                )}
               </p>
             </div>
-            <div
-              className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm"
-              style={{ backgroundColor: accentColor }}
-            >
-              {template.template_id}
+            <div className="flex items-center gap-2">
+              {(showDelete && typeof onDelete === 'function') && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                  className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold bg-red-500 hover:bg-red-600 transition-colors"
+                  title="삭제"
+                >
+                  ×
+                </button>
+              )}
+              <div
+                className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm"
+                style={{ backgroundColor: accentColor }}
+              >
+                {template.template_id}
+              </div>
             </div>
           </div>
         </div>

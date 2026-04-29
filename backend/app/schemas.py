@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Any, Optional
 
 
@@ -481,6 +481,8 @@ class ScreenTemplateItem(BaseModel):
     template_id: int
     name: str
     slots: Optional[Any] = None
+    is_default: Optional[str] = None
+    reference_count: Optional[int] = None
 
 
 class ScreenTemplateSlotItem(BaseModel):
@@ -492,3 +494,18 @@ class ScreenTemplateSlotItem(BaseModel):
     width: Optional[int] = None
     height: Optional[int] = None
     scr_nm: Optional[str] = None
+
+
+class ScreenTemplateCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1)
+    slots: list[dict[str, Any]]
+
+
+class ScreenTemplateCreateResponse(BaseModel):
+    template_id: int
+    name: str
+    slots: Optional[Any] = None
+
+
+class ScreenTemplateDeleteResponse(BaseModel):
+    ok: bool = True
