@@ -145,6 +145,8 @@ def _build_chart_model(item_type: str, item: dict, shape_content: dict, preview:
                 continue
             v = _get_row_value(row, field)
             try:
+                if v is not None and isinstance(v, str):
+                    v = v.replace(',', '')
                 num_value = float(v) if v is not None else None
             except (ValueError, TypeError):
                 num_value = None

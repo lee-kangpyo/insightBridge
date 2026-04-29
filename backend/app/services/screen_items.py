@@ -131,6 +131,16 @@ async def delete_item(item_id: int) -> None:
 
 
 async def save_screen_slots(scr_id: str, slots: list[dict]) -> None:
+    """화면의 개별 슬롯을 저장(upsert)한다.
+
+    의도된 동작:
+    - 이 함수는 슬롯 단위 upsert를 수행한다. (INSERT ... ON CONFLICT DO UPDATE)
+    - ts_scr_slot_item 의 PRIMARY KEY 가 (scr_id, slot_id) 이므로
+      동일 슬롯에 대한 "중복 행"이 쌓이는 것은 물리적으로 불가능하다.
+    - 프론트엔드(SlotLayoutPage)는 사용자가 슬롯을 개별 저장하므로,
+      기존 슬롯 전체를 DELETE 하지 않는다. (삭제하면 다른 슬롯 데이터가 날아감)
+    - 템플릿에서 슬롯이 제거되는 등의 orphan 정리는 별도 로직에서 처리한다.
+    """
     pool = await get_pool()
     async with pool.acquire() as conn:
         async with conn.transaction():

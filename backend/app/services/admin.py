@@ -1,3 +1,4 @@
+import logging
 import math
 import json
 from typing import Any, Optional
@@ -6,6 +7,7 @@ import pandas as pd
 from app.database import fetch_df, get_pool
 from app.services.menu import _sanitize_menu_record
 
+_logger = logging.getLogger(__name__)
 _PATCH_UNSET = object()
 
 
@@ -522,12 +524,22 @@ async def get_screen_template_slots(template_id: int) -> list[dict]:
     if isinstance(slots_json, str):
         try:
             slots = json.loads(slots_json)
-        except (json.JSONDecodeError, TypeError):
+        except (json.JSONDecodeError, TypeError) as e:
+            _logger.warning(
+                "get_screen_template_slots: invalid slots JSON for template %s: %s",
+                template_id,
+                e,
+            )
             return []
     else:
         slots = slots_json
 
     if not isinstance(slots, list):
+        _logger.warning(
+            "get_screen_template_slots: slots is not a list for template %s (type=%s)",
+            template_id,
+            type(slots).__name__,
+        )
         return []
 
     return [

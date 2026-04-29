@@ -87,17 +87,22 @@ export default function ScreenManagementPage() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
+    const target = deleteTarget;
     setDeleteLoading(true);
+    setDeleteTarget(null);
+    setScreens((prev) => prev.filter((s) => s.scr_id !== target.scr_id));
     try {
-      await deleteScreen(deleteTarget.scr_id);
-      showToast(`"${deleteTarget.scr_nm}" 화면이 삭제되었습니다.`);
-      await fetchScreens();
+      await deleteScreen(target.scr_id);
+      showToast(`"${target.scr_nm}" 화면이 삭제되었습니다.`);
     } catch (err) {
       console.error('Failed to delete screen:', err);
       showToast('화면 삭제 중 오류가 발생했습니다.', 'error');
+      setScreens((prev) => {
+        if (prev.some((s) => s.scr_id === target.scr_id)) return prev;
+        return [...prev, target];
+      });
     } finally {
       setDeleteLoading(false);
-      setDeleteTarget(null);
     }
   };
 
@@ -108,14 +113,25 @@ export default function ScreenManagementPage() {
 
   const handleSaveEdit = async () => {
     if (!editingId || !editName.trim()) return;
+    const originalScreen = screens.find((s) => s.scr_id === editingId);
+    const originalName = originalScreen?.scr_nm || '';
     setEditLoading(true);
+    setScreens((prev) =>
+      prev.map((s) =>
+        s.scr_id === editingId ? { ...s, scr_nm: editName.trim() } : s
+      )
+    );
     try {
       await patchScreen(editingId, { scr_nm: editName.trim() });
       showToast('화면 이름이 수정되었습니다.');
-      await fetchScreens();
     } catch (err) {
       console.error('Failed to patch screen:', err);
       showToast('화면 이름 수정 중 오류가 발생했습니다.', 'error');
+      setScreens((prev) =>
+        prev.map((s) =>
+          s.scr_id === editingId ? { ...s, scr_nm: originalName } : s
+        )
+      );
     } finally {
       setEditLoading(false);
       setEditingId(null);

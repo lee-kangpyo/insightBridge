@@ -327,7 +327,7 @@ function AddScreenMenuDialog({
                   {selectedScreen.linked_menus && selectedScreen.linked_menus.length > 0 ? (
                     <ul className="flex flex-col gap-1">
                       {selectedScreen.linked_menus.map((menuNm, idx) => (
-                        <li key={idx} className="text-sm text-on-surface flex items-center gap-2">
+                        <li key={`${menuNm}-${idx}`} className="text-sm text-on-surface flex items-center gap-2">
                           <span className="material-symbols-outlined text-[14px] text-on-surface-variant">menu</span>
                           {menuNm}
                         </li>
