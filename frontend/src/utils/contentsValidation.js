@@ -53,7 +53,7 @@ export function validateContentsBeforeSave({ generalInfo, contentType, data }) {
     for (let i = 0; i < items.length; i++) {
       const it = items[i] || {};
       errors.card.items[i] = { label: '', content: '' };
-      if (!asNonEmptyString(it.label)) errors.card.items[i].label = '필수값입니다.';
+      // 요약 카드: 라벨은 선택, 데이터 키(content)만 필수
       if (!asNonEmptyString(it.content)) errors.card.items[i].content = '필수값입니다.';
     }
   }
@@ -95,7 +95,6 @@ export function validateContentsBeforeSave({ generalInfo, contentType, data }) {
     errors.card.hasItems ||
     errors.cardFields.cardTitle ||
     errors.cardFields.titlePosition ||
-    (errors.card.items.find((it) => it?.label)?.label || '') ||
     (errors.card.items.find((it) => it?.content)?.content || '') ||
     errors.chart.chartType ||
     errors.chart.xAxis ||
