@@ -41,6 +41,8 @@ from app.services.screen_items import (
     get_screen_with_template,
     create_screen,
     list_screens,
+    delete_screen,
+    patch_screen,
 )
 from app.services.menu import treeify
 
@@ -540,6 +542,47 @@ async def put_screen_slots(
 async def get_admin_screens_list(_: dict = Depends(require_sys_adm)):
     rows = await list_screens()
     return {"screens": rows}
+
+
+@router.delete("/admin/screens/{scr_id}")
+async def delete_admin_screen(
+    scr_id: str,
+    _: dict = Depends(require_sys_adm),
+):
+    try:
+        await delete_screen(scr_id)
+    except LookupError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Screen not found",
+        )
+    return {"ok": True}
+
+
+class ScreenPatchBody(BaseModel):
+    scr_nm: Optional[str] = None
+
+
+@router.patch("/admin/screens/{scr_id}")
+async def patch_admin_screen(
+    scr_id: str,
+    body: ScreenPatchBody,
+    _: dict = Depends(require_sys_adm),
+):
+    data = body.model_dump(exclude_unset=True)
+    if not data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No fields to update",
+        )
+    try:
+        await patch_screen(scr_id, scr_nm=data.get("scr_nm"))
+    except LookupError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Screen not found",
+        )
+    return {"ok": True}
 
 
 @router.get("/admin/screens/{scr_id}/slots")

@@ -779,7 +779,7 @@ function MenuDetailForm({
             />
             {isSlotScreen && node.screen_id && (
               <a
-                href={`/admin/screen-config/${node.screen_id}`}
+                href={`/admin/screen-config/edit/${node.screen_id}`}
                 className="inline-flex items-center gap-1.5 text-xs font-medium text-secondary hover:text-primary transition-colors mt-1"
                 target="_blank"
                 rel="noopener noreferrer"

@@ -25,7 +25,8 @@ import RoleAuthorityMenu from "./pages/admin/RoleAuthorityMenu";
 import RoleUserManagement from "./pages/admin/RoleUserManagement";
 import UserManagement from "./pages/admin/UserManagement";
 import ChartGallery from "./pages/admin/ChartGallery";
-import ScreenConfigPage from "./pages/admin/ScreenConfigPage";
+import ScreenManagementPage from "./pages/admin/ScreenManagementPage";
+import TemplateSelectPage from "./pages/admin/TemplateSelectPage";
 import SlotLayoutPage from "./pages/admin/SlotLayoutPage";
 import ScreenViewer from "./pages/ScreenViewer";
 import ItemsManagement from "./pages/admin/ItemsManagement";
@@ -156,7 +157,9 @@ function App() {
         <Route path="role-authority-menu" element={<RoleAuthorityMenu />} />
         <Route path="role-users" element={<RoleUserManagement />} />
         <Route path="chart-gallery" element={<ChartGallery />} />
-        <Route path="screen-config" element={<ScreenConfigPage />} />
+        <Route path="screen-config" element={<ScreenManagementPage />} />
+        <Route path="screen-config/new" element={<TemplateSelectPage />} />
+        <Route path="screen-config/edit/:scrId" element={<SlotLayoutPage />} />
         <Route path="screen-config/:templateId" element={<SlotLayoutPage />} />
         <Route path="items" element={<ItemsManagement />} />
       </Route>

@@ -177,10 +177,24 @@ async def get_screen_with_template(scr_id: str) -> Optional[dict]:
 
 async def list_screens() -> list[dict]:
     query = """
-        SELECT scr_id, scr_nm, menu_id
-        FROM ts_scr_info
-        WHERE del_fg = 'N'
-        ORDER BY scr_nm, scr_id
+        SELECT
+            s.scr_id,
+            s.scr_nm,
+            s.menu_id,
+            t.name AS template_nm,
+            m.menu_nm AS linked_menu_nm,
+            COALESCE(si.slot_count, 0) AS used_slot_cnt
+        FROM ts_scr_info s
+        LEFT JOIN ts_scr_template_info t ON s.template_id = t.template_id
+        LEFT JOIN ts_menu_info m ON s.menu_id = m.menu_id
+        LEFT JOIN (
+            SELECT scr_id, COUNT(*) AS slot_count
+            FROM ts_scr_slot_item
+            WHERE item_id IS NOT NULL
+            GROUP BY scr_id
+        ) si ON s.scr_id = si.scr_id
+        WHERE s.del_fg = 'N'
+        ORDER BY s.scr_nm, s.scr_id
     """
     df = await fetch_df(query, ())
     if df.empty:
@@ -188,6 +202,76 @@ async def list_screens() -> list[dict]:
     return df.to_dict(orient="records")
 
 from app.utils.uuid_v7 import generate_uuid_v7
+
+async def delete_screen(scr_id: str) -> None:
+    """화면을 삭제하고 관련 메뉴 및 권한 매핑을 정리한다.
+
+    정책:
+    - ts_scr_info       : 소프트 삭제 (del_fg='Y')  → 화면 복원 가능
+    - ts_scr_slot_item  : 아무 작업 안 함           → 복원 시 슬롯 설정 유지
+    - ts_menu_info      : 소프트 삭제 (del_fg='Y')  → 메뉴 복원 가능
+    - ts_grp_menu       : 하드 삭제                 → 권한 매핑은 복원 시 수동 재설정
+    """
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            # 1. 연동된 메뉴 소프트 삭제
+            rows = await conn.fetch(
+                "SELECT menu_id FROM ts_menu_info WHERE screen_id = $1",
+                scr_id,
+            )
+            linked_menu_ids = [r["menu_id"] for r in rows]
+
+            if linked_menu_ids:
+                await conn.execute(
+                    "UPDATE ts_menu_info SET del_fg = 'Y' WHERE screen_id = $1",
+                    scr_id,
+                )
+                # 권한그룹-메뉴 매핑 하드 삭제
+                for menu_id in linked_menu_ids:
+                    await conn.execute(
+                        "DELETE FROM ts_grp_menu WHERE menu_id = $1",
+                        menu_id,
+                    )
+
+            # 2. 화면 소프트 삭제
+            result = str(
+                await conn.execute(
+                    "UPDATE ts_scr_info SET del_fg = 'Y' WHERE scr_id = $1",
+                    scr_id,
+                )
+            )
+            if result.strip() == "UPDATE 0":
+                raise LookupError("screen_not_found")
+
+
+async def patch_screen(scr_id: str, scr_nm: Optional[str] = None) -> None:
+    """화면 정보를 부분 업데이트한다."""
+    fields: list[str] = []
+    values: list[Any] = []
+    idx = 1
+
+    if scr_nm is not None:
+        fields.append(f"scr_nm = ${idx}")
+        values.append(scr_nm.strip())
+        idx += 1
+
+    if not fields:
+        return
+
+    fields.append(f"mod_dt = ${idx}")
+    values.append("NOW()")
+    idx += 1
+
+    values.append(scr_id)
+    query = f"UPDATE ts_scr_info SET {', '.join(fields)} WHERE scr_id = ${idx} AND del_fg = 'N'"
+
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        result = str(await conn.execute(query, *values))
+        if result.strip() == "UPDATE 0":
+            raise LookupError("screen_not_found")
+
 
 async def create_screen(scr_nm: str, template_id: int) -> str:
     """화면을 생성하고 UUID v7 스타일의 scr_id를 발급받는다."""
