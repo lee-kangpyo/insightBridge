@@ -4,6 +4,15 @@
  * No React dependencies - can be used in any context.
  */
 
+/** 백엔드 SQL 미리보기와 동일한 상한(행). 그 이상은 UI/선택 로직에서 처리하지 않습니다. */
+export const SQL_PREVIEW_MAX_ROWS = 100;
+
+export function clampPreviewRows(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return [];
+  if (rows.length <= SQL_PREVIEW_MAX_ROWS) return rows;
+  return rows.slice(0, SQL_PREVIEW_MAX_ROWS);
+}
+
 export function normalizeMappingItems(mappingItems) {
   if (!mappingItems) return [];
   if (Array.isArray(mappingItems)) return mappingItems.filter(Boolean);
@@ -183,7 +192,7 @@ export function buildGridPreviewModel(itemType, item, shapeContent, preview) {
     return { dataKey, header: meta?.header || dataKey };
   });
 
-  const sqlRows = Array.isArray(preview?.rows) ? preview.rows : [];
+  const sqlRows = clampPreviewRows(Array.isArray(preview?.rows) ? preview.rows : []);
   const rows = sqlRows.map((row) => {
     const out = {};
     for (const { dataKey, field } of usableMappings) {
@@ -216,7 +225,7 @@ export function buildChartPreviewModel(itemType, item, shapeContent, preview) {
     return { chartType, data: [], chartConfig: null };
   }
 
-  const sqlRows = Array.isArray(preview?.rows) ? preview.rows : [];
+  const sqlRows = clampPreviewRows(Array.isArray(preview?.rows) ? preview.rows : []);
   if (sqlRows.length === 0) {
     return { chartType, data: [], chartConfig: null };
   }
@@ -258,7 +267,7 @@ export function buildChartPreviewModel(itemType, item, shapeContent, preview) {
 }
 
 export function buildCardPreviewModel(itemType, item, shapeContent, preview) {
-  const rows = preview?.rows || [];
+  const rows = clampPreviewRows(Array.isArray(preview?.rows) ? preview.rows : []);
 
   if (itemType !== 'card') return null;
 

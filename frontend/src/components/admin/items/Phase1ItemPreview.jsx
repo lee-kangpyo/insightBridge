@@ -3,9 +3,11 @@ import { CardDetail, ChartDetail, GridDetail } from '../../content-detail';
 import { executeSqlPreview, getAdminContentsDetail, handleApiError } from '../../../services/adminApi';
 import ChartRenderer from '../../ChartRenderer';
 import {
+  SQL_PREVIEW_MAX_ROWS,
   buildChartPreviewModel,
   buildGridPreviewModel,
   buildCardPreviewModel,
+  clampPreviewRows,
   selectCardRow,
 } from '../../../utils/itemDataTransformers';
 
@@ -183,13 +185,16 @@ export default function Phase1ItemPreview({ item }) {
 
   const sqlMeta = useMemo(() => {
     const cols = sqlPreview?.columns || [];
-    const rows = sqlPreview?.rows || [];
+    const rawRows = Array.isArray(sqlPreview?.rows) ? sqlPreview.rows : [];
+    const rows = clampPreviewRows(rawRows);
     const rowSelector = item?.mapping_json?.mapping?.rowSelector;
     const selectedCardRow = itemType === 'card' ? selectCardRow(rows, rowSelector) : null;
     const selectedRow = selectedCardRow?.row || rows[0] || null;
     return {
       colCount: cols.length,
       rowCount: rows.length,
+      rawRowCount: rawRows.length,
+      previewRowsClientCapped: rawRows.length > SQL_PREVIEW_MAX_ROWS,
       truncated: !!sqlPreview?.truncated,
       cols,
       selectedRow,
@@ -461,6 +466,14 @@ export default function Phase1ItemPreview({ item }) {
                 <span>컬럼 {sqlMeta.colCount}개</span>
                 <span>·</span>
                 <span>행 {sqlMeta.rowCount}개</span>
+                {sqlMeta.previewRowsClientCapped && (
+                  <>
+                    <span>·</span>
+                    <span className="text-amber-900" title={`응답 ${sqlMeta.rawRowCount}행 중 미리보기·선택 로직에 ${SQL_PREVIEW_MAX_ROWS}행만 반영`}>
+                      응답 {sqlMeta.rawRowCount}행 → 상위 {SQL_PREVIEW_MAX_ROWS}행만 사용
+                    </span>
+                  </>
+                )}
                 {sqlMeta.truncated && (
                   <>
                     <span>·</span>

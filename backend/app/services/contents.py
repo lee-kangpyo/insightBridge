@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from typing import Any, Literal, Optional, Sequence
 
 import asyncpg
 import pandas as pd
-from app.database import fetch_df, get_pool
+from app.database import fetch_df, fetch_df_readonly, get_pool
+from app.utils.sql_preview_validation import prepare_admin_sql_preview
 
 ContentsType = Literal["chart", "grid", "card", "sql"]
 
@@ -480,27 +480,12 @@ async def get_contents_detail(cnts_id: int, tp: ContentsType) -> dict[str, Any]:
 async def preview_sql_text(sql: str) -> dict[str, Any]:
     """
     임의 SQL 문자열을 실행해 preview 결과를 반환합니다(관리자 전용 API에서 사용).
+    pglast로 단일 SELECT만 허용하고, 읽기 전용 DB 풀(default_transaction_read_only)에서 실행합니다.
     최대 100개의 row만 반환하며, truncated 플래그를 포함합니다.
     """
-    sql = (sql or "").strip()
-    if not sql:
-        raise ValueError("empty_sql")
-
-    normalized_sql = sql.lower()
-    forbidden_keywords = ["insert", "update", "delete", "drop", "create", "alter", "truncate"]
-    for keyword in forbidden_keywords:
-        pattern = r"(^|[\s;(),])" + keyword + r"([\s;(),]|$)"
-        if re.search(pattern, normalized_sql):
-            raise ValueError(f"unsafe_sql: contains forbidden keyword '{keyword}'")
-
     try:
-        has_limit = re.search(r"\blimit\s+\d+\b", normalized_sql)
-        if has_limit:
-            limited_sql = sql
-        else:
-            limited_sql = f"{sql.rstrip(';')} LIMIT 101"
-
-        df = await fetch_df(limited_sql, ())
+        limited_sql = prepare_admin_sql_preview(sql)
+        df = await fetch_df_readonly(limited_sql, ())
 
         columns = list(df.columns)
         rows_data = df.head(100).to_dict(orient="records")
