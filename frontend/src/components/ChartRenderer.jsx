@@ -7,18 +7,36 @@ import {
   TOOLTIP_STYLE,
 } from '../constants/chartTheme';
 
+function uniqueInOrder(values) {
+  const seen = new Set();
+  const out = [];
+  for (const v of values) {
+    if (seen.has(v)) continue;
+    seen.add(v);
+    out.push(v);
+  }
+  return out;
+}
+
 function pivotData(data, xKey, yKey, groupKey) {
   if (!data || data.length === 0) return { xValues: [], groups: [], series: {} };
 
-  const xValues = [...new Set(data.map(r => String(r[xKey])))].sort();
-  const groups = groupKey ? [...new Set(data.map(r => String(r[groupKey])))].sort() : [null];
+  // SQL ORDER BY 순서를 유지하기 위해, "처음 등장한 순서"를 그대로 사용합니다. (sort 금지)
+  const xValues = uniqueInOrder(data.map(r => String(r[xKey])));
+  const groups = groupKey ? uniqueInOrder(data.map(r => String(r[groupKey]))) : [null];
+
+  const valueMap = new Map();
+  for (const r of data) {
+    const xv = String(r[xKey]);
+    const g = groupKey ? String(r[groupKey]) : null;
+    const raw = r?.[yKey];
+    const value = raw === undefined || raw === null ? null : Number(raw);
+    valueMap.set(`${g}||${xv}`, Number.isNaN(value) ? null : value);
+  }
 
   const series = {};
   for (const g of groups) {
-    series[g] = xValues.map(xv => {
-      const match = data.find(r => String(r[xKey]) === xv && (g === null ? true : String(r[groupKey]) === g));
-      return match !== undefined ? Number(match[yKey]) : null;
-    });
+    series[g] = xValues.map((xv) => valueMap.get(`${g}||${xv}`) ?? null);
   }
 
   return { xValues, groups, series };
@@ -293,10 +311,11 @@ function buildHeatmapOption(data, config) {
   const groupKey = config.groupKey;
   const yKey = config.y;
 
-  const xValues = [...new Set(data.map(r => String(r[xKey])))].sort();
+  // SQL ORDER BY 순서를 유지하기 위해 sort 하지 않습니다.
+  const xValues = uniqueInOrder(data.map(r => String(r[xKey])));
   const yValues = groupKey
-    ? [...new Set(data.map(r => String(r[groupKey])))].sort()
-    : [...new Set(data.filter(r => r[yKey] !== undefined && r[yKey] !== null).map(r => String(r[yKey])))].sort();
+    ? uniqueInOrder(data.map(r => String(r[groupKey])))
+    : uniqueInOrder(data.filter(r => r[yKey] !== undefined && r[yKey] !== null).map(r => String(r[yKey])));
 
   const dataPoints = data.map(r => [
     xValues.indexOf(String(r[xKey])),
