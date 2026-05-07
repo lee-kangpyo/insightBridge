@@ -1,11 +1,18 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import {
   DndContext,
   DragOverlay,
   PointerSensor,
   useSensor,
   useSensors,
-  closestCenter,
+  pointerWithin,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -267,6 +274,62 @@ function findParentChain(nodes, targetId, path = []) {
   return null;
 }
 
+function cloneMenuTree(nodes) {
+  return nodes.map((n) => ({
+    ...n,
+    children: n.children ? cloneMenuTree(n.children) : [],
+  }));
+}
+
+function detachNode(nodes, nodeId) {
+  for (let i = 0; i < nodes.length; i += 1) {
+    const n = nodes[i];
+    if (n.menu_id === nodeId) {
+      nodes.splice(i, 1);
+      return n;
+    }
+    if (n.children?.length) {
+      const found = detachNode(n.children, nodeId);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function findParentListForTarget(nodes, targetId) {
+  for (const n of nodes) {
+    if (n.menu_id === targetId) {
+      return { list: nodes, index: nodes.indexOf(n), target: n };
+    }
+    if (n.children?.length) {
+      const r = findParentListForTarget(n.children, targetId);
+      if (r) return r;
+    }
+  }
+  return null;
+}
+
+function moveNodeInTree(tree, draggedId, targetId, position) {
+  const next = cloneMenuTree(tree);
+  const dragged = detachNode(next, draggedId);
+  if (!dragged) return { tree: next, didMove: false };
+
+  const targetInfo = findParentListForTarget(next, targetId);
+  if (!targetInfo) return { tree: next, didMove: false };
+
+  if (position === "inside") {
+    const t = targetInfo.target;
+    if (!t.children) t.children = [];
+    t.children.push(dragged);
+    return { tree: next, didMove: true };
+  }
+
+  const insertIndex =
+    position === "before" ? targetInfo.index : targetInfo.index + 1;
+  targetInfo.list.splice(insertIndex, 0, dragged);
+  return { tree: next, didMove: true };
+}
+
 function collectAllIds(nodes) {
   const ids = new Set();
   function walk(list) {
@@ -478,6 +541,7 @@ function MenuTree({
   onDragEnd,
   onDragCancel,
   menuTree,
+  scrollRef,
 }) {
   const activeNode = activeId ? findNodeById(menuTree, activeId) : null;
 
@@ -504,7 +568,7 @@ function MenuTree({
         placeholder="메뉴 항목 검색..."
         showSubmitButton={false}
       />
-      <div className="overflow-y-auto no-scrollbar flex-1 min-h-0 -mx-2 px-2 flex flex-col gap-1 text-sm mt-2">
+      <div ref={scrollRef} className="overflow-y-auto no-scrollbar flex-1 min-h-0 -mx-2 px-2 flex flex-col gap-1 text-sm mt-2">
         {loading ? (
           <p className="text-on-surface-variant text-sm py-4">불러오는 중…</p>
         ) : roots.length === 0 ? (
@@ -514,7 +578,7 @@ function MenuTree({
         ) : (
           <DndContext
             sensors={sensors}
-            collisionDetection={closestCenter}
+            collisionDetection={pointerWithin}
             onDragStart={onDragStart}
             onDragOver={onDragOver}
             onDragEnd={onDragEnd}
@@ -1013,6 +1077,12 @@ export default function MenuManagement() {
   const overIdRef = useRef(null);
   const dropPositionRef = useRef(null);
   const descendantIdsRef = useRef(new Set());
+  const pendingTreeScrollTopRef = useRef(null);
+  const pendingTreeScrollRestoreKeyRef = useRef(0);
+  const treeScrollRestoreRafRef = useRef(null);
+  const treeScrollRestoreRaf2Ref = useRef(null);
+  const hasMountedRef = useRef(false);
+  const treeScrollRef = useRef(null);
 
   const invalidTargetIds = useMemo(() => {
     if (!activeId) return new Set();
@@ -1033,10 +1103,12 @@ export default function MenuManagement() {
     toastTimerRef.current = window.setTimeout(() => setToast(null), 3000);
   }, []);
 
-  const loadTree = useCallback(async () => {
+  const loadTree = useCallback(async ({ silent = false } = {}) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (!silent) {
+        setLoading(true);
+        setError(null);
+      }
       const data = await getAdminMenuTree();
       const tree = data.menu_tree || [];
       setMenuTree(tree);
@@ -1056,18 +1128,62 @@ export default function MenuManagement() {
         err.response?.data?.detail ||
         err.message ||
         "메뉴를 불러오지 못했습니다.";
-      setError(typeof msg === "string" ? msg : JSON.stringify(msg));
-      setMenuTree([]);
-      setSelectedNode(null);
+      if (!silent) {
+        setError(typeof msg === "string" ? msg : JSON.stringify(msg));
+        setMenuTree([]);
+        setSelectedNode(null);
+      }
       return [];
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadTree();
+    loadTree({ silent: false });
   }, [loadTree]);
+
+  useLayoutEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+    if (loading) return;
+    const scrollContainer = treeScrollRef.current;
+    const saved = pendingTreeScrollTopRef.current;
+    if (!scrollContainer || saved == null) return;
+
+    if (treeScrollRestoreRafRef.current) {
+      cancelAnimationFrame(treeScrollRestoreRafRef.current);
+      treeScrollRestoreRafRef.current = null;
+    }
+    if (treeScrollRestoreRaf2Ref.current) {
+      cancelAnimationFrame(treeScrollRestoreRaf2Ref.current);
+      treeScrollRestoreRaf2Ref.current = null;
+    }
+
+    const restoreKey = pendingTreeScrollRestoreKeyRef.current;
+    treeScrollRestoreRafRef.current = requestAnimationFrame(() => {
+      if (pendingTreeScrollRestoreKeyRef.current !== restoreKey) return;
+      scrollContainer.scrollTop = saved;
+      treeScrollRestoreRaf2Ref.current = requestAnimationFrame(() => {
+        if (pendingTreeScrollRestoreKeyRef.current !== restoreKey) return;
+        scrollContainer.scrollTop = saved;
+        pendingTreeScrollTopRef.current = null;
+      });
+    });
+  }, [loading, menuTree]);
+
+  useEffect(() => {
+    return () => {
+      if (treeScrollRestoreRafRef.current) {
+        cancelAnimationFrame(treeScrollRestoreRafRef.current);
+      }
+      if (treeScrollRestoreRaf2Ref.current) {
+        cancelAnimationFrame(treeScrollRestoreRaf2Ref.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (selectedNode) {
@@ -1089,38 +1205,14 @@ export default function MenuManagement() {
 
   const overRectRef = useRef(null);
 
-  useEffect(() => {
-    if (!activeId) return;
-    const el = document.querySelector(
-      `[data-menu-id="${overIdRef.current}"]`,
-    );
-    overRectRef.current = el ? el.getBoundingClientRect() : null;
-  }, [activeId, overId]);
-
-  useEffect(() => {
-    if (!activeId) return;
-    const handlePointerMove = (e) => {
-      pointerYRef.current = e.clientY;
-      if (!overRectRef.current) return;
-      const rect = overRectRef.current;
-      const relY = e.clientY - rect.top;
-      const height = rect.height;
-      let pos;
-      if (relY < height * 0.25) {
-        pos = "before";
-      } else if (relY > height * 0.75) {
-        pos = "after";
-      } else {
-        pos = "inside";
-      }
-      if (pos !== dropPositionRef.current) {
-        dropPositionRef.current = pos;
-        setDropPosition(pos);
-      }
-    };
-    window.addEventListener("pointermove", handlePointerMove);
-    return () => window.removeEventListener("pointermove", handlePointerMove);
-  }, [activeId, overId]);
+  const computeDropPosition = useCallback((clientY, rect) => {
+    if (!rect) return null;
+    const relY = clientY - rect.top;
+    const height = rect.height;
+    if (relY < height * 0.25) return "before";
+    if (relY > height * 0.75) return "after";
+    return "inside";
+  }, []);
 
   const handleDragStart = useCallback(
     ({ active }) => {
@@ -1133,17 +1225,37 @@ export default function MenuManagement() {
     [menuTree],
   );
 
-  const handleDragOver = useCallback(({ over }) => {
-    if (over) {
-      overIdRef.current = over.id;
-      setOverId(over.id);
-    } else {
-      overIdRef.current = null;
-      setOverId(null);
-      setDropPosition(null);
-      dropPositionRef.current = null;
-    }
-  }, []);
+  const handleDragOver = useCallback(
+    ({ over }) => {
+      if (over) {
+        overIdRef.current = over.id;
+        setOverId(over.id);
+        const rect = over.rect;
+        overRectRef.current = rect;
+        const pos = computeDropPosition(pointerYRef.current, rect);
+        if (pos !== dropPositionRef.current) {
+          dropPositionRef.current = pos;
+          setDropPosition(pos);
+        }
+      } else {
+        overIdRef.current = null;
+        setOverId(null);
+        setDropPosition(null);
+        dropPositionRef.current = null;
+        overRectRef.current = null;
+      }
+    },
+    [computeDropPosition],
+  );
+
+  useEffect(() => {
+    if (!activeId) return;
+    const handlePointerMove = (e) => {
+      pointerYRef.current = e.clientY;
+    };
+    window.addEventListener("pointermove", handlePointerMove);
+    return () => window.removeEventListener("pointermove", handlePointerMove);
+  }, [activeId]);
 
   const resetDragState = useCallback(() => {
     setActiveId(null);
@@ -1167,9 +1279,34 @@ export default function MenuManagement() {
       if (draggedId === targetId) return;
       if (descendants.has(targetId)) return;
 
+      const scrollContainer = treeScrollRef.current;
+      const savedScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
+      pendingTreeScrollTopRef.current = savedScrollTop;
+      pendingTreeScrollRestoreKeyRef.current += 1;
+
+      const prevTree = menuTree;
+      const prevExpanded = expandedIds;
+      const prevSelectedId = selectedNode?.menu_id ?? null;
+
+      const optimistic = moveNodeInTree(menuTree, draggedId, targetId, position);
+      if (optimistic.didMove) {
+        setMenuTree(optimistic.tree);
+        setSelectedNode((prev) => {
+          if (!prev) return prev;
+          return findNodeById(optimistic.tree, prev.menu_id) ?? null;
+        });
+        if (position === "inside") {
+          setExpandedIds((prev) => {
+            const next = new Set(prev);
+            next.add(targetId);
+            return next;
+          });
+        }
+      }
+
       try {
         await moveAdminMenu(draggedId, targetId, position);
-        const tree = await loadTree();
+        const tree = await loadTree({ silent: true });
         const chain = findParentChain(tree, draggedId);
         if (chain) {
           setExpandedIds((prev) => {
@@ -1179,17 +1316,44 @@ export default function MenuManagement() {
           });
         }
       } catch (err) {
-        const msg =
-          err.response?.data?.detail ||
-          err.message ||
-          "이동에 실패했습니다.";
+        setMenuTree(prevTree);
+        setExpandedIds(prevExpanded);
+        if (prevSelectedId != null) {
+          setSelectedNode(findNodeById(prevTree, prevSelectedId));
+        } else {
+          setSelectedNode(null);
+        }
+        const status = err?.response?.status;
+        const detail = err?.response?.data?.detail;
+        const rawMsg = err?.message;
+        let msg = "메뉴 이동에 실패했습니다.";
+        if (typeof detail === "string" && detail.trim()) {
+          msg = detail;
+        } else if (status === 401) {
+          msg = "로그인이 만료되었습니다. 다시 로그인해주세요.";
+        } else if (status === 403) {
+          msg = "권한이 없어 메뉴를 이동할 수 없습니다.";
+        } else if (status === 404) {
+          msg = "이동 대상 메뉴를 찾을 수 없습니다. 새로고침 후 다시 시도해주세요.";
+        } else if (status === 409) {
+          msg = "순환 참조가 발생할 수 있어 이동이 차단되었습니다.";
+        } else if (status === 502 || status === 503 || status === 504) {
+          msg = "서버 연결에 실패했습니다(백엔드/프록시). 잠시 후 다시 시도해주세요.";
+        } else if (
+          typeof rawMsg === "string" &&
+          (rawMsg.includes("Network Error") || rawMsg.includes("ECONN"))
+        ) {
+          msg = "네트워크 오류로 메뉴 이동에 실패했습니다. 서버 상태를 확인해주세요.";
+        } else if (typeof rawMsg === "string" && rawMsg.trim()) {
+          msg = rawMsg;
+        }
         showToast(
-          typeof msg === "string" ? msg : "이동에 실패했습니다.",
+          msg,
           "error",
         );
       }
     },
-    [loadTree, showToast],
+    [menuTree, expandedIds, selectedNode, loadTree, showToast, resetDragState],
   );
 
   const handleDragCancel = useCallback(() => {
@@ -1439,6 +1603,7 @@ export default function MenuManagement() {
           onDragEnd={handleDragEnd}
           onDragCancel={handleDragCancel}
           menuTree={menuTree}
+          scrollRef={treeScrollRef}
         />
         <MenuDetailForm
           key={selectedNode?.menu_id ?? "none"}
