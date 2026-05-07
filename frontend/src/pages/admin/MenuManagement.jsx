@@ -1087,16 +1087,22 @@ export default function MenuManagement() {
     });
   }, []);
 
+  const overRectRef = useRef(null);
+
+  useEffect(() => {
+    if (!activeId) return;
+    const el = document.querySelector(
+      `[data-menu-id="${overIdRef.current}"]`,
+    );
+    overRectRef.current = el ? el.getBoundingClientRect() : null;
+  }, [activeId, overId]);
+
   useEffect(() => {
     if (!activeId) return;
     const handlePointerMove = (e) => {
       pointerYRef.current = e.clientY;
-      if (!overIdRef.current) return;
-      const overEl = document.querySelector(
-        `[data-menu-id="${overIdRef.current}"]`,
-      );
-      if (!overEl) return;
-      const rect = overEl.getBoundingClientRect();
+      if (!overRectRef.current) return;
+      const rect = overRectRef.current;
       const relY = e.clientY - rect.top;
       const height = rect.height;
       let pos;
@@ -1114,7 +1120,7 @@ export default function MenuManagement() {
     };
     window.addEventListener("pointermove", handlePointerMove);
     return () => window.removeEventListener("pointermove", handlePointerMove);
-  }, [activeId]);
+  }, [activeId, overId]);
 
   const handleDragStart = useCallback(
     ({ active }) => {
