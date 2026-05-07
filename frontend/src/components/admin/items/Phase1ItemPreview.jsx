@@ -40,66 +40,80 @@ export function CompositeKpiCardPreview({ title, headline, rows, sources }) {
   if (!hasHeadline && !hasRows) return null;
 
   return (
-    <div className="h-full flex flex-col p-4 gap-3">
-      {/* 상단 컬러 액센트 바 */}
-      <div className="h-0.5 w-10 rounded-full bg-gradient-to-r from-sky-400 to-blue-500 opacity-70 -mt-1" />
+    <div className="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/40 shadow-md hover:shadow-lg hover:border-outline-variant/60 transition-all h-full min-h-full">
+      <div className="h-full min-h-full flex flex-col gap-3 text-on-surface">
+        {/* 상단 컬러 액센트 바 (메인 KPI 카드의 하단 바 느낌을 해치지 않게, 얇고 짧게) */}
+        <div className="h-0.5 w-10 rounded-full bg-gradient-to-r from-sky-400 to-blue-500 opacity-60 -mt-1" />
 
-      {/* 제목 */}
-      {title && (
-        <span
-          className="text-[10px] font-bold tracking-[0.12em] uppercase text-on-surface-variant/70 leading-snug line-clamp-2 break-words"
-          title={title}
-        >
-          {title}
-        </span>
-      )}
+        {/* 제목 */}
+        {title && (
+          <span
+            className="text-[13px] font-bold tracking-[0.10em] uppercase text-on-surface-variant/70 leading-snug line-clamp-2 break-words"
+            title={title}
+          >
+            {title}
+          </span>
+        )}
 
-      {/* 헤드라인 수치 */}
-      {hasHeadline && (
-        <div className="text-[2rem] font-extrabold tabular-nums leading-none text-primary tracking-tight">
-          {displayText(headline)}
-        </div>
-      )}
+        {/* 헤드라인 수치 */}
+        {hasHeadline && (
+          <div className="text-4xl font-semibold tabular-nums leading-tight text-primary tracking-tight">
+            {displayText(headline)}
+          </div>
+        )}
 
-      {/* 비교 행 */}
-      {hasRows && (
-        <div className="mt-auto space-y-1.5 border-t border-outline/10 pt-2.5">
-          {rows.map((r, idx) => {
-            const label = typeof r?.label === 'string' ? r.label : '';
-            const value = r?.value;
-            const kind = r?.kind;
+        {/* 비교 행 */}
+        {hasRows && (
+          <div className="mt-auto space-y-1.5 border-t border-outline/10 pt-2.5">
+            {rows.map((r, idx) => {
+              const label = typeof r?.label === 'string' ? r.label : '';
+              const value = r?.value;
+              const kind = r?.kind;
+              const rowTextStyle = r?.color ? { color: r.color } : undefined;
 
-            if (!label.trim() || kind === 'valueOnly') {
+              if (!label.trim() || kind === 'valueOnly') {
+                return (
+                  <div
+                    key={idx}
+                    className="text-xl font-semibold tabular-nums"
+                    style={rowTextStyle}
+                  >
+                    {displayText(value)}
+                  </div>
+                );
+              }
+
               return (
-                <div key={idx} className="text-lg font-bold tabular-nums text-on-surface">
-                  {displayText(value)}
+                <div key={idx} className="flex justify-between items-baseline gap-2 text-base">
+                  <span
+                    className="font-semibold shrink-0 leading-snug inline-flex items-baseline gap-2"
+                    style={rowTextStyle}
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0 translate-y-[-1px]"
+                      style={r?.color ? { backgroundColor: r.color } : undefined}
+                    />
+                    {label}
+                  </span>
+                  <span className="font-semibold tabular-nums" style={rowTextStyle}>
+                    {displayText(value)}
+                  </span>
                 </div>
               );
-            }
+            })}
+          </div>
+        )}
 
-            return (
-              <div key={idx} className="flex justify-between items-baseline gap-2">
-                <span className="text-[11px] text-on-surface-variant font-medium shrink-0">
-                  {label}
-                </span>
-                <span className="text-xs font-bold tabular-nums text-on-surface/80">
-                  {displayText(value)}
-                </span>
+        {Array.isArray(sources) && sources.length > 0 && (
+          <div className="space-y-0.5 mt-1">
+            {sources.map((s, i) => (
+              <div key={i} className="text-xs text-on-surface-variant/50 truncate" title={s}>
+                {s}
               </div>
-            );
-          })}
-        </div>
-      )}
-
-      {Array.isArray(sources) && sources.length > 0 && (
-        <div className="space-y-0.5 mt-1">
-          {sources.map((s, i) => (
-            <div key={i} className="text-[10px] text-on-surface-variant/50 truncate" title={s}>
-              {s}
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

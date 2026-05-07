@@ -32,6 +32,14 @@ export default function ContentsTable({ contents, selectedId, onSelect }) {
                 ? (item.createdAt || item.generatedAt).replace('T', '\n').slice(0, 16).replace('T', ' ')
                 : '-';
 
+              const cardColorDots =
+                item?.contentType === 'card' && Array.isArray(item?.data?.items)
+                  ? item.data.items
+                      .map((it) => (typeof it?.color === 'string' ? it.color.trim() : ''))
+                      .filter(Boolean)
+                      .slice(0, 3)
+                  : [];
+
               return (
                 <tr
                   key={item.contentId}
@@ -49,15 +57,29 @@ export default function ContentsTable({ contents, selectedId, onSelect }) {
 
                   {/* 타입 pill */}
                   <td className="py-5 px-6">
-                    <span
-                      className="px-3 py-1 rounded-full text-xs font-medium leading-snug"
-                      style={{
-                        backgroundColor: typeInfo.bgColor,
-                        color: typeInfo.textColor,
-                      }}
-                    >
-                      {typeInfo.label}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="px-3 py-1 rounded-full text-xs font-medium leading-snug"
+                        style={{
+                          backgroundColor: typeInfo.bgColor,
+                          color: typeInfo.textColor,
+                        }}
+                      >
+                        {typeInfo.label}
+                      </span>
+                      {cardColorDots.length > 0 && (
+                        <span className="inline-flex items-center gap-1.5" aria-label="카드 항목 색상">
+                          {cardColorDots.map((c, i) => (
+                            <span
+                              key={`${c}-${i}`}
+                              className="w-2.5 h-2.5 rounded-full border border-white shadow-sm"
+                              style={{ backgroundColor: c }}
+                              title={c}
+                            />
+                          ))}
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   {/* 콘텐츠명 */}
