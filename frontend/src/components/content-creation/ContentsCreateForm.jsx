@@ -101,7 +101,11 @@ export default function ContentsCreateForm({
             createdAt: toDatetimeLocalValue(),
             generatedAt: toDatetimeLocalValue(),
           }
-        : normalized.generalInfo;
+        : {
+            ...normalized.generalInfo,
+            createdAt: normalized.generalInfo.createdAt || toDatetimeLocalValue(),
+            generatedAt: toDatetimeLocalValue(),
+          };
 
     setGeneralInfo(nextGeneralInfo);
     setContentType(normalized.contentType);

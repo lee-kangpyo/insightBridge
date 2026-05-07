@@ -115,7 +115,7 @@ function SlotItemRenderer({ itemId }) {
 
   if (data.type === 'card') {
     return (
-      <div className="w-full h-full overflow-auto">
+      <div className="w-full h-full">
         <CompositeKpiCardPreview
           title={data.title}
           headline={data.headline}

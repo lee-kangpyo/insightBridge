@@ -1018,6 +1018,7 @@ export function MappingTab({
               const isGridColumn = field.id.startsWith('column_');
               const isCategory = field.id.startsWith('category_');
               const isSeries = field.id.startsWith('series_');
+              const seriesKey = isSeries ? field.id.substring(7) : '';
 
               let mappedValue;
               let isMapped;
@@ -1034,6 +1035,13 @@ export function MappingTab({
                 mappedValue = mappingJson.mapping?.[field.id];
                 isMapped = !!mappedValue;
               }
+
+              const seriesColor =
+                isSeries && seriesKey
+                  ? mappingJson?.mapping?.series?.[seriesKey]?.colorHex ||
+                    mappingJson?.mapping?.series?.[seriesKey]?.color_hex ||
+                    ''
+                  : '';
 
               return (
                 <div
@@ -1053,15 +1061,37 @@ export function MappingTab({
                         {mappedValue || '여기에 드롭'}
                       </div>
                     </div>
-                    {isMapped && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveMapping(field.id)}
-                        className="text-error hover:text-error/80 transition-colors"
-                      >
-                        ✕
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {isSeries && (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={seriesColor || '#64748b'}
+                            onChange={(e) => {
+                              const next = { ...(mappingJson || {}) };
+                              if (!next.mapping || typeof next.mapping !== 'object') next.mapping = {};
+                              if (!next.mapping.series || typeof next.mapping.series !== 'object') next.mapping.series = {};
+                              const prev = next.mapping.series[seriesKey] || {};
+                              next.mapping.series[seriesKey] = { ...prev, colorHex: e.target.value };
+                              onMappingJsonChange(next);
+                            }}
+                            className="w-7 h-7 rounded border border-outline/30 cursor-pointer bg-transparent"
+                            title="시리즈 색상"
+                            aria-label="시리즈 색상"
+                          />
+                        </div>
+                      )}
+                      {isMapped && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveMapping(field.id)}
+                          className="text-error hover:text-error/80 transition-colors"
+                          aria-label={`${field.label} 해제`}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );

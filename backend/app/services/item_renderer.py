@@ -129,6 +129,22 @@ def _build_chart_model(item_type: str, item: dict, shape_content: dict, preview:
     if not title:
         title = item.get("item_nm", "") if item else ""
 
+    series_colors: dict[str, str] = {}
+    for s in series_list:
+        if not isinstance(s, dict):
+            continue
+        series_name = str(s.get("name") or s.get("label") or "").strip() or ""
+        field = s.get("field")
+        key = series_name or (str(field).strip() if isinstance(field, str) else "")
+        if not key:
+            continue
+        raw_color = s.get("colorHex") or s.get("color_hex") or s.get("item_color_hex") or s.get("color")
+        if raw_color is None:
+            continue
+        color = str(raw_color).strip()
+        if color:
+            series_colors[key] = color
+
     long = []
     for row in sql_rows:
         category = _get_row_value(row, category_field)
@@ -166,6 +182,7 @@ def _build_chart_model(item_type: str, item: dict, shape_content: dict, preview:
         "x": "category",
         "y": "value",
         "group": "series",
+        "seriesColors": series_colors,
     }
 
     return {"chartType": chart_type, "data": data, "chartConfig": chart_config}
@@ -210,6 +227,9 @@ def _build_card_model(item_type: str, item: dict, shape_content: dict, preview: 
         label_raw = it.get("label") or (shape_items[idx].get("label") if idx < len(shape_items) and shape_items[idx] else "")
         label = str(label_raw) if isinstance(label_raw, str) else str(label_raw or "")
         label_trim = label.strip()
+        color_hex = None
+        if idx < len(shape_items) and shape_items[idx] and isinstance(shape_items[idx], dict):
+            color_hex = shape_items[idx].get("color")
         v = _get_row_value(row0, field) if field else None
 
         if field:
@@ -226,6 +246,7 @@ def _build_card_model(item_type: str, item: dict, shape_content: dict, preview: 
             "label": label if label_trim else "",
             "value": v,
             "kind": "labeled" if label_trim else "valueOnly",
+            "color": color_hex,
         })
 
     return {"title": title, "headline": headline, "rows": out_rows, "sources": sources}
@@ -303,6 +324,7 @@ async def render_item(item_id: int) -> dict:
             "title": model.get("title") if model else item.get("item_nm", "카드"),
             "headline": model.get("headline") if model else None,
             "rows": model.get("rows", []) if model else [],
+            "sources": model.get("sources", []) if model else [],
         }
 
     return {
