@@ -135,6 +135,9 @@ export default function Sidebar({ open, onClose }) {
     const currentPath = location.pathname;
     const findActive = (menus) => {
       for (const menu of menus) {
+        if (menu.screen_id && currentPath === `/view/menu/${menu.menu_id}`) {
+          return menu.menu_id;
+        }
         if (menu.menu_path && currentPath.startsWith(menu.menu_path)) {
           return menu.menu_id;
         }
@@ -149,7 +152,9 @@ export default function Sidebar({ open, onClose }) {
   }, [sidebarMenus, location.pathname, selectedLevel1]);
 
   const handleSelect = useCallback((menu) => {
-    if (menu.menu_path) {
+    if (menu.screen_id) {
+      navigate(`/view/menu/${menu.menu_id}`);
+    } else if (menu.menu_path) {
       navigate(menu.menu_path);
     }
   }, [navigate]);

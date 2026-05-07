@@ -67,6 +67,11 @@ export const createAdminMenu = async (payload) => {
   return response.data;
 };
 
+export const createAdminMenuForScreen = async (payload) => {
+  const response = await api.post('/api/admin/menus/for-screen', payload);
+  return response.data;
+};
+
 export const patchAdminMenu = async (menuId, payload) => {
   const response = await api.patch(`/api/admin/menus/${menuId}`, payload);
   return response.data;
@@ -96,6 +101,28 @@ export const resetUserPassword = async (userCd, newPassword) => {
 
 export const getTemplateList = async () => {
   const response = await api.get('/api/admin/screen-templates');
+  return response.data;
+};
+
+export const getTemplatesByDefault = async (isDefault) => {
+  const response = await api.get('/api/admin/screen-templates', {
+    params: { is_default: isDefault ? 'Y' : 'N' },
+  });
+  return response.data;
+};
+
+export const createTemplate = async (payload) => {
+  const response = await api.post('/api/admin/screen-templates', payload);
+  return response.data;
+};
+
+export const deleteTemplate = async (templateId) => {
+  const response = await api.delete(`/api/admin/screen-templates/${templateId}`);
+  return response.data;
+};
+
+export const getTemplateReferenceCount = async (templateId) => {
+  const response = await api.get(`/api/admin/screen-templates/${templateId}/reference-count`);
   return response.data;
 };
 

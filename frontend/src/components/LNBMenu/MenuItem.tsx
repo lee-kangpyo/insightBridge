@@ -9,14 +9,14 @@ export default function MenuItem({ menu, isAdmin = false, onSelect }) {
   const children = menu.children || [];
   const hasChildren = children.length > 0;
   const hasPath = !!menuPath || !!menu.screen_id;
-  const linkTo = menu.screen_id ? `/view/screen/${menu.screen_id}` : menuPath;
+  const linkTo = menu.screen_id ? `/view/menu/${menu.menu_id}` : menuPath;
   const isActive = hasPath && location.pathname === linkTo;
 
   useEffect(() => {
     if (hasChildren && hasPath) {
       const isParentOfActive = children.some((child) => {
         const childLink = child.screen_id
-          ? `/view/screen/${child.screen_id}`
+          ? `/view/menu/${child.menu_id}`
           : child.menu_path || child.path;
         return location.pathname === childLink;
       });

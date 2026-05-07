@@ -2,8 +2,15 @@ from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, model_validator
-from app.dependencies import require_sys_adm
-from app.schemas import AdminGroupItem, ScreenTemplateItem, ScreenTemplateSlotItem
+from app.dependencies import require_sys_adm, require_auth
+from app.schemas import (
+    AdminGroupItem,
+    ScreenTemplateItem,
+    ScreenTemplateSlotItem,
+    ScreenTemplateCreateRequest,
+    ScreenTemplateCreateResponse,
+    ScreenTemplateDeleteResponse,
+)
 from app.services.admin import (
     search_users,
     update_user_role,
@@ -11,6 +18,7 @@ from app.services.admin import (
     get_all_menus,
     get_role_menu_map,
     create_menu,
+    create_menu_for_screen,
     patch_menu,
     soft_delete_menu,
     get_all_role_user_mappings,
@@ -28,6 +36,9 @@ from app.services.admin import (
     get_all_screen_templates,
     get_screen_template_by_id,
     get_screen_template_slots,
+    create_screen_template,
+    delete_screen_template,
+    get_template_reference_count,
     _PATCH_UNSET,
 )
 from app.services.screen_items import (
@@ -67,6 +78,7 @@ class AdminMenuCreateBody(BaseModel):
     menu_path: Optional[str] = None
     screen_id: Optional[str] = None
     sort_order: Optional[int] = None
+    subtitle: Optional[str] = None
 
     @model_validator(mode="after")
     def validate_menu_path_for_non_slot(self):
@@ -88,6 +100,7 @@ class AdminMenuPatchBody(BaseModel):
     sort_order: Optional[int] = None
     use_yn: Optional[str] = None
     del_fg: Optional[str] = None
+    subtitle: Optional[str] = None
 
     @model_validator(mode="after")
     def validate_menu_path_for_non_slot(self):
@@ -225,6 +238,34 @@ async def post_admin_menu(
         menu_path=body.menu_path,
         screen_id=body.screen_id,
         sort_order=body.sort_order,
+        subtitle=body.subtitle,
+    )
+    return {"menu_id": menu_id}
+
+
+class AdminMenuCreateForScreenBody(BaseModel):
+    menu_cd: str = Field(..., min_length=1)
+    menu_nm: str = Field(..., min_length=1)
+    screen_id: str = Field(..., min_length=1)
+    sort_order: Optional[int] = None
+    subtitle: Optional[str] = None
+
+
+@router.post("/admin/menus/for-screen", status_code=status.HTTP_201_CREATED)
+async def post_admin_menu_for_screen(
+    body: AdminMenuCreateForScreenBody,
+    _: dict = Depends(require_sys_adm),
+):
+    """
+    Create a menu linked to a screen in a single transaction.
+    menu_path is automatically set to /view/menu/{menu_id}.
+    """
+    menu_id = await create_menu_for_screen(
+        menu_cd=body.menu_cd,
+        menu_nm=body.menu_nm,
+        screen_id=body.screen_id,
+        sort_order=body.sort_order,
+        subtitle=body.subtitle,
     )
     return {"menu_id": menu_id}
 
@@ -390,7 +431,7 @@ async def reset_user_password_endpoint(
 @router.get("/admin/role-menu-map")
 async def get_admin_role_menu_map(_: dict = Depends(require_sys_adm)):
     """
-    SYS_ADM: 메뉴별로 어떤 권한그룹(grp_id)이 매핑돼 있는지 조회.
+    SYS_ADM: 메뉴�별로 어떤 권한그룹(grp_id)이 매핑돼 있는지 조회.
     Response: { "menu_role_ids": { "<menu_id>": [<grp_id>, ...], ... } }
     """
     menu_role_ids = await get_role_menu_map()
@@ -399,9 +440,77 @@ async def get_admin_role_menu_map(_: dict = Depends(require_sys_adm)):
 
 
 @router.get("/admin/screen-templates", response_model=list[ScreenTemplateItem])
-async def get_admin_screen_templates(_: dict = Depends(require_sys_adm)):
-    rows = await get_all_screen_templates()
+async def get_admin_screen_templates(
+    is_default: Optional[str] = None,
+    _: dict = Depends(require_sys_adm),
+):
+    rows = await get_all_screen_templates(is_default)
     return [ScreenTemplateItem(**r) for r in rows]
+
+
+@router.post("/admin/screen-templates", status_code=status.HTTP_201_CREATED, response_model=ScreenTemplateCreateResponse)
+async def post_admin_screen_template(
+    body: ScreenTemplateCreateRequest,
+    _: dict = Depends(require_sys_adm),
+):
+    if not body.name or not body.name.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="템플릿 이름을 입력해주세요",
+        )
+    if not body.slots or len(body.slots) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="최소 하나 이상의 슬롯을 생성해주세요",
+        )
+    template_id = await create_screen_template(body.name, body.slots)
+    return {"template_id": template_id, "name": body.name, "slots": body.slots}
+
+
+class TemplateReferenceCountResponse(BaseModel):
+    template_id: int
+    reference_count: int
+
+
+@router.get("/admin/screen-templates/{template_id}/reference-count", response_model=TemplateReferenceCountResponse)
+async def get_template_reference_count_endpoint(
+    template_id: int,
+    _: dict = Depends(require_sys_adm),
+):
+    count = await get_template_reference_count(template_id)
+    return {"template_id": template_id, "reference_count": count}
+
+
+@router.delete("/admin/screen-templates/{template_id}", response_model=ScreenTemplateDeleteResponse)
+async def delete_admin_screen_template(
+    template_id: int,
+    _: dict = Depends(require_sys_adm),
+):
+    try:
+        await delete_screen_template(template_id)
+    except LookupError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Template not found",
+        )
+    except PermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="기본 템플릿은 삭제할 수 없습니다",
+        )
+    except ValueError as e:
+        msg = str(e)
+        if msg.startswith("referenced_by_screens:"):
+            cnt = msg.split(":", 1)[1]
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"이 템플릿을 사용하는 화면 {cnt}개가 있습니다. 먼저 삭제해주세요.",
+            ) from e
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=msg,
+        ) from e
+    return {"ok": True}
 
 
 @router.get("/admin/screen-templates/{template_id}", response_model=ScreenTemplateItem)

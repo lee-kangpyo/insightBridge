@@ -110,7 +110,7 @@ async def get_all_menus(include_deleted: bool = False) -> list[dict]:
     where = "" if include_deleted else "WHERE del_fg = 'N'"
     query = f"""
         SELECT menu_id, menu_cd, menu_nm, parent_menu_id,
-               menu_level, menu_path, screen_id, sort_order, use_yn, del_fg, reg_dt
+               menu_level, menu_path, screen_id, sort_order, use_yn, del_fg, subtitle, reg_dt
         FROM ts_menu_info
         {where}
         ORDER BY sort_order NULLS LAST, menu_id
@@ -137,6 +137,7 @@ async def create_menu(
     menu_path: Optional[str] = None,
     screen_id: Optional[str] = None,
     sort_order: Optional[int] = None,
+    subtitle: Optional[str] = None,
 ) -> int:
     pool = await get_pool()
     parent = _norm_parent_for_db(parent_menu_id)
@@ -146,9 +147,9 @@ async def create_menu(
                 """
                 INSERT INTO ts_menu_info (
                     menu_cd, menu_nm, parent_menu_id, menu_level,
-                    menu_path, screen_id, sort_order, use_yn, del_fg
+                    menu_path, screen_id, sort_order, use_yn, del_fg, subtitle
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, 'Y', 'N')
+                VALUES ($1, $2, $3, $4, $5, $6, $7, 'Y', 'N', $8)
                 RETURNING menu_id
                 """,
                 menu_cd.strip(),
@@ -158,8 +159,52 @@ async def create_menu(
                 menu_path.strip() if menu_path else None,
                 screen_id.strip() if screen_id else None,
                 sort_order,
+                subtitle.strip() if subtitle else None,
             )
             menu_id = int(row["menu_id"])
+            return menu_id
+
+
+async def create_menu_for_screen(
+    menu_cd: str,
+    menu_nm: str,
+    screen_id: str,
+    sort_order: Optional[int] = None,
+    subtitle: Optional[str] = None,
+) -> int:
+    """
+    Create a menu linked to a screen, with menu_path set to /view/menu/{menu_id}.
+    Both operations happen in a single transaction.
+    Returns the created menu_id.
+    """
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                """
+                INSERT INTO ts_menu_info (
+                    menu_cd, menu_nm, parent_menu_id, menu_level,
+                    menu_path, screen_id, sort_order, use_yn, del_fg, subtitle
+                )
+                VALUES ($1, $2, NULL, NULL, NULL, $3, $4, 'Y', 'N', $5)
+                RETURNING menu_id
+                """,
+                menu_cd.strip(),
+                menu_nm.strip(),
+                screen_id.strip(),
+                sort_order,
+                subtitle.strip() if subtitle else None,
+            )
+            menu_id = int(row["menu_id"])
+            await conn.execute(
+                """
+                UPDATE ts_menu_info
+                SET menu_path = $1
+                WHERE menu_id = $2
+                """,
+                f"/view/menu/{menu_id}",
+                menu_id,
+            )
             return menu_id
 
 
@@ -205,6 +250,12 @@ async def patch_menu(menu_id: int, updates: dict[str, Any]) -> None:
         add("use_yn", yn)
     if "del_fg" in updates and updates["del_fg"] is not None:
         add("del_fg", str(updates["del_fg"]).strip())
+    if "subtitle" in updates:
+        sub = updates["subtitle"]
+        if sub is None or (isinstance(sub, str) and not sub.strip()):
+            add("subtitle", None)
+        else:
+            add("subtitle", sub.strip() if isinstance(sub, str) else sub)
 
     if not fields:
         return
@@ -475,14 +526,23 @@ async def soft_delete_group(grp_id: int) -> None:
     await patch_group(grp_id, del_fg="Y")
 
 
-async def get_all_screen_templates() -> list[dict]:
-    query = """
-        SELECT template_id, name, slots
-        FROM ts_scr_template_info
-        WHERE del_fg = 'N'
-        ORDER BY template_id
+async def get_all_screen_templates(is_default: Optional[str] = None) -> list[dict]:
+    where_clause = "WHERE t.del_fg = 'N'"
+    params = []
+    if is_default:
+        where_clause += " AND t.is_default = $1"
+        params.append(is_default.strip().upper())
+
+    query = f"""
+        SELECT t.template_id, t.name, t.slots, t.is_default,
+               COUNT(s.scr_id) as reference_count
+        FROM ts_scr_template_info t
+        LEFT JOIN ts_scr_info s ON t.template_id = s.template_id AND s.del_fg = 'N'
+        {where_clause}
+        GROUP BY t.template_id, t.name, t.is_default
+        ORDER BY t.template_id
     """
-    df = await fetch_df(query, ())
+    df = await fetch_df(query, tuple(params))
     if df.empty:
         return []
     rows = df.to_dict(orient="records")
@@ -553,3 +613,68 @@ async def get_screen_template_slots(template_id: int) -> list[dict]:
         }
         for s in slots
     ]
+
+
+async def create_screen_template(name: str, slots: list[dict]) -> int:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            INSERT INTO ts_scr_template_info (name, slots, is_default, del_fg)
+            VALUES ($1, $2, 'N', 'N')
+            RETURNING template_id
+            """,
+            name.strip(),
+            json.dumps(slots),
+        )
+        return int(row["template_id"])
+
+
+async def delete_screen_template(template_id: int) -> None:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            # Atomic update: try to delete only if it's NOT default and NOT referenced
+            query = """
+                UPDATE ts_scr_template_info
+                SET del_fg = 'Y'
+                WHERE template_id = $1
+                  AND is_default = 'N'
+                  AND NOT EXISTS (
+                      SELECT 1 FROM ts_scr_info
+                      WHERE template_id = $1 AND del_fg = 'N'
+                  )
+                RETURNING template_id
+            """
+            result = await conn.fetchrow(query, template_id)
+
+            if result:
+                return  # Success
+
+            # If update failed, determine why for specific error reporting
+            row = await conn.fetchrow(
+                "SELECT is_default, del_fg FROM ts_scr_template_info WHERE template_id = $1",
+                template_id,
+            )
+            if not row or row["del_fg"] == "Y":
+                raise LookupError("template_not_found")
+            if row["is_default"] == "Y":
+                raise PermissionError("cannot_delete_default_template")
+
+            # If we reach here, it must be because it's referenced by screens
+            count_row = await conn.fetchrow(
+                "SELECT COUNT(*) as cnt FROM ts_scr_info WHERE template_id = $1 AND del_fg = 'N'",
+                template_id,
+            )
+            cnt = count_row["cnt"] if count_row else 0
+            raise ValueError(f"referenced_by_screens:{cnt}")
+
+
+async def get_template_reference_count(template_id: int) -> int:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT COUNT(*) as cnt FROM ts_scr_info WHERE template_id = $1 AND del_fg = 'N'",
+            template_id,
+        )
+        return int(row["cnt"]) if row else 0
