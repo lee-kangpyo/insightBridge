@@ -1016,7 +1016,9 @@ export default function MenuManagement() {
 
   const invalidTargetIds = useMemo(() => {
     if (!activeId) return new Set();
-    return descendantIdsRef.current;
+    const ids = new Set(descendantIdsRef.current);
+    ids.add(activeId);
+    return ids;
   }, [activeId]);
 
   const sensors = useSensors(
@@ -1137,6 +1139,15 @@ export default function MenuManagement() {
     }
   }, []);
 
+  const resetDragState = useCallback(() => {
+    setActiveId(null);
+    setOverId(null);
+    setDropPosition(null);
+    overIdRef.current = null;
+    dropPositionRef.current = null;
+    descendantIdsRef.current = new Set();
+  }, []);
+
   const handleDragEnd = useCallback(
     async ({ active, over }) => {
       const draggedId = active.id;
@@ -1144,12 +1155,7 @@ export default function MenuManagement() {
       const position = dropPositionRef.current;
       const descendants = new Set(descendantIdsRef.current);
 
-      setActiveId(null);
-      setOverId(null);
-      setDropPosition(null);
-      overIdRef.current = null;
-      dropPositionRef.current = null;
-      descendantIdsRef.current = new Set();
+      resetDragState();
 
       if (!targetId || !position) return;
       if (draggedId === targetId) return;
@@ -1181,13 +1187,8 @@ export default function MenuManagement() {
   );
 
   const handleDragCancel = useCallback(() => {
-    setActiveId(null);
-    setOverId(null);
-    setDropPosition(null);
-    overIdRef.current = null;
-    dropPositionRef.current = null;
-    descendantIdsRef.current = new Set();
-  }, []);
+    resetDragState();
+  }, [resetDragState]);
 
   const displayRoots = useMemo(
     () => filterMenuTree(menuTree, searchTerm),
@@ -1304,6 +1305,11 @@ export default function MenuManagement() {
         parent_menu_id: null,
       });
       const tree = await loadTree();
+      setExpandedIds((prev) => {
+        const next = new Set(prev);
+        next.add(menu_id);
+        return next;
+      });
       const created = findNodeById(tree, menu_id);
       if (created) {
         setSelectedNode(created);
@@ -1367,6 +1373,11 @@ export default function MenuManagement() {
         screen_id: scrId,
       });
       const tree = await loadTree();
+      setExpandedIds((prev) => {
+        const next = new Set(prev);
+        next.add(menu_id);
+        return next;
+      });
       const created = findNodeById(tree, menu_id);
       if (created) {
         setSelectedNode(created);
