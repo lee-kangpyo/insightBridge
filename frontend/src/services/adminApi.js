@@ -82,6 +82,15 @@ export const deleteAdminMenu = async (menuId) => {
   return response.data;
 };
 
+export const moveAdminMenu = async (menuId, targetId, position) => {
+  const response = await api.post('/api/admin/menus/move', {
+    menu_id: menuId,
+    target_id: targetId,
+    position,
+  });
+  return response.data;
+};
+
 export const updateUser = async (userCd, data) => {
   const response = await api.patch(`/api/admin/users/${userCd}`, data);
   return response.data;

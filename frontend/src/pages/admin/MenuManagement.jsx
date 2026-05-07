@@ -1,4 +1,18 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import PageHeader from "../../components/common/PageHeader";
 import AdminSearchBar from "../../components/common/AdminSearchBar";
 import { ADMIN_PAGE_CONTAINER_CLASS } from "../../constants/adminLayout";
@@ -9,6 +23,7 @@ import {
   patchAdminMenu,
   deleteAdminMenu,
   getAdminScreensList,
+  moveAdminMenu,
 } from "../../services/adminApi";
 import ScreenPreviewModal from "../../components/admin/ScreenPreviewModal";
 import AddScreenMenuDialog from "../../components/admin/AddScreenMenuDialog";
@@ -215,8 +230,100 @@ function findNodeById(nodes, id) {
   return null;
 }
 
-function MenuTreeNode({ node, level = 0, selectedId, onSelect, searchTerm }) {
-  const [expanded, setExpanded] = useState(level === 0);
+function getDescendantIds(node) {
+  const ids = new Set();
+  function walk(n) {
+    if (n.children) {
+      for (const child of n.children) {
+        ids.add(child.menu_id);
+        walk(child);
+      }
+    }
+  }
+  walk(node);
+  return ids;
+}
+
+function countDescendants(node) {
+  if (!node.children) return 0;
+  let count = node.children.length;
+  for (const child of node.children) {
+    count += countDescendants(child);
+  }
+  return count;
+}
+
+function findParentChain(nodes, targetId, path = []) {
+  for (const node of nodes) {
+    if (node.menu_id === targetId) return path;
+    if (node.children?.length) {
+      const result = findParentChain(node.children, targetId, [
+        ...path,
+        node.menu_id,
+      ]);
+      if (result) return result;
+    }
+  }
+  return null;
+}
+
+function collectAllIds(nodes) {
+  const ids = new Set();
+  function walk(list) {
+    for (const n of list) {
+      ids.add(n.menu_id);
+      if (n.children) walk(n.children);
+    }
+  }
+  walk(nodes);
+  return ids;
+}
+
+function DragGhost({ node }) {
+  const dc = countDescendants(node);
+  return (
+    <div className="flex items-center gap-2 py-2 px-3 rounded-md bg-surface-container-lowest shadow-lg border border-primary/40 opacity-85 select-none">
+      <span className="material-symbols-outlined text-[18px] text-on-surface-variant">
+        {menuIcon(node)}
+      </span>
+      <span className="font-medium text-sm text-on-surface">
+        {node.menu_nm}
+      </span>
+      {dc > 0 && (
+        <span className="text-[10px] bg-primary-container text-on-primary-container px-1.5 py-0.5 rounded ml-1">
+          외 {dc}개
+        </span>
+      )}
+    </div>
+  );
+}
+
+function MenuTreeNode({
+  node,
+  level = 0,
+  selectedId,
+  onSelect,
+  searchTerm,
+  expandedIds,
+  onToggleExpand,
+  overId,
+  dropPosition,
+  invalidTargetIds,
+  activeId,
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: node.menu_id,
+    disabled: node.del_fg === "Y",
+  });
+
+  const expanded = expandedIds.has(node.menu_id);
   const hasChildren = node.children && node.children.length > 0;
   const mid = node.menu_id;
   const isSelected = selectedId === mid;
@@ -227,10 +334,35 @@ function MenuTreeNode({ node, level = 0, selectedId, onSelect, searchTerm }) {
     (node.menu_nm || "").toLowerCase().includes(searchTerm.toLowerCase());
   const icon = menuIcon(node);
 
+  const isOverTarget = overId === mid;
+  const isInvalid = isOverTarget && invalidTargetIds.has(mid);
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    border: isDragging ? "1px dashed var(--color-outline-variant)" : undefined,
+    borderRadius: isDragging ? 6 : undefined,
+  };
+
   return (
-    <div className="select-none">
+    <div
+      ref={setNodeRef}
+      style={style}
+      data-menu-id={mid}
+      className="select-none"
+    >
+      {isOverTarget && dropPosition === "before" && !isInvalid && (
+        <div
+          className="relative h-0 mx-2 animate-[dropLineIn_0.2s_ease-out]"
+          style={{ top: "-1px" }}
+        >
+          <div className="absolute left-0 right-0 h-[3px] bg-primary rounded-full" />
+        </div>
+      )}
+
       <div
-        className={`flex items-center gap-2 py-2 px-2 rounded-md cursor-pointer transition-colors ${
+        className={`flex items-center gap-2 py-2 px-2 rounded-md cursor-pointer transition-all duration-150 ${
           isSelected
             ? "bg-primary-container/10 text-error"
             : isDeleted
@@ -240,16 +372,27 @@ function MenuTreeNode({ node, level = 0, selectedId, onSelect, searchTerm }) {
                 : isHighlighted
                   ? "bg-yellow-100 text-primary font-semibold"
                   : "hover:bg-surface-container text-on-surface"
+        } ${
+          isOverTarget && dropPosition === "inside" && !isInvalid
+            ? "!bg-primary-container/15 border-l-2 !border-primary"
+            : ""
+        } ${
+          isInvalid
+            ? "!bg-error/10 border-l-2 !border-error"
+            : ""
         }`}
         style={{ paddingLeft: level > 0 ? `${level * 12 + 8}px` : "8px" }}
         onClick={() => onSelect(node)}
+        {...attributes}
+        {...listeners}
       >
         {hasChildren ? (
           <span
             className="material-symbols-outlined text-[18px] text-on-surface-variant cursor-pointer"
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
-              setExpanded(!expanded);
+              onToggleExpand(mid);
             }}
           >
             {expanded ? "arrow_drop_down" : "arrow_right"}
@@ -274,19 +417,40 @@ function MenuTreeNode({ node, level = 0, selectedId, onSelect, searchTerm }) {
           <span className="text-[10px] uppercase text-outline ml-1">off</span>
         ) : null}
       </div>
-      {hasChildren && expanded && (
-        <div className="flex flex-col ml-6 pl-2 border-l border-outline-variant/30 gap-1">
-          {node.children.map((child) => (
-            <MenuTreeNode
-              key={child.menu_id}
-              node={child}
-              level={level + 1}
-              selectedId={selectedId}
-              onSelect={onSelect}
-              searchTerm={searchTerm}
-            />
-          ))}
+
+      {isOverTarget && dropPosition === "after" && !isInvalid && (
+        <div
+          className="relative h-0 mx-2 animate-[dropLineIn_0.2s_ease-out]"
+          style={{ top: "-1px" }}
+        >
+          <div className="absolute left-0 right-0 h-[3px] bg-primary rounded-full" />
         </div>
+      )}
+
+      {hasChildren && expanded && (
+        <SortableContext
+          items={node.children.map((c) => c.menu_id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="flex flex-col ml-6 pl-2 border-l border-outline-variant/30 gap-1">
+            {node.children.map((child) => (
+              <MenuTreeNode
+                key={child.menu_id}
+                node={child}
+                level={level + 1}
+                selectedId={selectedId}
+                onSelect={onSelect}
+                searchTerm={searchTerm}
+                expandedIds={expandedIds}
+                onToggleExpand={onToggleExpand}
+                overId={overId}
+                dropPosition={dropPosition}
+                invalidTargetIds={invalidTargetIds}
+                activeId={activeId}
+              />
+            ))}
+          </div>
+        </SortableContext>
       )}
     </div>
   );
@@ -302,7 +466,21 @@ function MenuTree({
   onAddRoot,
   onAddScreen,
   loading,
+  expandedIds,
+  onToggleExpand,
+  activeId,
+  overId,
+  dropPosition,
+  invalidTargetIds,
+  sensors,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
+  onDragCancel,
+  menuTree,
 }) {
+  const activeNode = activeId ? findNodeById(menuTree, activeId) : null;
+
   return (
     <aside className="w-full lg:w-[350px] shrink-0 bg-surface-container-lowest rounded-lg p-6 flex flex-col gap-5 relative min-h-[600px] shadow-[0_8px_32px_rgba(24,28,30,0.04)]">
       <div className="flex justify-between items-center mb-2">
@@ -334,15 +512,38 @@ function MenuTree({
             표시할 메뉴가 없습니다.
           </p>
         ) : (
-          roots.map((node) => (
-            <MenuTreeNode
-              key={node.menu_id}
-              node={node}
-              selectedId={selectedId}
-              onSelect={onSelect}
-              searchTerm={searchTerm}
-            />
-          ))
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={onDragStart}
+            onDragOver={onDragOver}
+            onDragEnd={onDragEnd}
+            onDragCancel={onDragCancel}
+          >
+            <SortableContext
+              items={roots.map((n) => n.menu_id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {roots.map((node) => (
+                <MenuTreeNode
+                  key={node.menu_id}
+                  node={node}
+                  selectedId={selectedId}
+                  onSelect={onSelect}
+                  searchTerm={searchTerm}
+                  expandedIds={expandedIds}
+                  onToggleExpand={onToggleExpand}
+                  overId={overId}
+                  dropPosition={dropPosition}
+                  invalidTargetIds={invalidTargetIds}
+                  activeId={activeId}
+                />
+              ))}
+            </SortableContext>
+            <DragOverlay dropAnimation={null}>
+              {activeNode ? <DragGhost node={activeNode} /> : null}
+            </DragOverlay>
+          </DndContext>
         )}
       </div>
       <div className="mt-auto pt-4 flex flex-col gap-2 border-t border-outline-variant/15">
@@ -804,6 +1005,26 @@ export default function MenuManagement() {
   const [addScreenLoading, setAddScreenLoading] = useState(false);
   const [addScreenError, setAddScreenError] = useState(null);
 
+  const [activeId, setActiveId] = useState(null);
+  const [overId, setOverId] = useState(null);
+  const [dropPosition, setDropPosition] = useState(null);
+  const [expandedIds, setExpandedIds] = useState(new Set());
+  const pointerYRef = useRef(0);
+  const overIdRef = useRef(null);
+  const dropPositionRef = useRef(null);
+  const descendantIdsRef = useRef(new Set());
+
+  const invalidTargetIds = useMemo(() => {
+    if (!activeId) return new Set();
+    return descendantIdsRef.current;
+  }, [activeId]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    })
+  );
+
   const showToast = useCallback((message, type = "success") => {
     setToast({ message, type });
     if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
@@ -817,6 +1038,12 @@ export default function MenuManagement() {
       const data = await getAdminMenuTree();
       const tree = data.menu_tree || [];
       setMenuTree(tree);
+      setExpandedIds((prev) => {
+        if (prev.size === 0 && tree.length > 0) {
+          return new Set(tree.map((n) => n.menu_id));
+        }
+        return prev;
+      });
       setSelectedNode((prev) => {
         if (!prev) return null;
         return findNodeById(tree, prev.menu_id) ?? null;
@@ -845,6 +1072,122 @@ export default function MenuManagement() {
       setFormData(nodeToForm(selectedNode));
     }
   }, [selectedNode]);
+
+  const toggleExpand = useCallback((menuId) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(menuId)) {
+        next.delete(menuId);
+      } else {
+        next.add(menuId);
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!activeId) return;
+    const handlePointerMove = (e) => {
+      pointerYRef.current = e.clientY;
+      if (!overIdRef.current) return;
+      const overEl = document.querySelector(
+        `[data-menu-id="${overIdRef.current}"]`,
+      );
+      if (!overEl) return;
+      const rect = overEl.getBoundingClientRect();
+      const relY = e.clientY - rect.top;
+      const height = rect.height;
+      let pos;
+      if (relY < height * 0.25) {
+        pos = "before";
+      } else if (relY > height * 0.75) {
+        pos = "after";
+      } else {
+        pos = "inside";
+      }
+      if (pos !== dropPositionRef.current) {
+        dropPositionRef.current = pos;
+        setDropPosition(pos);
+      }
+    };
+    window.addEventListener("pointermove", handlePointerMove);
+    return () => window.removeEventListener("pointermove", handlePointerMove);
+  }, [activeId]);
+
+  const handleDragStart = useCallback(
+    ({ active }) => {
+      setActiveId(active.id);
+      const node = findNodeById(menuTree, active.id);
+      if (node) {
+        descendantIdsRef.current = getDescendantIds(node);
+      }
+    },
+    [menuTree],
+  );
+
+  const handleDragOver = useCallback(({ over }) => {
+    if (over) {
+      overIdRef.current = over.id;
+      setOverId(over.id);
+    } else {
+      overIdRef.current = null;
+      setOverId(null);
+      setDropPosition(null);
+      dropPositionRef.current = null;
+    }
+  }, []);
+
+  const handleDragEnd = useCallback(
+    async ({ active, over }) => {
+      const draggedId = active.id;
+      const targetId = over?.id ?? null;
+      const position = dropPositionRef.current;
+      const descendants = new Set(descendantIdsRef.current);
+
+      setActiveId(null);
+      setOverId(null);
+      setDropPosition(null);
+      overIdRef.current = null;
+      dropPositionRef.current = null;
+      descendantIdsRef.current = new Set();
+
+      if (!targetId || !position) return;
+      if (draggedId === targetId) return;
+      if (descendants.has(targetId)) return;
+
+      try {
+        await moveAdminMenu(draggedId, targetId, position);
+        const tree = await loadTree();
+        const chain = findParentChain(tree, draggedId);
+        if (chain) {
+          setExpandedIds((prev) => {
+            const next = new Set(prev);
+            for (const id of chain) next.add(id);
+            return next;
+          });
+        }
+      } catch (err) {
+        const msg =
+          err.response?.data?.detail ||
+          err.message ||
+          "이동에 실패했습니다.";
+        showToast(
+          typeof msg === "string" ? msg : "이동에 실패했습니다.",
+          "error",
+        );
+      }
+    },
+    [loadTree, showToast],
+  );
+
+  const handleDragCancel = useCallback(() => {
+    setActiveId(null);
+    setOverId(null);
+    setDropPosition(null);
+    overIdRef.current = null;
+    dropPositionRef.current = null;
+    descendantIdsRef.current = new Set();
+  }, []);
 
   const displayRoots = useMemo(
     () => filterMenuTree(menuTree, searchTerm),
@@ -982,9 +1325,9 @@ export default function MenuManagement() {
     }
   };
 
-  const handleExpandAll = () => {
-    /* 트리 펼침 상태는 노드 로컬 state — 전역 펼침은 후속 작업 */
-  };
+  const handleExpandAll = useCallback(() => {
+    setExpandedIds(collectAllIds(menuTree));
+  }, [menuTree]);
 
   const openAddScreen = async () => {
     if (saving) return;
@@ -1067,6 +1410,18 @@ export default function MenuManagement() {
           onAddRoot={openAddRoot}
           onAddScreen={openAddScreen}
           loading={loading}
+          expandedIds={expandedIds}
+          onToggleExpand={toggleExpand}
+          activeId={activeId}
+          overId={overId}
+          dropPosition={dropPosition}
+          invalidTargetIds={invalidTargetIds}
+          sensors={sensors}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+          menuTree={menuTree}
         />
         <MenuDetailForm
           key={selectedNode?.menu_id ?? "none"}

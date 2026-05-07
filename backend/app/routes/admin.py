@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, model_validator
@@ -21,6 +21,7 @@ from app.services.admin import (
     create_menu_for_screen,
     patch_menu,
     soft_delete_menu,
+    move_menu,
     get_all_role_user_mappings,
     get_all_grp_info,
     get_all_user_info,
@@ -58,6 +59,12 @@ from app.services.screen_items import (
 from app.services.menu import treeify
 
 router = APIRouter()
+
+
+class MenuMoveRequest(BaseModel):
+    menu_id: int
+    target_id: int
+    position: Literal["before", "after", "inside"]
 
 
 class UpdateRoleRequest(BaseModel):
@@ -300,6 +307,49 @@ async def delete_admin_menu(
     _: dict = Depends(require_sys_adm),
 ):
     await soft_delete_menu(menu_id)
+    return {"ok": True}
+
+
+@router.post("/admin/menus/move")
+async def move_admin_menu(
+    body: MenuMoveRequest,
+    _: dict = Depends(require_sys_adm),
+):
+    try:
+        await move_menu(body.menu_id, body.target_id, body.position)
+    except LookupError as e:
+        key = str(e)
+        if "source" in key:
+            detail = "이동할 메뉴를 찾을 수 없습니다."
+        else:
+            detail = "대상 메뉴를 찾을 수 없습니다."
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=detail,
+        ) from e
+    except ValueError as e:
+        msg = str(e)
+        if msg == "cycle_detected":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="순환 참조가 발생합니다. 이동할 수 없습니다.",
+            ) from e
+        if msg in ("source_deleted", "target_deleted"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="삭제된 메뉴는 이동할 수 없습니다.",
+            ) from e
+        if msg == "cannot_move_to_self":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="자기 자신으로 이동할 수 없습니다.",
+            ) from e
+        if msg == "invalid_position":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="position은 before, after, inside 중 하나여야 합니다.",
+            ) from e
+        raise
     return {"ok": True}
 
 
