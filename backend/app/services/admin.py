@@ -267,6 +267,136 @@ async def patch_menu(menu_id: int, updates: dict[str, Any]) -> None:
         await conn.execute(query, *values)
 
 
+async def move_menu(menu_id: int, target_id: int, position: str) -> None:
+    if position not in ("before", "after", "inside"):
+        raise ValueError("invalid_position")
+
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            source = await conn.fetchrow(
+                "SELECT menu_id, parent_menu_id, sort_order, menu_level, del_fg FROM ts_menu_info WHERE menu_id = $1",
+                menu_id,
+            )
+            if not source:
+                raise LookupError("source_not_found")
+            if source["del_fg"] == "Y":
+                raise ValueError("source_deleted")
+
+            target = await conn.fetchrow(
+                "SELECT menu_id, parent_menu_id, sort_order, menu_level, del_fg FROM ts_menu_info WHERE menu_id = $1",
+                target_id,
+            )
+            if not target:
+                raise LookupError("target_not_found")
+            if target["del_fg"] == "Y":
+                raise ValueError("target_deleted")
+
+            if menu_id == target_id:
+                raise ValueError("cannot_move_to_self")
+
+            old_parent_id = source["parent_menu_id"]
+            old_sort_order = source["sort_order"] or 0
+
+            if position == "inside":
+                new_parent_id = str(target_id)
+                max_row = await conn.fetchrow(
+                    "SELECT COALESCE(MAX(sort_order), 0) AS max_so FROM ts_menu_info WHERE parent_menu_id = $1",
+                    str(target_id),
+                )
+                new_sort_order = max_row["max_so"] + 1
+                new_level = (target["menu_level"] or 0) + 1
+            elif position == "before":
+                new_parent_id = target["parent_menu_id"]
+                new_sort_order = target["sort_order"] or 0
+                new_level = target["menu_level"]
+            else:
+                new_parent_id = target["parent_menu_id"]
+                new_sort_order = (target["sort_order"] or 0) + 1
+                new_level = target["menu_level"]
+
+            cycle = await conn.fetchrow(
+                """
+                WITH RECURSIVE ancestors AS (
+                    SELECT menu_id, parent_menu_id FROM ts_menu_info WHERE menu_id = $1
+                    UNION ALL
+                    SELECT m.menu_id, m.parent_menu_id
+                    FROM ts_menu_info m
+                    INNER JOIN ancestors a ON m.menu_id::text = a.parent_menu_id
+                )
+                SELECT 1 AS found FROM ancestors WHERE menu_id = $2
+                """,
+                target_id,
+                menu_id,
+            )
+            if cycle:
+                raise ValueError("cycle_detected")
+
+            def _pid_eq(a, b):
+                if a is None and b is None:
+                    return True
+                if a is None or b is None:
+                    return False
+                return str(a) == str(b)
+
+            if old_parent_id is not None:
+                await conn.execute(
+                    "UPDATE ts_menu_info SET sort_order = sort_order - 1 WHERE parent_menu_id = $1 AND sort_order > $2",
+                    old_parent_id,
+                    old_sort_order,
+                )
+            else:
+                await conn.execute(
+                    "UPDATE ts_menu_info SET sort_order = sort_order - 1 WHERE parent_menu_id IS NULL AND sort_order > $1",
+                    old_sort_order,
+                )
+
+            if _pid_eq(old_parent_id, new_parent_id) and old_sort_order < new_sort_order:
+                new_sort_order -= 1
+
+            if new_parent_id is not None:
+                await conn.execute(
+                    "UPDATE ts_menu_info SET sort_order = sort_order + 1 WHERE parent_menu_id = $1 AND sort_order >= $2 AND menu_id != $3",
+                    new_parent_id,
+                    new_sort_order,
+                    menu_id,
+                )
+            else:
+                await conn.execute(
+                    "UPDATE ts_menu_info SET sort_order = sort_order + 1 WHERE parent_menu_id IS NULL AND sort_order >= $1 AND menu_id != $2",
+                    new_sort_order,
+                    menu_id,
+                )
+
+            await conn.execute(
+                "UPDATE ts_menu_info SET parent_menu_id = $1, sort_order = $2, menu_level = $3 WHERE menu_id = $4",
+                new_parent_id,
+                new_sort_order,
+                new_level,
+                menu_id,
+            )
+
+            await conn.execute(
+                """
+                WITH RECURSIVE desc_tree AS (
+                    SELECT menu_id, $2::int + 1 AS new_level
+                    FROM ts_menu_info
+                    WHERE parent_menu_id = $1
+                    UNION ALL
+                    SELECT m.menu_id, d.new_level + 1
+                    FROM ts_menu_info m
+                    INNER JOIN desc_tree d ON m.parent_menu_id::text = d.menu_id::text
+                )
+                UPDATE ts_menu_info t
+                SET menu_level = dt.new_level
+                FROM desc_tree dt
+                WHERE t.menu_id = dt.menu_id
+                """,
+                str(menu_id),
+                new_level,
+            )
+
+
 async def soft_delete_menu(menu_id: int) -> None:
     pool = await get_pool()
     async with pool.acquire() as conn:
