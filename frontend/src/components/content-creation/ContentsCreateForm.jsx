@@ -3,6 +3,7 @@ import GeneralInfoSection from './GeneralInfoSection';
 import ChartSettings from './ChartSettings';
 import GridSettings from './GridSettings';
 import CardSettings from './CardSettings';
+import { DEFAULT_CARD_ITEM } from '../../constants/cardFormatting';
 import SqlSettings from './SqlSettings';
 import { createAdminContents, patchAdminContents } from '../../services/adminApi';
 import { validateContentsBeforeSave } from '../../utils/contentsValidation';
@@ -44,7 +45,7 @@ const INITIAL_GRID_DATA = { sectionTitle: '', columns: [] };
 const INITIAL_CARD_DATA = {
   cardTitle: '',
   titlePosition: 'left-top',
-  items: [{ label: '', content: '', color: '#002c5a' }],
+  items: [{ ...DEFAULT_CARD_ITEM }],
 };
 const INITIAL_SQL_DATA = { sql: '' };
 

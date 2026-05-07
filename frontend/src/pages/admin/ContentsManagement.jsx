@@ -5,6 +5,7 @@ import GeneralInfoSection from '../../components/content-creation/GeneralInfoSec
 import ChartSettings from '../../components/content-creation/ChartSettings';
 import GridSettings from '../../components/content-creation/GridSettings';
 import CardSettings from '../../components/content-creation/CardSettings';
+import { DEFAULT_CARD_ITEM } from '../../constants/cardFormatting';
 import SqlSettings from '../../components/content-creation/SqlSettings';
 import ContentsTable from '../../components/content-list/ContentsTable';
 import ContentsDetail from '../../components/content-list/ContentsDetail';
@@ -46,7 +47,7 @@ export function ContentsCreate() {
   const [contentType, setContentType] = useState('chart');
   const [chartData, setChartData] = useState({ chartTitle: '', chartTitlePosition: 'top', chartType: 'bar', xAxis: '', yAxis: '', legendPosition: 'right' });
   const [gridData, setGridData] = useState({ sectionTitle: '', columns: [] });
-  const [cardData, setCardData] = useState({ cardTitle: '', titlePosition: 'left-top', items: [{ label: '', content: '', color: '#002c5a' }] });
+  const [cardData, setCardData] = useState({ cardTitle: '', titlePosition: 'left-top', items: [{ ...DEFAULT_CARD_ITEM }] });
   const [sqlData, setSqlData] = useState({ sql: '' });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
@@ -99,7 +100,7 @@ export function ContentsCreate() {
     setContentType('chart');
     setChartData({ chartTitle: '', chartTitlePosition: 'top', chartType: 'bar', xAxis: '', yAxis: '', legendPosition: 'right' });
     setGridData({ sectionTitle: '', columns: [] });
-    setCardData({ cardTitle: '', titlePosition: 'left-top', items: [{ label: '', content: '', color: '#002c5a' }] });
+    setCardData({ cardTitle: '', titlePosition: 'left-top', items: [{ ...DEFAULT_CARD_ITEM }] });
     setSqlData({ sql: '' });
     setShowValidation(false);
     setFieldErrors(null);

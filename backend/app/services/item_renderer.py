@@ -44,6 +44,94 @@ def _get_row_value(row: dict, field: str) -> Any:
     return v
 
 
+VALID_CARD_FORMATS = {"raw", "number", "percent", "currency"}
+VALID_PERCENT_BASES = {"0to1", "0to100"}
+
+
+def _normalize_card_format(value: Any) -> str:
+    text = str(value or "raw").strip().lower()
+    return text if text in VALID_CARD_FORMATS else "raw"
+
+
+def _normalize_decimal_places(value: Any) -> int:
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return 0
+    return max(0, min(n, 6))
+
+
+def _truthy(value: Any, default: bool = True) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return value.strip().upper() not in ("N", "NO", "FALSE", "0")
+    return bool(value)
+
+
+def _to_number(value: Any) -> Optional[float]:
+    if value is None or value == "":
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        return float(str(value).replace(",", "").strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def _resolve_card_format_spec(mapping_item: Optional[dict], shape_item: Optional[dict]) -> dict:
+    mapping_item = mapping_item if isinstance(mapping_item, dict) else {}
+    shape_item = shape_item if isinstance(shape_item, dict) else {}
+
+    def pick(key: str, default: Any) -> Any:
+        if mapping_item.get(key) is not None:
+            return mapping_item.get(key)
+        if shape_item.get(key) is not None:
+            return shape_item.get(key)
+        return default
+
+    return {
+        "format": _normalize_card_format(pick("format", "raw")),
+        "decimalPlaces": _normalize_decimal_places(pick("decimalPlaces", 0)),
+        "thousandSeparator": _truthy(pick("thousandSeparator", True), True),
+        "percentBase": pick("percentBase", "0to100") if pick("percentBase", "0to100") in VALID_PERCENT_BASES else "0to100",
+        "prefix": "" if pick("prefix", "") is None else str(pick("prefix", "")),
+        "suffix": "" if pick("suffix", "") is None else str(pick("suffix", "")),
+        "nullDisplay": "-" if pick("nullDisplay", "-") is None else str(pick("nullDisplay", "-")),
+    }
+
+
+def _format_card_value(value: Any, spec: dict) -> Any:
+    if value is None or value == "":
+        return spec.get("nullDisplay", "-")
+
+    format_cd = _normalize_card_format(spec.get("format"))
+    if format_cd == "raw":
+        return str(value)
+
+    number = _to_number(value)
+    if number is None:
+        return str(value)
+
+    if format_cd == "percent" and spec.get("percentBase") == "0to1":
+        number *= 100
+
+    decimals = _normalize_decimal_places(spec.get("decimalPlaces"))
+    if spec.get("thousandSeparator", True):
+        text = f"{number:,.{decimals}f}"
+    else:
+        text = f"{number:.{decimals}f}"
+
+    prefix = str(spec.get("prefix") or "")
+    suffix = str(spec.get("suffix") or "")
+    if format_cd == "percent" and not suffix:
+        suffix = "%"
+    if format_cd == "currency" and not prefix:
+        prefix = "₩"
+    return f"{prefix}{text}{suffix}"
+
+
 def _resolve_item_type(item: dict, shape_content: dict) -> Optional[str]:
     t = item.get("mapping_json", {}).get("type") if item.get("mapping_json") else None
     if t in ("chart", "grid", "card"):
@@ -192,8 +280,11 @@ def _build_card_model(item_type: str, item: dict, shape_content: dict, preview: 
 
     if m.get("value") and isinstance(m.get("value"), str):
         v = _get_row_value(row0, m.get("value"))
+        shape_items_for_value = shape_content.get("data", {}).get("items", []) if shape_content else []
+        shape_item_for_value = shape_items_for_value[0] if shape_items_for_value else {}
+        spec = _resolve_card_format_spec(m, shape_item_for_value)
         sources.append(f"mapping.value = {m.get('value')}")
-        return {"title": title, "headline": v, "rows": [], "sources": sources}
+        return {"title": title, "headline": _format_card_value(v, spec), "rows": [], "sources": sources}
 
     mapped_items = _normalize_mapping_items(m.get("items"))
     if not mapped_items:
@@ -214,6 +305,9 @@ def _build_card_model(item_type: str, item: dict, shape_content: dict, preview: 
         if idx < len(shape_items) and shape_items[idx] and isinstance(shape_items[idx], dict):
             color_hex = shape_items[idx].get("color")
         v = _get_row_value(row0, field) if field else None
+        shape_item = shape_items[idx] if idx < len(shape_items) and isinstance(shape_items[idx], dict) else {}
+        spec = _resolve_card_format_spec(it, shape_item)
+        formatted_v = _format_card_value(v, spec)
 
         if field:
             sources.append(f"mapping.items[{idx}].field = {field}")
@@ -221,13 +315,14 @@ def _build_card_model(item_type: str, item: dict, shape_content: dict, preview: 
             sources.append(f"mapping.items[{idx}]")
 
         if not label_trim and not headline_taken:
-            headline = v
+            headline = formatted_v
             headline_taken = True
             continue
 
         out_rows.append({
             "label": label if label_trim else "",
-            "value": v,
+            "value": formatted_v,
+            "rawValue": v,
             "kind": "labeled" if label_trim else "valueOnly",
             "color": color_hex,
         })
