@@ -5,7 +5,8 @@ from typing import Any, Literal, Optional, Sequence
 
 import asyncpg
 import pandas as pd
-from app.database import fetch_df, get_pool
+from app.database import fetch_df, fetch_df_readonly, get_pool
+from app.utils.sql_preview_validation import prepare_admin_sql_preview
 
 ContentsType = Literal["chart", "grid", "card", "sql"]
 
@@ -476,6 +477,30 @@ async def get_contents_detail(cnts_id: int, tp: ContentsType) -> dict[str, Any]:
     return {}
 
 
+async def preview_sql_text(sql: str) -> dict[str, Any]:
+    """
+    임의 SQL 문자열을 실행해 preview 결과를 반환합니다(관리자 전용 API에서 사용).
+    pglast로 단일 SELECT만 허용하고, 읽기 전용 DB 풀(default_transaction_read_only)에서 실행합니다.
+    최대 100개의 row만 반환하며, truncated 플래그를 포함합니다.
+    """
+    try:
+        limited_sql = prepare_admin_sql_preview(sql)
+        df = await fetch_df_readonly(limited_sql, ())
+
+        columns = list(df.columns)
+        rows_data = df.head(100).to_dict(orient="records")
+
+        return {
+            "columns": columns,
+            "rows": rows_data,
+            "truncated": len(df) > 100,
+        }
+    except asyncpg.exceptions.PostgresError as e:
+        raise ValueError(f"sql_execution_error: {str(e)}") from e
+    except Exception as e:
+        raise ValueError(f"sql_execution_error: {str(e)}") from e
+
+
 async def execute_sql_preview(cnts_id: int) -> dict[str, Any]:
     """
     SQL 콘텐츠의 SQL을 실행하여 preview 결과를 반환합니다.
@@ -484,47 +509,12 @@ async def execute_sql_preview(cnts_id: int) -> dict[str, Any]:
     master = await get_contents_master(cnts_id)
     if master.cnts_tp != "sql":
         raise ValueError("not_sql_content")
-    
-    sql = master.user_sql
-    if not sql:
+
+    raw_sql = master.user_sql
+    if not raw_sql:
         raise ValueError("empty_sql")
-    
-    # SQL injection 방지를 위해 read-only 쿼리만 허용하는 기본 검증
-    normalized_sql = sql.strip().lower()
-    # 단어 경계를 고려한 검증 (테이블명/컬럼명에 포함된 경우는 허용)
-    forbidden_keywords = ['insert', 'update', 'delete', 'drop', 'create', 'alter', 'truncate']
-    import re
-    for keyword in forbidden_keywords:
-        # 단어 경계 패턴: 공백, 줄바꿈, 탭, 괄호, 세미콜론 뒤에 오는 경우
-        pattern = r'(^|[\s;(),])' + keyword + r'([\s;(),]|$)'
-        if re.search(pattern, normalized_sql):
-            raise ValueError(f"unsafe_sql: contains forbidden keyword '{keyword}'")
-    
-    try:
-        # 최대 101개를 조회하여 100개 초과 여부 확인
-        # 이미 LIMIT이 있는지 확인
-        has_limit = re.search(r'\blimit\s+\d+\b', normalized_sql)
-        if has_limit:
-            limited_sql = sql
-        else:
-            limited_sql = f"{sql.rstrip(';')} LIMIT 101"
-        
-        df = await fetch_df(limited_sql, ())
-        
-        columns = list(df.columns)
-        rows_data = df.head(100).to_dict(orient="records")
-        # fetch_df에서 이미 NaN/NA를 None으로 치환했으므로 별도 처리는 생략
-        
-        result = {
-            "columns": columns,
-            "rows": rows_data,
-            "truncated": len(df) > 100,
-        }
-        return result
-    except asyncpg.exceptions.PostgresError as e:
-        raise ValueError(f"sql_execution_error: {str(e)}")
-    except Exception as e:
-        raise ValueError(f"sql_execution_error: {str(e)}")
+
+    return await preview_sql_text(raw_sql)
 
 
 async def soft_delete_contents(cnts_id: int) -> None:

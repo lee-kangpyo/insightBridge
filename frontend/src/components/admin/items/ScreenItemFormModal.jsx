@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { createItem, getItem, handleApiError, updateItem } from '../../../services/adminApi';
+import { createItem, executeSqlPreview, getItem, handleApiError, updateItem } from '../../../services/adminApi';
 import api from '../../../services/api';
 import { FormTab, SqlTab, MappingTab } from './ItemEditorTabs';
 
@@ -19,6 +19,27 @@ function buildMappingPayload(mappingJson, contentType) {
   return next;
 }
 
+function validateMappingPayload(mappingPayload) {
+  if (!mappingPayload || typeof mappingPayload !== 'object') return '';
+  const type = mappingPayload.type;
+  const mapping = mappingPayload.mapping;
+  if (!type || !mapping || typeof mapping !== 'object') return '';
+
+  if (type === 'card') {
+    const hasValue = typeof mapping.value === 'string' && mapping.value.trim() !== '';
+    const hasItems =
+      (Array.isArray(mapping.items) && mapping.items.some((it) => it && typeof it.field === 'string' && it.field.trim())) ||
+      (mapping.items &&
+        typeof mapping.items === 'object' &&
+        Object.values(mapping.items).some((it) => it && typeof it.field === 'string' && it.field.trim()));
+    if (!hasValue && !hasItems) {
+      return "카드 매핑 저장 실패: 'value' 또는 'items.field'를 1개 이상 설정해야 합니다.";
+    }
+  }
+
+  return '';
+}
+
 export default function ScreenItemFormModal({ isOpen, mode, editItemId, onClose, onSaved }) {
   const [activeTab, setActiveTab] = useState('form');
   const [itemName, setItemName] = useState('');
@@ -26,6 +47,8 @@ export default function ScreenItemFormModal({ isOpen, mode, editItemId, onClose,
   const [selectedSql, setSelectedSql] = useState(null);
   const [mappingJson, setMappingJson] = useState({});
   const [contentDetail, setContentDetail] = useState(null);
+  const [sqlPreviewData, setSqlPreviewData] = useState(null);
+  const [sqlPreviewLoading, setSqlPreviewLoading] = useState(false);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [loadingEdit, setLoadingEdit] = useState(false);
@@ -83,10 +106,50 @@ export default function ScreenItemFormModal({ isOpen, mode, editItemId, onClose,
 
   useEffect(() => {
     if (!isOpen) return;
+    if (!selectedCnts || !selectedSql) return;
+
+    // 요약 카드(Summary Card, contentType === 'card')일 때만 미리보기 결과를 기본 로드합니다.
+    const contentType = contentDetail?.contentType || selectedCnts?.contentType;
+    if (contentType !== 'card') return;
+
+    if (sqlPreviewLoading) return;
+
+    if (sqlPreviewData && (Array.isArray(sqlPreviewData?.rows) || Array.isArray(sqlPreviewData?.columns))) {
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      setSqlPreviewLoading(true);
+      setError(null);
+      try {
+        const data = await executeSqlPreview(selectedSql.cnts_id);
+        if (cancelled) return;
+        setSqlPreviewData(data);
+      } catch (e) {
+        if (!cancelled) setError(handleApiError(e, 'SQL 미리보기를 불러오지 못했습니다.'));
+      } finally {
+        if (!cancelled) setSqlPreviewLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  // NOTE:
+  // - sqlPreviewLoading을 dependency에 포함하면 setSqlPreviewLoading(true) 직후 effect가 재실행되면서
+  //   이전 async의 cleanup이 실행되어 cancelled=true가 될 수 있습니다.
+  // - 로딩 중 상태 변화는 여기의 fetch 취소 사유가 아니므로 dependency에서 제외합니다.
+  }, [isOpen, activeTab, contentDetail?.contentType, selectedCnts?.cnts_id, selectedSql?.cnts_id, sqlPreviewData]);
+
+  useEffect(() => {
+    if (!isOpen) return;
 
     setError(null);
     setActiveTab('form');
     setContentDetail(null);
+    setSqlPreviewData(null);
+    setSqlPreviewLoading(false);
 
     if (mode === 'create') {
       setItemName('');
@@ -151,6 +214,11 @@ export default function ScreenItemFormModal({ isOpen, mode, editItemId, onClose,
     }
 
     const mappingPayload = buildMappingPayload(mappingJson, selectedCnts?.contentType);
+    const mappingValidationError = validateMappingPayload(mappingPayload);
+    if (mappingValidationError) {
+      setError(mappingValidationError);
+      return;
+    }
 
     const payload = {
       item_nm: itemName.trim(),
@@ -251,14 +319,18 @@ export default function ScreenItemFormModal({ isOpen, mode, editItemId, onClose,
               selectedSql={selectedSql}
               onSelectSql={(sql) => {
                 setSelectedSql(sql);
+                setSqlPreviewData(null);
                 resetMapping();
               }}
+              onPreviewDataChange={setSqlPreviewData}
             />
           )}
           {!loadingEdit && activeTab === 'mapping' && isMappingEnabled && (
             <MappingTab
               selectedCnts={selectedCnts}
               selectedSql={selectedSql}
+              contentDetail={contentDetail}
+              sqlPreviewData={sqlPreviewData}
               mappingJson={mappingJson}
               onMappingJsonChange={setMappingJson}
             />

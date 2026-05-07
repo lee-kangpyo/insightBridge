@@ -1320,10 +1320,11 @@ function UniversalChart({ chartType, data, config }: UniversalChartProps) {
   const option = buildChartOption(chartType, data, config);
 
   return (
-    <div className="w-full h-full min-h-[300px]">
+    // 부모 컨테이너가 overflow로 스크롤을 가질 수 있게 min-height를 강제하지 않습니다.
+    <div className="w-full h-full min-h-0 overflow-hidden">
       <ReactECharts
         option={option}
-        style={{ height: '100%', width: '100%', minHeight: '300px' }}
+        style={{ height: '100%', width: '100%' }}
         opts={{ renderer: 'canvas' }}
       />
     </div>
