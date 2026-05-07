@@ -111,3 +111,43 @@ async def get_user_menus(user_cd: int) -> dict:
         ]
 
     return {"menu_tree": treeify(flat_menus)}
+
+
+async def verify_menu_access(menu_id: int, user_cd: int) -> dict:
+    """
+    Unified menu guard: checks menu status (active, not deleted)
+    and user permission via grp_menu mapping.
+    Returns the menu record if all checks pass.
+    Raises LookupError if menu not found.
+    Raises PermissionError if menu is deleted, inactive, or user has no permission.
+    """
+    query_menu = """
+        SELECT menu_id, menu_cd, menu_nm, parent_menu_id, menu_level,
+               menu_path, screen_id, sort_order, use_yn, del_fg, subtitle, reg_dt
+        FROM ts_menu_info
+        WHERE menu_id = $1
+    """
+    df = await fetch_df(query_menu, (menu_id,))
+    if df.empty:
+        raise LookupError("menu_not_found")
+
+    menu = _sanitize_menu_record(df.to_dict(orient="records")[0])
+
+    if menu.get("del_fg") == "Y":
+        raise PermissionError("menu_deleted")
+
+    if menu.get("use_yn") != "Y":
+        raise PermissionError("menu_inactive")
+
+    query_perm = """
+        SELECT 1
+        FROM ts_grp_user gu
+        JOIN ts_grp_menu gm ON gu.grp_id = gm.grp_id
+        WHERE gu.user_cd = $1 AND gm.menu_id = $2
+        LIMIT 1
+    """
+    df_perm = await fetch_df(query_perm, (user_cd, menu_id))
+    if df_perm.empty:
+        raise PermissionError("menu_no_permission")
+
+    return menu

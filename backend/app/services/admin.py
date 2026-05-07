@@ -110,7 +110,7 @@ async def get_all_menus(include_deleted: bool = False) -> list[dict]:
     where = "" if include_deleted else "WHERE del_fg = 'N'"
     query = f"""
         SELECT menu_id, menu_cd, menu_nm, parent_menu_id,
-               menu_level, menu_path, screen_id, sort_order, use_yn, del_fg, reg_dt
+               menu_level, menu_path, screen_id, sort_order, use_yn, del_fg, subtitle, reg_dt
         FROM ts_menu_info
         {where}
         ORDER BY sort_order NULLS LAST, menu_id
@@ -137,6 +137,7 @@ async def create_menu(
     menu_path: Optional[str] = None,
     screen_id: Optional[str] = None,
     sort_order: Optional[int] = None,
+    subtitle: Optional[str] = None,
 ) -> int:
     pool = await get_pool()
     parent = _norm_parent_for_db(parent_menu_id)
@@ -146,9 +147,9 @@ async def create_menu(
                 """
                 INSERT INTO ts_menu_info (
                     menu_cd, menu_nm, parent_menu_id, menu_level,
-                    menu_path, screen_id, sort_order, use_yn, del_fg
+                    menu_path, screen_id, sort_order, use_yn, del_fg, subtitle
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, 'Y', 'N')
+                VALUES ($1, $2, $3, $4, $5, $6, $7, 'Y', 'N', $8)
                 RETURNING menu_id
                 """,
                 menu_cd.strip(),
@@ -158,6 +159,7 @@ async def create_menu(
                 menu_path.strip() if menu_path else None,
                 screen_id.strip() if screen_id else None,
                 sort_order,
+                subtitle.strip() if subtitle else None,
             )
             menu_id = int(row["menu_id"])
             return menu_id
@@ -205,6 +207,12 @@ async def patch_menu(menu_id: int, updates: dict[str, Any]) -> None:
         add("use_yn", yn)
     if "del_fg" in updates and updates["del_fg"] is not None:
         add("del_fg", str(updates["del_fg"]).strip())
+    if "subtitle" in updates:
+        sub = updates["subtitle"]
+        if sub is None or (isinstance(sub, str) and not sub.strip()):
+            add("subtitle", None)
+        else:
+            add("subtitle", sub.strip() if isinstance(sub, str) else sub)
 
     if not fields:
         return

@@ -15,6 +15,7 @@ from .routes import (
     admin,
     admin_contents,
     items,
+    viewer,
 )
 from .database import close_pool
 from .middleware.csrf import CSRFMiddleware
@@ -66,6 +67,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(menu.router, prefix="/api", tags=["menu"])
 app.include_router(admin.router, prefix="/api", tags=["admin"])
 app.include_router(admin_contents.router, prefix="/api", tags=["admin"])
+app.include_router(viewer.router, prefix="/api", tags=["viewer"])
 app.include_router(items.router, prefix="/api", tags=["items"])
 
 

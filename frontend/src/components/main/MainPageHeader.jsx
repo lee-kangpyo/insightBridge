@@ -19,7 +19,7 @@ function profileInitials(user) {
 function buildNavTabs(level1Menus) {
   return level1Menus.map(menu => ({
     label: menu.menu_nm,
-    path: menu.menu_path || null
+    path: menu.screen_id ? `/view/menu/${menu.menu_id}` : (menu.menu_path || null)
   }));
 }
 
@@ -52,7 +52,7 @@ export default function MainPageHeader() {
   }, [avatarUrl, user?.email]);
 
   const level1Menus = useMemo(
-    () => navMenus.filter(menu => menu.parent_menu_id === null && menu.menu_path),
+    () => navMenus.filter(menu => menu.parent_menu_id === null && (menu.menu_path || menu.screen_id)),
     [navMenus]
   );
 

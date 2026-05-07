@@ -2,7 +2,7 @@ from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, model_validator
-from app.dependencies import require_sys_adm
+from app.dependencies import require_sys_adm, require_auth
 from app.schemas import (
     AdminGroupItem,
     ScreenTemplateItem,
@@ -77,6 +77,7 @@ class AdminMenuCreateBody(BaseModel):
     menu_path: Optional[str] = None
     screen_id: Optional[str] = None
     sort_order: Optional[int] = None
+    subtitle: Optional[str] = None
 
     @model_validator(mode="after")
     def validate_menu_path_for_non_slot(self):
@@ -98,6 +99,7 @@ class AdminMenuPatchBody(BaseModel):
     sort_order: Optional[int] = None
     use_yn: Optional[str] = None
     del_fg: Optional[str] = None
+    subtitle: Optional[str] = None
 
     @model_validator(mode="after")
     def validate_menu_path_for_non_slot(self):
@@ -235,6 +237,7 @@ async def post_admin_menu(
         menu_path=body.menu_path,
         screen_id=body.screen_id,
         sort_order=body.sort_order,
+        subtitle=body.subtitle,
     )
     return {"menu_id": menu_id}
 
@@ -400,7 +403,7 @@ async def reset_user_password_endpoint(
 @router.get("/admin/role-menu-map")
 async def get_admin_role_menu_map(_: dict = Depends(require_sys_adm)):
     """
-    SYS_ADM: 메뉴별로 어떤 권한그룹(grp_id)이 매핑돼 있는지 조회.
+    SYS_ADM: 메뉴�별로 어떤 권한그룹(grp_id)이 매핑돼 있는지 조회.
     Response: { "menu_role_ids": { "<menu_id>": [<grp_id>, ...], ... } }
     """
     menu_role_ids = await get_role_menu_map()
