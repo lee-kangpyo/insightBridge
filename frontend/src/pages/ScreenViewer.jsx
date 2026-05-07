@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Navigate } from 'react-router-dom';
 import { getScreen, getScreenSlots, getTemplateSlots } from '../services/adminApi';
+import { getViewerMenu, getViewerScreen } from '../services/viewerApi';
 import PageTitleSection from '../components/main/PageTitleSection';
+import StatusChips from '../components/main/StatusChips';
 import ScreenRenderer from '../components/admin/ScreenRenderer';
+import { useAuthStore } from '../stores/authStore';
+import { useUniversityContext } from '../hooks/useUniversityContext';
 
 function mergeSlots(templateSlots, assignedSlots) {
   const assignedMap = new Map();
@@ -12,7 +16,6 @@ function mergeSlots(templateSlots, assignedSlots) {
 
   const templateSlotIds = new Set(templateSlots.map((ts) => ts.slot_id));
 
-  // 템플릿에 없는 할당 정보 경고
   for (const s of assignedSlots) {
     if (!templateSlotIds.has(s.slot_id)) {
       console.warn(
@@ -37,46 +40,74 @@ function mergeSlots(templateSlots, assignedSlots) {
 }
 
 export default function ScreenViewer() {
-  const { scrId } = useParams();
+  const { scrId, menuId } = useParams();
+  const user = useAuthStore((s) => s.user);
+  const { statusChips } = useUniversityContext();
+  const roles = user?.roles || [];
+  const isAdmin = roles.includes('SYS_ADM');
+
   const [screen, setScreen] = useState(null);
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [viewInfo, setViewInfo] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
+        setViewInfo(null);
 
-        // 1단계: 화면 정보 조회 → template_id 획득
-        const screenData = await getScreen(scrId);
-        setScreen(screenData);
+        // menuId route: use viewer APIs
+        if (menuId) {
+          const menuInfo = await getViewerMenu(menuId);
+          setViewInfo(menuInfo);
 
-        // template_id가 없으면 빈 슬롯 처리
-        if (!screenData?.template_id) {
-          setSlots([]);
+          const screenData = await getViewerScreen(menuInfo.screen_id);
+          setScreen(screenData);
+
+          const merged = mergeSlots(screenData.template_slots || [], screenData.assigned_slots || []);
+          setSlots(merged);
           setLoading(false);
           return;
         }
 
-        // 2단계: 템플릿 슬롯 + 할당 정보 병렬 호출
-        const [templateSlots, assignedSlots] = await Promise.all([
-          getTemplateSlots(screenData.template_id),
-          getScreenSlots(scrId),
-        ]);
+        // scrId route: admin preview via existing admin APIs
+        if (scrId) {
+          const screenData = await getScreen(scrId);
+          setScreen(screenData);
 
-        // 3단계: 병합
-        const merged = mergeSlots(templateSlots, assignedSlots);
-        setSlots(merged);
+          if (!screenData?.template_id) {
+            setSlots([]);
+            setLoading(false);
+            return;
+          }
+
+          const [templateSlots, assignedSlots] = await Promise.all([
+            getTemplateSlots(screenData.template_id),
+            getScreenSlots(scrId),
+          ]);
+
+          const merged = mergeSlots(templateSlots, assignedSlots);
+          setSlots(merged);
+          setLoading(false);
+          return;
+        }
+
+        setLoading(false);
       } catch (err) {
         setError(err.message || '화면을 불러오지 못했습니다.');
-      } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, [scrId]);
+  }, [scrId, menuId]);
+
+  // scrId route: non-admin users are blocked
+  if (scrId && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
 
   if (loading) {
     return (
@@ -94,6 +125,9 @@ export default function ScreenViewer() {
     );
   }
 
+  const title = viewInfo?.title || screen?.scr_nm || '화면 보기';
+  const subtitle = viewInfo?.subtitle || (scrId ? `화면 ID: ${scrId?.slice(0, 8)}…` : null);
+
   return (
     <div className="relative max-w-[1600px] mx-auto px-8 py-6 overflow-hidden">
       {/* Glassmorphism depth: gradient orbs */}
@@ -103,9 +137,13 @@ export default function ScreenViewer() {
 
       <div className="relative z-10">
         <PageTitleSection
-          title={screen?.scr_nm || '화면 보기'}
-          subtitle={`화면 ID: ${scrId?.slice(0, 8)}…`}
+          title={title}
+          subtitle={subtitle}
         />
+
+        {menuId && statusChips.length > 0 && (
+          <StatusChips filters={statusChips} />
+        )}
 
         <ScreenRenderer
           slots={slots}
