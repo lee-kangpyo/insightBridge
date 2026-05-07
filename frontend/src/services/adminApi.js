@@ -67,6 +67,11 @@ export const createAdminMenu = async (payload) => {
   return response.data;
 };
 
+export const createAdminMenuForScreen = async (payload) => {
+  const response = await api.post('/api/admin/menus/for-screen', payload);
+  return response.data;
+};
+
 export const patchAdminMenu = async (menuId, payload) => {
   const response = await api.patch(`/api/admin/menus/${menuId}`, payload);
   return response.data;

@@ -114,14 +114,21 @@ export default function SlotLayoutPage() {
     }
   }, [scrNm, templateId]);
 
-  const handleSlotClick = useCallback((slot) => {
+  const refreshItems = useCallback(async () => {
+    const allItems = await getItems();
+    setItems(allItems);
+    return allItems;
+  }, []);
+
+  const handleSlotClick = useCallback(async (slot) => {
     if (!isScreenCreated) {
       alert('화면을 먼저 생성해주세요.');
       return;
     }
+    await refreshItems();
     setSelectedSlot(slot);
     setIsModalOpen(true);
-  }, [isScreenCreated]);
+  }, [isScreenCreated, refreshItems]);
 
   const activeScrId = isEditMode ? scrId : screenScrId;
 
@@ -265,6 +272,7 @@ export default function SlotLayoutPage() {
           items={items}
           onSave={handleModalSave}
           onCancel={handleModalCancel}
+          onNavigate={navigate}
         />
       )}
     </div>

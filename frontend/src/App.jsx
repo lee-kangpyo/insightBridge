@@ -164,6 +164,16 @@ function App() {
         <Route path="items" element={<ItemsManagement />} />
       </Route>
       <Route
+        path="/view/menu/:menuId"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <ScreenViewer />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/view/screen/:scrId"
         element={
           <ProtectedRoute>

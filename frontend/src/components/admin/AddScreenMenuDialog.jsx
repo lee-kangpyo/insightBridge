@@ -158,7 +158,7 @@ export default function AddScreenMenuDialog({
                     자동 생성 정보
                   </span>
                   <div className="text-sm text-on-surface">
-                    <div>경로: <code className="text-primary font-mono">/view/screen/{selectedScreen.scr_id}</code></div>
+                    <div>경로: <code className="text-primary font-mono">/view/menu/&lt;menu_id&gt;</code> (자동 생성)</div>
                     <div>화면 ID: <code className="text-primary font-mono">{selectedScreen.scr_id}</code></div>
                   </div>
                 </div>

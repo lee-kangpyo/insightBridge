@@ -39,3 +39,6 @@ openspec/
 
 # Development Outputs
 output/
+
+# Scripts (migration utilities)
+backend/scripts/

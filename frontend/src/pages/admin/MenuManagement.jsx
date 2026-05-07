@@ -5,6 +5,7 @@ import { ADMIN_PAGE_CONTAINER_CLASS } from "../../constants/adminLayout";
 import {
   getAdminMenuTree,
   createAdminMenu,
+  createAdminMenuForScreen,
   patchAdminMenu,
   deleteAdminMenu,
   getAdminScreensList,
@@ -512,6 +513,20 @@ function MenuDetailForm({
               />
             </div>
           </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">
+              서브 제목 (subtitle)
+            </label>
+            <input
+              className="border-0 border-b border-outline focus:border-primary focus:ring-0 px-0 py-2 bg-transparent text-on-surface"
+              type="text"
+              placeholder="화면 상단에 표시될 부제목을 입력하세요"
+              value={formData.subtitle}
+              onChange={(e) =>
+                onChange({ ...formData, subtitle: e.target.value })
+              }
+            />
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col gap-2">
               <label className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">
@@ -738,6 +753,7 @@ function emptyForm() {
   return {
     menuCd: "",
     menuName: "",
+    subtitle: "",
     menuUrl: "",
     component: "",
     menuLevel: "",
@@ -751,6 +767,7 @@ function nodeToForm(node) {
   return {
     menuCd: node.menu_cd ?? "",
     menuName: node.menu_nm ?? "",
+    subtitle: node.subtitle ?? "",
     menuUrl: node.menu_path ?? "",
     component: node.screen_id ?? "",
     menuLevel: node.menu_level != null ? String(node.menu_level) : "",
@@ -861,6 +878,7 @@ export default function MenuManagement() {
       await patchAdminMenu(selectedNode.menu_id, {
         menu_cd: formData.menuCd.trim(),
         menu_nm: formData.menuName.trim(),
+        subtitle: formData.subtitle.trim() || null,
         menu_path: formData.menuUrl.trim() || null,
         screen_id: formData.component.trim() || null,
         menu_level: parseOptionalInt(formData.menuLevel),
@@ -1000,12 +1018,10 @@ export default function MenuManagement() {
       setError(null);
       const menu_cd = `SCR_${scrId.replace(/-/g, "_")}`;
       const menu_nm = screen.scr_nm || scrId;
-      const { menu_id } = await createAdminMenu({
+      const { menu_id } = await createAdminMenuForScreen({
         menu_cd,
         menu_nm,
-        parent_menu_id: null,
         screen_id: scrId,
-        menu_path: `/view/screen/${scrId}`,
       });
       const tree = await loadTree();
       const created = findNodeById(tree, menu_id);
