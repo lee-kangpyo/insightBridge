@@ -18,6 +18,7 @@ from app.services.admin import (
     get_all_menus,
     get_role_menu_map,
     create_menu,
+    create_menu_for_screen,
     patch_menu,
     soft_delete_menu,
     get_all_role_user_mappings,
@@ -235,6 +236,33 @@ async def post_admin_menu(
         parent_menu_id=body.parent_menu_id,
         menu_level=body.menu_level,
         menu_path=body.menu_path,
+        screen_id=body.screen_id,
+        sort_order=body.sort_order,
+        subtitle=body.subtitle,
+    )
+    return {"menu_id": menu_id}
+
+
+class AdminMenuCreateForScreenBody(BaseModel):
+    menu_cd: str = Field(..., min_length=1)
+    menu_nm: str = Field(..., min_length=1)
+    screen_id: str = Field(..., min_length=1)
+    sort_order: Optional[int] = None
+    subtitle: Optional[str] = None
+
+
+@router.post("/admin/menus/for-screen", status_code=status.HTTP_201_CREATED)
+async def post_admin_menu_for_screen(
+    body: AdminMenuCreateForScreenBody,
+    _: dict = Depends(require_sys_adm),
+):
+    """
+    Create a menu linked to a screen in a single transaction.
+    menu_path is automatically set to /view/menu/{menu_id}.
+    """
+    menu_id = await create_menu_for_screen(
+        menu_cd=body.menu_cd,
+        menu_nm=body.menu_nm,
         screen_id=body.screen_id,
         sort_order=body.sort_order,
         subtitle=body.subtitle,

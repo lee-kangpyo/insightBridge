@@ -165,6 +165,49 @@ async def create_menu(
             return menu_id
 
 
+async def create_menu_for_screen(
+    menu_cd: str,
+    menu_nm: str,
+    screen_id: str,
+    sort_order: Optional[int] = None,
+    subtitle: Optional[str] = None,
+) -> int:
+    """
+    Create a menu linked to a screen, with menu_path set to /view/menu/{menu_id}.
+    Both operations happen in a single transaction.
+    Returns the created menu_id.
+    """
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                """
+                INSERT INTO ts_menu_info (
+                    menu_cd, menu_nm, parent_menu_id, menu_level,
+                    menu_path, screen_id, sort_order, use_yn, del_fg, subtitle
+                )
+                VALUES ($1, $2, NULL, NULL, NULL, $3, $4, 'Y', 'N', $5)
+                RETURNING menu_id
+                """,
+                menu_cd.strip(),
+                menu_nm.strip(),
+                screen_id.strip(),
+                sort_order,
+                subtitle.strip() if subtitle else None,
+            )
+            menu_id = int(row["menu_id"])
+            await conn.execute(
+                """
+                UPDATE ts_menu_info
+                SET menu_path = $1
+                WHERE menu_id = $2
+                """,
+                f"/view/menu/{menu_id}",
+                menu_id,
+            )
+            return menu_id
+
+
 async def patch_menu(menu_id: int, updates: dict[str, Any]) -> None:
     """Partial update; keys must be DB column names."""
     fields: list[str] = []

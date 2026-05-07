@@ -5,6 +5,7 @@ import { ADMIN_PAGE_CONTAINER_CLASS } from "../../constants/adminLayout";
 import {
   getAdminMenuTree,
   createAdminMenu,
+  createAdminMenuForScreen,
   patchAdminMenu,
   deleteAdminMenu,
   getAdminScreensList,
@@ -1017,14 +1018,10 @@ export default function MenuManagement() {
       setError(null);
       const menu_cd = `SCR_${scrId.replace(/-/g, "_")}`;
       const menu_nm = screen.scr_nm || scrId;
-      const { menu_id } = await createAdminMenu({
+      const { menu_id } = await createAdminMenuForScreen({
         menu_cd,
         menu_nm,
-        parent_menu_id: null,
         screen_id: scrId,
-      });
-      await patchAdminMenu(menu_id, {
-        menu_path: `/view/menu/${menu_id}`,
       });
       const tree = await loadTree();
       const created = findNodeById(tree, menu_id);

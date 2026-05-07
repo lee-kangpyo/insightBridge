@@ -4,7 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from app.dependencies import require_auth
-from app.services.menu import verify_menu_access
+from app.services.menu import (
+    verify_menu_access,
+    verify_screen_access,
+    MenuNotFoundError,
+    MenuDeletedError,
+    MenuInactiveError,
+    MenuAccessDeniedError,
+)
 from app.services.screen_items import (
     get_screen_with_template,
     get_screen_slots,
@@ -43,28 +50,26 @@ async def get_viewer_menu(
 
     try:
         menu = await verify_menu_access(menu_id, user_cd)
-    except LookupError:
+    except MenuNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Menu not found",
         )
-    except PermissionError as e:
-        msg = str(e)
-        if msg == "menu_deleted":
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Deleted menu",
-            )
-        elif msg == "menu_inactive":
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Inactive menu",
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied",
-            )
+    except MenuDeletedError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Deleted menu",
+        )
+    except MenuInactiveError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Inactive menu",
+        )
+    except MenuAccessDeniedError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied",
+        )
 
     screen_id = menu.get("screen_id")
     if not screen_id:
@@ -96,22 +101,9 @@ async def get_viewer_screen(
     """
     user_cd = int(current_user["user_cd"])
 
-    # Reverse look-up: check if user has access to any menu linked to this screen
-    from app.database import fetch_df
-
-    query_perm = """
-        SELECT 1
-        FROM ts_menu_info m
-        JOIN ts_grp_menu gm ON m.menu_id = gm.menu_id
-        JOIN ts_grp_user gu ON gm.grp_id = gu.grp_id
-        WHERE m.screen_id = $1
-          AND m.del_fg = 'N'
-          AND m.use_yn = 'Y'
-          AND gu.user_cd = $2
-        LIMIT 1
-    """
-    df_perm = await fetch_df(query_perm, (screen_id, user_cd))
-    if df_perm.empty:
+    try:
+        await verify_screen_access(screen_id, user_cd)
+    except MenuAccessDeniedError:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied",
