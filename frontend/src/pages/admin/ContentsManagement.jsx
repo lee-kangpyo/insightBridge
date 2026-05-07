@@ -14,6 +14,9 @@ import Modal from '../../components/common/Modal';
 import { createAdminContents, deleteAdminContents, getAdminContentsList } from '../../services/adminApi';
 import { validateContentsBeforeSave } from '../../utils/contentsValidation';
 
+const SHOW_DEV_QUICK_ACTIONS =
+  import.meta.env.DEV && (import.meta.env.VITE_ADMIN_CONTENTS_DEV_QUICK_ACTIONS ?? 'true') !== 'false';
+
 function toDatetimeLocalValue(date = new Date()) {
   const pad = (n) => String(n).padStart(2, '0');
   return (
@@ -165,6 +168,8 @@ export function ContentsList() {
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isCloneOpen, setIsCloneOpen] = useState(false);
+  const [cloneTarget, setCloneTarget] = useState(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -205,6 +210,36 @@ export function ContentsList() {
         description="생성된 AI 쿼리, 차트·테이블·카드 설정을 확인하고 관리합니다."
         actions={
           <div className="flex items-center gap-3">
+            {SHOW_DEV_QUICK_ACTIONS && (
+              <>
+                <button
+                  type="button"
+                  disabled={!selectedContent}
+                  onClick={() => {
+                    if (!selectedContent) return;
+                    setEditTarget(selectedContent);
+                    setIsEditOpen(true);
+                  }}
+                  className="flex items-center gap-2 rounded-lg border border-outline bg-surface-container-lowest px-4 py-2.5 text-sm font-semibold text-on-surface shadow-sm hover:bg-surface-container-high disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className="material-symbols-outlined text-lg">edit</span>
+                  수정
+                </button>
+                <button
+                  type="button"
+                  disabled={!selectedContent}
+                  onClick={() => {
+                    if (!selectedContent) return;
+                    setCloneTarget(selectedContent);
+                    setIsCloneOpen(true);
+                  }}
+                  className="flex items-center gap-2 rounded-lg border border-outline bg-surface-container-lowest px-4 py-2.5 text-sm font-semibold text-on-surface shadow-sm hover:bg-surface-container-high disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className="material-symbols-outlined text-lg">content_copy</span>
+                  복제
+                </button>
+              </>
+            )}
             <button
               type="button"
               onClick={() => setIsCreateOpen(true)}
@@ -246,6 +281,26 @@ export function ContentsList() {
       <ContentsCreateModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
+        onSaved={async () => {
+          try {
+            const list = await getAdminContentsList({ include_deleted: false });
+            setContents(Array.isArray(list) ? list : []);
+            if (Array.isArray(list) && list.length > 0) {
+              setSelectedId(list[0].contentId);
+            }
+          } catch (err) {
+            console.error('컨텐츠 목록 재조회 실패:', err);
+          }
+        }}
+      />
+      <ContentsCreateModal
+        isOpen={isCloneOpen}
+        mode="clone"
+        initialContent={cloneTarget}
+        onClose={() => {
+          setIsCloneOpen(false);
+          setCloneTarget(null);
+        }}
         onSaved={async () => {
           try {
             const list = await getAdminContentsList({ include_deleted: false });

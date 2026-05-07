@@ -86,10 +86,24 @@ export default function ContentsCreateForm({
   const normalized = useMemo(() => normalizeInitialContent(initialContent), [initialContent]);
 
   useEffect(() => {
-    if (mode !== 'edit') return;
+    if (mode !== 'edit' && mode !== 'clone') return;
     if (!normalized) return;
 
-    setGeneralInfo(normalized.generalInfo);
+    const nextGeneralInfo =
+      mode === 'clone'
+        ? {
+            ...normalized.generalInfo,
+            contentId: '',
+            cnts_id: null,
+            contentName: normalized.generalInfo.contentName
+              ? `${normalized.generalInfo.contentName} (복제)`
+              : '',
+            createdAt: toDatetimeLocalValue(),
+            generatedAt: toDatetimeLocalValue(),
+          }
+        : normalized.generalInfo;
+
+    setGeneralInfo(nextGeneralInfo);
     setContentType(normalized.contentType);
 
     // 타입별 초기값 주입(없는 필드는 기존 초기값으로 fallback)
@@ -153,7 +167,7 @@ export default function ContentsCreateForm({
         onSaved?.(res);
       } else {
         const res = await createAdminContents(payload);
-        showToast('저장되었습니다.');
+        showToast(mode === 'clone' ? '복제 생성되었습니다.' : '저장되었습니다.');
         resetAll();
         onSaved?.(res);
       }
@@ -203,7 +217,17 @@ export default function ContentsCreateForm({
           className="flex items-center gap-2 px-5 py-2.5 bg-primary text-on-primary font-medium rounded-lg hover:bg-primary/90 shadow-sm transition-all disabled:opacity-60"
         >
           <span className="material-symbols-outlined text-lg">check</span>
-          {saving ? (mode === 'edit' ? '수정 중...' : '저장 중...') : mode === 'edit' ? '수정' : '저장'}
+          {saving
+            ? mode === 'edit'
+              ? '수정 중...'
+              : mode === 'clone'
+                ? '복제 생성 중...'
+                : '저장 중...'
+            : mode === 'edit'
+              ? '수정'
+              : mode === 'clone'
+                ? '복제 생성'
+                : '저장'}
         </button>
       </div>
 

@@ -158,6 +158,12 @@ export const executeSqlPreview = async (cntsId) => {
   return response.data;
 };
 
+/** 저장 전 SQL 문자열로 미리보기 (관리자) */
+export const previewAdminContentsSql = async (sql) => {
+  const response = await api.post('/api/admin/contents/preview-sql', { sql });
+  return response.data;
+};
+
 export const handleApiError = (error, fallbackMessage = '오류가 발생했습니다.') => {
   if (error.response?.data?.detail) {
     return error.response.data.detail;

@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { queryAdminStream } from '../../services/api';
+import { handleApiError, previewAdminContentsSql } from '../../services/adminApi';
 
 const DEFAULT_PROMPT =
   '예: 최근 5년간의 연도별, 학과별 등록금 수입 데이터를 추출해줘. 단과대 이름도 포함하고, 등록금 수입이 높은 순으로 정렬해.';
+
+const PREVIEW_DEBOUNCE_MS = 600;
 
 function safeCopy(text) {
   const s = (text ?? '').toString();
@@ -43,7 +46,7 @@ function DataPreviewTable({ rows }) {
           </tr>
         </thead>
         <tbody className="text-sm font-body bg-surface-container-lowest divide-y divide-surface-container-low/50">
-          {safeRows.slice(0, 20).map((r, idx) => (
+          {safeRows.slice(0, 100).map((r, idx) => (
             <tr key={idx} className="hover:bg-surface-container-low/50 transition-colors">
               {columns.map((c) => (
                 <td key={c} className="px-4 py-3 text-on-surface-variant whitespace-nowrap">
@@ -66,18 +69,74 @@ export default function SqlSettings({ value, onChange, visible, errors, showErro
   const [error, setError] = useState('');
   const [candidate, setCandidate] = useState(null);
 
-  const displaySql = useMemo(() => {
-    const fromCandidate = candidate?.sql ? String(candidate.sql) : '';
-    return sqlValue || fromCandidate;
-  }, [sqlValue, candidate]);
+  const [previewRows, setPreviewRows] = useState([]);
+  const [previewTruncated, setPreviewTruncated] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewApiError, setPreviewApiError] = useState('');
+
+  const previewRequestId = useRef(0);
+
+  const runPreview = useCallback(async (sqlStr) => {
+    const s = (sqlStr ?? '').toString().trim();
+    if (!s) {
+      previewRequestId.current += 1;
+      setPreviewRows([]);
+      setPreviewTruncated(false);
+      setPreviewApiError('');
+      setPreviewLoading(false);
+      return;
+    }
+
+    const seq = ++previewRequestId.current;
+    setPreviewLoading(true);
+    setPreviewApiError('');
+    try {
+      const res = await previewAdminContentsSql(s);
+      if (seq !== previewRequestId.current) return;
+      setPreviewRows(Array.isArray(res?.rows) ? res.rows : []);
+      setPreviewTruncated(!!res?.truncated);
+    } catch (e) {
+      if (seq !== previewRequestId.current) return;
+      setPreviewRows([]);
+      setPreviewTruncated(false);
+      setPreviewApiError(handleApiError(e, '미리보기 실행에 실패했습니다.'));
+    } finally {
+      if (seq === previewRequestId.current) {
+        setPreviewLoading(false);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (candidate?.sql) {
       onChange?.({ ...(value || {}), sql: String(candidate.sql) });
     }
-    // value/onChange는 부모에서 주입되며, onChange 호출은 candidate 변경에만 반응시키기 위함
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [candidate?.sql]);
+
+  useEffect(() => {
+    if (!visible) return;
+
+    const s = sqlValue.trim();
+    if (!s) {
+      previewRequestId.current += 1;
+      setPreviewRows([]);
+      setPreviewTruncated(false);
+      setPreviewApiError('');
+      setPreviewLoading(false);
+      return;
+    }
+
+    if (isStreaming) {
+      return () => {};
+    }
+
+    const t = window.setTimeout(() => {
+      runPreview(s);
+    }, PREVIEW_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(t);
+  }, [visible, sqlValue, isStreaming, runPreview]);
 
   const handleGenerate = async () => {
     const q = prompt.trim();
@@ -90,8 +149,12 @@ export default function SqlSettings({ value, onChange, visible, errors, showErro
     await queryAdminStream(
       q,
       (cand) => {
-        // SSE로 candidate 이벤트가 여러 번 와도, admin 화면에서는 1개만 유지(마지막 값으로 덮어씀).
         setCandidate(cand);
+        if (Array.isArray(cand?.data) && cand.data.length > 0) {
+          setPreviewRows(cand.data);
+          setPreviewTruncated(false);
+          setPreviewApiError('');
+        }
       },
       () => {
         setIsStreaming(false);
@@ -103,12 +166,14 @@ export default function SqlSettings({ value, onChange, visible, errors, showErro
     );
   };
 
-  const handleReRunPreview = async () => {
-    const sql = (value?.sql ?? '').toString().trim();
-    if (!sql || isStreaming) return;
-    // 같은 SQL이라도 "데이터 미리보기"를 다시 받고 싶을 수 있어, prompt에 SQL을 넣어 재요청하지 않고
-    // 현재는 백엔드가 자연어 기반이므로, 사용자가 프롬프트로 재생성하도록 유도한다.
-    setError('현재는 프롬프트 기반 재생성만 지원합니다. 프롬프트를 수정 후 다시 생성하세요.');
+  const handleReRunPreview = () => {
+    const s = sqlValue.trim();
+    if (!s || isStreaming) return;
+    runPreview(s);
+  };
+
+  const handleSqlChange = (next) => {
+    onChange?.({ ...(value || {}), sql: next });
   };
 
   if (!visible) return null;
@@ -160,42 +225,59 @@ export default function SqlSettings({ value, onChange, visible, errors, showErro
             ) : null}
           </div>
 
-          <div className="flex flex-col flex-grow">
+          <div className="flex flex-col flex-grow min-h-0">
             <label className="ds-label flex items-center justify-between">
-              <span>생성된 SQL 쿼리</span>
+              <span>SQL 쿼리 (직접 수정 가능)</span>
               <button
                 type="button"
-                onClick={() => safeCopy(displaySql)}
+                onClick={() => safeCopy(sqlValue)}
                 className="text-secondary hover:text-primary transition-colors flex items-center gap-1"
               >
                 <span className="material-symbols-outlined text-sm">content_copy</span>
                 <span className="text-[10px] normal-case">복사</span>
               </button>
             </label>
-            <div className="bg-inverse-surface text-inverse-on-surface p-5 rounded-xl font-mono text-xs leading-relaxed overflow-x-auto h-full shadow-inner min-h-[220px]">
-              <pre className="whitespace-pre-wrap"><code>{displaySql || '(아직 생성된 SQL이 없습니다)'}</code></pre>
-            </div>
+            <textarea
+              value={sqlValue}
+              onChange={(e) => handleSqlChange(e.target.value)}
+              readOnly={isStreaming}
+              spellCheck={false}
+              placeholder="AI로 생성하거나 SELECT 문을 직접 입력하세요."
+              className="w-full min-h-[220px] flex-1 resize-y bg-inverse-surface text-inverse-on-surface p-5 rounded-xl font-mono text-xs leading-relaxed
+                         border border-transparent shadow-inner focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary
+                         read-only:opacity-70"
+            />
           </div>
         </div>
 
         <div className="flex flex-col">
           <label className="ds-label flex items-center justify-between mb-2">
-            <span>데이터 미리보기 (Top 20)</span>
+            <span>데이터 미리보기 (최대 100행)</span>
             <button
               type="button"
               onClick={handleReRunPreview}
               className="flex items-center gap-1 text-secondary text-xs hover:underline disabled:opacity-60"
-              disabled={isStreaming}
+              disabled={isStreaming || !sqlValue.trim()}
             >
               <span className="material-symbols-outlined text-[14px]">refresh</span>
               재실행
             </button>
           </label>
-          <div className="bg-surface-container-low rounded-xl overflow-hidden border border-outline-variant/20 flex-grow flex flex-col min-h-[320px]">
-            <DataPreviewTable rows={candidate?.data || []} />
-            <div className="mt-auto bg-surface px-4 py-3 border-t border-outline-variant/20 flex justify-between items-center text-xs text-on-surface-variant">
+          <div className="bg-surface-container-low rounded-xl overflow-hidden border border-outline-variant/20 flex-grow flex flex-col min-h-[320px] relative">
+            {previewLoading ? (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface-container-low/60 text-sm text-on-surface-variant">
+                미리보기 로딩 중…
+              </div>
+            ) : null}
+            {previewApiError ? (
+              <div className="text-sm text-error px-4 py-3 border-b border-outline-variant/20">{previewApiError}</div>
+            ) : null}
+            <DataPreviewTable rows={previewRows} />
+            <div className="mt-auto bg-surface px-4 py-3 border-t border-outline-variant/20 flex justify-between items-center text-xs text-on-surface-variant gap-2 flex-wrap">
               <span>
-                {Array.isArray(candidate?.data) ? `Showing ${Math.min(candidate.data.length, 20)} rows` : 'Showing 0 rows'}
+                {previewRows.length > 0
+                  ? `표시 ${previewRows.length}행${previewTruncated ? ' (일부만 표시)' : ''}`
+                  : '표시 0행'}
               </span>
               <span className="text-on-surface-variant">
                 {candidate?.chart_config?.type ? `추천 차트: ${candidate.chart_config.type}` : ''}

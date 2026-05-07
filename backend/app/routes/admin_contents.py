@@ -15,6 +15,7 @@ from app.services.contents import (
     get_contents_master,
     list_contents,
     patch_contents,
+    preview_sql_text,
     soft_delete_contents,
 )
 
@@ -35,6 +36,10 @@ class ContentsPatchBody(BaseModel):
     memo: Optional[str] = None
     contentType: Optional[Literal["chart", "grid", "card", "sql", "차트", "그리드", "카드", "데이터조회"]] = None
     data: Optional[dict[str, Any]] = None
+
+
+class PreviewSqlBody(BaseModel):
+    sql: str = Field(default="", description="실행할 SELECT 계열 SQL")
 
 
 def _to_front_row(master: Any, detail: dict[str, Any]) -> dict[str, Any]:
@@ -157,6 +162,21 @@ async def delete_admin_contents(cnts_id: int, _: dict = Depends(require_sys_adm)
     except LookupError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="컨텐츠를 찾을 수 없습니다.")
     return {"ok": True}
+
+
+@router.post("/admin/contents/preview-sql")
+async def post_admin_contents_preview_sql(body: PreviewSqlBody, _: dict = Depends(require_sys_adm)):
+    try:
+        return await preview_sql_text(body.sql)
+    except ValueError as e:
+        code = str(e)
+        if code == "empty_sql":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="SQL 문장이 비어있습니다.") from e
+        if code.startswith("unsafe_sql"):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="안전하지 않은 SQL 문장입니다.") from e
+        if code.startswith("sql_execution_error:"):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="SQL 실행 중 오류가 발생했습니다.") from e
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="요청이 올바르지 않습니다.") from e
 
 
 @router.get("/admin/contents/{cnts_id}/preview")
