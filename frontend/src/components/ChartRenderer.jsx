@@ -130,10 +130,18 @@ function gradColor(hex) {
   };
 }
 
+function resolveSeriesColor(seriesName, seriesColorMap, idx) {
+  const byName = seriesColorMap && seriesName != null ? seriesColorMap[String(seriesName)] : null;
+  if (byName) return byName;
+  return CHART_COLORS[idx % CHART_COLORS.length];
+}
+
 function buildBarOption(data, config) {
   const { xValues, groups, series } = config.groupKey
     ? pivotData(data, config.x, config.y, config.groupKey)
     : { xValues: data.map(r => r[config.x]), groups: [null], series: { [null]: data.map(r => Number(r[config.y])) } };
+
+  const seriesColorMap = config?.seriesColors && typeof config.seriesColors === 'object' ? config.seriesColors : null;
 
   return {
     ...COMMON_THEME,
@@ -146,7 +154,7 @@ function buildBarOption(data, config) {
       type: 'bar',
       data: series[g],
       barMaxWidth: 36,
-      itemStyle: { borderRadius: [5, 5, 0, 0], color: gradColor(CHART_COLORS[i % CHART_COLORS.length]) },
+      itemStyle: { borderRadius: [5, 5, 0, 0], color: gradColor(resolveSeriesColor(g, seriesColorMap, i)) },
     })),
   };
 }
@@ -155,6 +163,8 @@ function buildLineOption(data, config) {
   const { xValues, groups, series } = config.groupKey
     ? pivotData(data, config.x, config.y, config.groupKey)
     : { xValues: data.map(r => r[config.x]), groups: [null], series: { [null]: data.map(r => Number(r[config.y])) } };
+
+  const seriesColorMap = config?.seriesColors && typeof config.seriesColors === 'object' ? config.seriesColors : null;
 
   return {
     ...COMMON_THEME,
@@ -167,8 +177,8 @@ function buildLineOption(data, config) {
       type: 'line',
       data: series[g],
       smooth: true,
-      lineStyle: { width: 2.5, color: CHART_COLORS[i % CHART_COLORS.length] },
-      itemStyle: { color: CHART_COLORS[i % CHART_COLORS.length], borderWidth: 2, borderColor: '#fff' },
+      lineStyle: { width: 2.5, color: resolveSeriesColor(g, seriesColorMap, i) },
+      itemStyle: { color: resolveSeriesColor(g, seriesColorMap, i), borderWidth: 2, borderColor: '#fff' },
       symbolSize: 5,
     })),
   };
@@ -197,6 +207,8 @@ function buildAreaOption(data, config) {
     ? pivotData(data, config.x, config.y, config.groupKey)
     : { xValues: data.map(r => r[config.x]), groups: [null], series: { [null]: data.map(r => Number(r[config.y])) } };
 
+  const seriesColorMap = config?.seriesColors && typeof config.seriesColors === 'object' ? config.seriesColors : null;
+
   return {
     ...COMMON_THEME,
     title: config.title ? { text: config.title, left: 'center', textStyle: { fontSize: 13, fontWeight: 700, color: '#0f172a' } } : undefined,
@@ -208,11 +220,11 @@ function buildAreaOption(data, config) {
       type: 'line',
       data: series[g],
       smooth: true,
-      lineStyle: { width: 2.5, color: CHART_COLORS[i % CHART_COLORS.length] },
-      itemStyle: { color: CHART_COLORS[i % CHART_COLORS.length] },
+      lineStyle: { width: 2.5, color: resolveSeriesColor(g, seriesColorMap, i) },
+      itemStyle: { color: resolveSeriesColor(g, seriesColorMap, i) },
       areaStyle: {
         color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-          colorStops: [{ offset: 0, color: `${CHART_COLORS[i % CHART_COLORS.length]}44` }, { offset: 1, color: `${CHART_COLORS[i % CHART_COLORS.length]}06` }] },
+          colorStops: [{ offset: 0, color: `${resolveSeriesColor(g, seriesColorMap, i)}44` }, { offset: 1, color: `${resolveSeriesColor(g, seriesColorMap, i)}06` }] },
       },
       symbolSize: 5,
     })),
@@ -223,6 +235,8 @@ function buildStackedBarOption(data, config) {
   const { xValues, groups, series } = config.groupKey
     ? pivotData(data, config.x, config.y, config.groupKey)
     : { xValues: data.map(r => r[config.x]), groups: [null], series: { [null]: data.map(r => Number(r[config.y])) } };
+
+  const seriesColorMap = config?.seriesColors && typeof config.seriesColors === 'object' ? config.seriesColors : null;
 
   return {
     ...COMMON_THEME,
@@ -237,7 +251,7 @@ function buildStackedBarOption(data, config) {
       data: series[g],
       barMaxWidth: 40,
       itemStyle: {
-        color: CHART_COLORS[i % CHART_COLORS.length],
+        color: resolveSeriesColor(g, seriesColorMap, i),
         borderRadius: i === groups.length - 1 ? [5, 5, 0, 0] : [0, 0, 0, 0],
       },
     })),

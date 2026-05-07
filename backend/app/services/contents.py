@@ -253,21 +253,51 @@ async def create_contents(payload: dict[str, Any]) -> int:
 
             elif tp == "card":
                 items = detail
+                supports_color_hex = False
+                try:
+                    supports_color_hex = bool(
+                        await conn.fetchval(
+                            """
+                            SELECT 1
+                            FROM information_schema.columns
+                            WHERE table_schema = 'public'
+                              AND table_name = 'ts_cnts_info_card'
+                              AND column_name = 'color_hex'
+                            LIMIT 1
+                            """
+                        )
+                    )
+                except Exception:
+                    supports_color_hex = False
                 for idx, item in enumerate(items):
                     if not isinstance(item, dict):
                         continue
                     label = item.get("label")
                     content = item.get("content")
-                    await conn.execute(
-                        """
-                        INSERT INTO ts_cnts_info_card (cnts_id, header_nm, data_key, pos)
-                        VALUES ($1, $2, $3, $4)
-                        """,
-                        cnts_id,
-                        str(label).strip() if label is not None else None,
-                        str(content).strip() if content is not None else None,
-                        str(idx),
-                    )
+                    color_hex = item.get("color")
+                    if supports_color_hex:
+                        await conn.execute(
+                            """
+                            INSERT INTO ts_cnts_info_card (cnts_id, header_nm, data_key, pos, color_hex)
+                            VALUES ($1, $2, $3, $4, $5)
+                            """,
+                            cnts_id,
+                            str(label).strip() if label is not None else None,
+                            str(content).strip() if content is not None else None,
+                            str(idx),
+                            str(color_hex).strip() if color_hex is not None else None,
+                        )
+                    else:
+                        await conn.execute(
+                            """
+                            INSERT INTO ts_cnts_info_card (cnts_id, header_nm, data_key, pos)
+                            VALUES ($1, $2, $3, $4)
+                            """,
+                            cnts_id,
+                            str(label).strip() if label is not None else None,
+                            str(content).strip() if content is not None else None,
+                            str(idx),
+                        )
 
             return cnts_id
 
@@ -449,15 +479,26 @@ async def get_contents_detail(cnts_id: int, tp: ContentsType) -> dict[str, Any]:
         return {"columns": cols}
 
     if tp == "card":
-        df = await fetch_df(
-            """
-            SELECT header_nm, data_key, pos
-            FROM ts_cnts_info_card
-            WHERE cnts_id = $1
-            ORDER BY (pos::int) NULLS LAST, card_id
-            """,
-            (cnts_id,),
-        )
+        try:
+            df = await fetch_df(
+                """
+                SELECT header_nm, data_key, pos, color_hex
+                FROM ts_cnts_info_card
+                WHERE cnts_id = $1
+                ORDER BY (pos::int) NULLS LAST, card_id
+                """,
+                (cnts_id,),
+            )
+        except asyncpg.exceptions.UndefinedColumnError:
+            df = await fetch_df(
+                """
+                SELECT header_nm, data_key, pos
+                FROM ts_cnts_info_card
+                WHERE cnts_id = $1
+                ORDER BY (pos::int) NULLS LAST, card_id
+                """,
+                (cnts_id,),
+            )
         items: list[dict[str, Any]] = []
         if not df.empty:
             for r in df.to_dict(orient="records"):
@@ -465,7 +506,7 @@ async def get_contents_detail(cnts_id: int, tp: ContentsType) -> dict[str, Any]:
                     {
                         "label": r.get("header_nm"),
                         "content": r.get("data_key"),
-                        "color": "#002c5a",
+                        "color": r.get("color_hex") or "#002c5a",
                     }
                 )
         return {"items": items}
@@ -691,18 +732,54 @@ async def patch_contents(cnts_id: int, payload: dict[str, Any]) -> None:
                 for idx2, item in enumerate(items):
                     if not isinstance(item, dict):
                         continue
-                    await conn.execute(
-                        """
-                        INSERT INTO ts_cnts_info_card (cnts_id, header_nm, data_key, pos)
-                        VALUES ($1, $2, $3, $4)
-                        """,
-                        cnts_id,
-                        str(item.get("label")).strip() if item.get("label") is not None else None,
-                        str(item.get("content")).strip()
-                        if item.get("content") is not None
-                        else None,
-                        str(idx2),
-                    )
+                    supports_color_hex = False
+                    try:
+                        supports_color_hex = bool(
+                            await conn.fetchval(
+                                """
+                                SELECT 1
+                                FROM information_schema.columns
+                                WHERE table_schema = 'public'
+                                  AND table_name = 'ts_cnts_info_card'
+                                  AND column_name = 'color_hex'
+                                LIMIT 1
+                                """
+                            )
+                        )
+                    except Exception:
+                        supports_color_hex = False
+                    color_hex = item.get("color")
+                    if supports_color_hex:
+                        await conn.execute(
+                            """
+                            INSERT INTO ts_cnts_info_card (cnts_id, header_nm, data_key, pos, color_hex)
+                            VALUES ($1, $2, $3, $4, $5)
+                            """,
+                            cnts_id,
+                            str(item.get("label")).strip()
+                            if item.get("label") is not None
+                            else None,
+                            str(item.get("content")).strip()
+                            if item.get("content") is not None
+                            else None,
+                            str(idx2),
+                            str(color_hex).strip() if color_hex is not None else None,
+                        )
+                    else:
+                        await conn.execute(
+                            """
+                            INSERT INTO ts_cnts_info_card (cnts_id, header_nm, data_key, pos)
+                            VALUES ($1, $2, $3, $4)
+                            """,
+                            cnts_id,
+                            str(item.get("label")).strip()
+                            if item.get("label") is not None
+                            else None,
+                            str(item.get("content")).strip()
+                            if item.get("content") is not None
+                            else None,
+                            str(idx2),
+                        )
 
             elif tp == "sql":
                 sql = d.get("sql")
