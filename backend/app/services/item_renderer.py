@@ -129,22 +129,6 @@ def _build_chart_model(item_type: str, item: dict, shape_content: dict, preview:
     if not title:
         title = item.get("item_nm", "") if item else ""
 
-    series_colors: dict[str, str] = {}
-    for s in series_list:
-        if not isinstance(s, dict):
-            continue
-        series_name = str(s.get("name") or s.get("label") or "").strip() or ""
-        field = s.get("field")
-        key = series_name or (str(field).strip() if isinstance(field, str) else "")
-        if not key:
-            continue
-        raw_color = s.get("colorHex") or s.get("color_hex") or s.get("item_color_hex") or s.get("color")
-        if raw_color is None:
-            continue
-        color = str(raw_color).strip()
-        if color:
-            series_colors[key] = color
-
     long = []
     for row in sql_rows:
         category = _get_row_value(row, category_field)
@@ -182,7 +166,6 @@ def _build_chart_model(item_type: str, item: dict, shape_content: dict, preview:
         "x": "category",
         "y": "value",
         "group": "series",
-        "seriesColors": series_colors,
     }
 
     return {"chartType": chart_type, "data": data, "chartConfig": chart_config}
