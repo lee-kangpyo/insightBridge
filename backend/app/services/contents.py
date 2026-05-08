@@ -63,6 +63,136 @@ def _money_fg_to_db(is_amount: Any) -> str:
     return "Y" if bool(is_amount) else "N"
 
 
+CARD_FORMAT_COLUMNS = (
+    "format_cd",
+    "decimal_places",
+    "thousand_sep_fg",
+    "percent_base_cd",
+    "prefix_txt",
+    "suffix_txt",
+    "null_display_txt",
+)
+VALID_CARD_FORMATS = {"raw", "number", "percent", "currency"}
+VALID_PERCENT_BASES = {"0to1", "0to100"}
+
+
+async def _get_table_columns(
+    table_name: str,
+    conn: Optional[asyncpg.Connection] = None,
+) -> set[str]:
+    sql = """
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = $1
+        """
+
+    if conn is not None:
+        rows = await conn.fetch(sql, table_name)
+    else:
+        pool = await get_pool()
+        async with pool.acquire() as conn2:
+            rows = await conn2.fetch(sql, table_name)
+
+    # information_schema.columns.column_name is effectively NOT NULL,
+    # but keep a defensive guard to avoid polluting the set with "None".
+    return {str(r["column_name"]) for r in rows if r.get("column_name") is not None}
+
+
+def _optional_text(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text if text else None
+
+
+def _normalize_card_format(value: Any) -> str:
+    text = str(value or "raw").strip().lower()
+    return text if text in VALID_CARD_FORMATS else "raw"
+
+
+def _normalize_decimal_places(value: Any) -> int:
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return 0
+    return max(0, min(n, 6))
+
+
+def _bool_to_yn(value: Any, default: str = "Y") -> str:
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return "N" if value.strip().upper() in ("N", "NO", "FALSE", "0") else "Y"
+    return "Y" if bool(value) else "N"
+
+
+def _card_format_to_db(item: dict[str, Any]) -> dict[str, Any]:
+    format_cd = _normalize_card_format(item.get("format"))
+    percent_base = str(item.get("percentBase") or "0to100").strip()
+    if percent_base not in VALID_PERCENT_BASES:
+        percent_base = "0to100"
+    return {
+        "format_cd": format_cd,
+        "decimal_places": _normalize_decimal_places(item.get("decimalPlaces")),
+        "thousand_sep_fg": _bool_to_yn(item.get("thousandSeparator"), "Y"),
+        "percent_base_cd": percent_base if format_cd == "percent" else None,
+        "prefix_txt": _optional_text(item.get("prefix")),
+        "suffix_txt": _optional_text(item.get("suffix")),
+        "null_display_txt": str(item.get("nullDisplay") if item.get("nullDisplay") is not None else "-"),
+    }
+
+
+def _card_format_from_db(row: dict[str, Any]) -> dict[str, Any]:
+    format_cd = _normalize_card_format(row.get("format_cd"))
+    thousand_sep = str(row.get("thousand_sep_fg") or "Y").upper() != "N"
+    return {
+        "format": format_cd,
+        "decimalPlaces": _normalize_decimal_places(row.get("decimal_places")),
+        "thousandSeparator": thousand_sep,
+        "percentBase": row.get("percent_base_cd") or "0to100",
+        "prefix": row.get("prefix_txt") or "",
+        "suffix": row.get("suffix_txt") or "",
+        "nullDisplay": row.get("null_display_txt") if row.get("null_display_txt") is not None else "-",
+    }
+
+
+async def _insert_card_item(
+    conn: asyncpg.Connection,
+    *,
+    cnts_id: int,
+    idx: int,
+    item: dict[str, Any],
+    table_columns: set[str],
+) -> None:
+    columns = ["cnts_id", "header_nm", "data_key", "pos"]
+    values: list[Any] = [
+        cnts_id,
+        _optional_text(item.get("label")),
+        _optional_text(item.get("content")),
+        str(idx),
+    ]
+
+    if "color_hex" in table_columns:
+        columns.append("color_hex")
+        values.append(_optional_text(item.get("color")))
+
+    if all(col in table_columns for col in CARD_FORMAT_COLUMNS):
+        format_values = _card_format_to_db(item)
+        for col in CARD_FORMAT_COLUMNS:
+            columns.append(col)
+            values.append(format_values[col])
+
+    placeholders = ", ".join(f"${i}" for i in range(1, len(values) + 1))
+    await conn.execute(
+        f"""
+        INSERT INTO ts_cnts_info_card ({', '.join(columns)})
+        VALUES ({placeholders})
+        """,
+        *values,
+    )
+
+
 @dataclass(frozen=True)
 class ContentsRow:
     cnts_id: int
@@ -253,51 +383,17 @@ async def create_contents(payload: dict[str, Any]) -> int:
 
             elif tp == "card":
                 items = detail
-                supports_color_hex = False
-                try:
-                    supports_color_hex = bool(
-                        await conn.fetchval(
-                            """
-                            SELECT 1
-                            FROM information_schema.columns
-                            WHERE table_schema = 'public'
-                              AND table_name = 'ts_cnts_info_card'
-                              AND column_name = 'color_hex'
-                            LIMIT 1
-                            """
-                        )
-                    )
-                except Exception:
-                    supports_color_hex = False
+                card_columns = await _get_table_columns("ts_cnts_info_card", conn)
                 for idx, item in enumerate(items):
                     if not isinstance(item, dict):
                         continue
-                    label = item.get("label")
-                    content = item.get("content")
-                    color_hex = item.get("color")
-                    if supports_color_hex:
-                        await conn.execute(
-                            """
-                            INSERT INTO ts_cnts_info_card (cnts_id, header_nm, data_key, pos, color_hex)
-                            VALUES ($1, $2, $3, $4, $5)
-                            """,
-                            cnts_id,
-                            str(label).strip() if label is not None else None,
-                            str(content).strip() if content is not None else None,
-                            str(idx),
-                            str(color_hex).strip() if color_hex is not None else None,
-                        )
-                    else:
-                        await conn.execute(
-                            """
-                            INSERT INTO ts_cnts_info_card (cnts_id, header_nm, data_key, pos)
-                            VALUES ($1, $2, $3, $4)
-                            """,
-                            cnts_id,
-                            str(label).strip() if label is not None else None,
-                            str(content).strip() if content is not None else None,
-                            str(idx),
-                        )
+                    await _insert_card_item(
+                        conn,
+                        cnts_id=cnts_id,
+                        idx=idx,
+                        item=item,
+                        table_columns=card_columns,
+                    )
 
             return cnts_id
 
@@ -479,36 +575,31 @@ async def get_contents_detail(cnts_id: int, tp: ContentsType) -> dict[str, Any]:
         return {"columns": cols}
 
     if tp == "card":
-        try:
-            df = await fetch_df(
-                """
-                SELECT header_nm, data_key, pos, color_hex
-                FROM ts_cnts_info_card
-                WHERE cnts_id = $1
-                ORDER BY (pos::int) NULLS LAST, card_id
-                """,
-                (cnts_id,),
-            )
-        except asyncpg.exceptions.UndefinedColumnError:
-            df = await fetch_df(
-                """
-                SELECT header_nm, data_key, pos
-                FROM ts_cnts_info_card
-                WHERE cnts_id = $1
-                ORDER BY (pos::int) NULLS LAST, card_id
-                """,
-                (cnts_id,),
-            )
+        table_columns = await _get_table_columns("ts_cnts_info_card")
+        select_columns = ["header_nm", "data_key", "pos"]
+        if "color_hex" in table_columns:
+            select_columns.append("color_hex")
+        if all(col in table_columns for col in CARD_FORMAT_COLUMNS):
+            select_columns.extend(CARD_FORMAT_COLUMNS)
+        df = await fetch_df(
+            f"""
+            SELECT {', '.join(select_columns)}
+            FROM ts_cnts_info_card
+            WHERE cnts_id = $1
+            ORDER BY (pos::int) NULLS LAST, card_id
+            """,
+            (cnts_id,),
+        )
         items: list[dict[str, Any]] = []
         if not df.empty:
             for r in df.to_dict(orient="records"):
-                items.append(
-                    {
-                        "label": r.get("header_nm"),
-                        "content": r.get("data_key"),
-                        "color": r.get("color_hex") or "#002c5a",
-                    }
-                )
+                item = {
+                    "label": r.get("header_nm"),
+                    "content": r.get("data_key"),
+                    "color": r.get("color_hex") or "#002c5a",
+                }
+                item.update(_card_format_from_db(r))
+                items.append(item)
         return {"items": items}
 
     if tp == "sql":
@@ -729,57 +820,17 @@ async def patch_contents(cnts_id: int, payload: dict[str, Any]) -> None:
                     str(d.get("titlePosition")).strip() if d.get("titlePosition") is not None else None,
                     len(items),
                 )
+                card_columns = await _get_table_columns("ts_cnts_info_card", conn)
                 for idx2, item in enumerate(items):
                     if not isinstance(item, dict):
                         continue
-                    supports_color_hex = False
-                    try:
-                        supports_color_hex = bool(
-                            await conn.fetchval(
-                                """
-                                SELECT 1
-                                FROM information_schema.columns
-                                WHERE table_schema = 'public'
-                                  AND table_name = 'ts_cnts_info_card'
-                                  AND column_name = 'color_hex'
-                                LIMIT 1
-                                """
-                            )
-                        )
-                    except Exception:
-                        supports_color_hex = False
-                    color_hex = item.get("color")
-                    if supports_color_hex:
-                        await conn.execute(
-                            """
-                            INSERT INTO ts_cnts_info_card (cnts_id, header_nm, data_key, pos, color_hex)
-                            VALUES ($1, $2, $3, $4, $5)
-                            """,
-                            cnts_id,
-                            str(item.get("label")).strip()
-                            if item.get("label") is not None
-                            else None,
-                            str(item.get("content")).strip()
-                            if item.get("content") is not None
-                            else None,
-                            str(idx2),
-                            str(color_hex).strip() if color_hex is not None else None,
-                        )
-                    else:
-                        await conn.execute(
-                            """
-                            INSERT INTO ts_cnts_info_card (cnts_id, header_nm, data_key, pos)
-                            VALUES ($1, $2, $3, $4)
-                            """,
-                            cnts_id,
-                            str(item.get("label")).strip()
-                            if item.get("label") is not None
-                            else None,
-                            str(item.get("content")).strip()
-                            if item.get("content") is not None
-                            else None,
-                            str(idx2),
-                        )
+                    await _insert_card_item(
+                        conn,
+                        cnts_id=cnts_id,
+                        idx=idx2,
+                        item=item,
+                        table_columns=card_columns,
+                    )
 
             elif tp == "sql":
                 sql = d.get("sql")

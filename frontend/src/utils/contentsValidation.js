@@ -3,6 +3,9 @@ export function asNonEmptyString(v) {
   return s ? s : '';
 }
 
+const VALID_CARD_FORMATS = new Set(['raw', 'number', 'percent', 'currency']);
+const VALID_PERCENT_BASES = new Set(['0to1', '0to100']);
+
 export function validateContentsBeforeSave({ generalInfo, contentType, data }) {
   const errors = {
     generalInfo: {
@@ -52,9 +55,23 @@ export function validateContentsBeforeSave({ generalInfo, contentType, data }) {
 
     for (let i = 0; i < items.length; i++) {
       const it = items[i] || {};
-      errors.card.items[i] = { label: '', content: '' };
+      errors.card.items[i] = { label: '', content: '', format: '', decimalPlaces: '', percentBase: '' };
       // 요약 카드: 라벨은 선택, 데이터 키(content)만 필수
       if (!asNonEmptyString(it.content)) errors.card.items[i].content = '필수값입니다.';
+      const format = asNonEmptyString(it.format) || 'raw';
+      if (!VALID_CARD_FORMATS.has(format)) errors.card.items[i].format = '지원하지 않는 포맷입니다.';
+      if (format !== 'raw') {
+        const decimalPlaces = Number(it.decimalPlaces ?? 0);
+        if (!Number.isInteger(decimalPlaces) || decimalPlaces < 0 || decimalPlaces > 6) {
+          errors.card.items[i].decimalPlaces = '0~6 사이 정수만 입력하세요.';
+        }
+      }
+      if (format === 'percent') {
+        const percentBase = asNonEmptyString(it.percentBase) || '0to100';
+        if (!VALID_PERCENT_BASES.has(percentBase)) {
+          errors.card.items[i].percentBase = '퍼센트 기준을 선택하세요.';
+        }
+      }
     }
   }
 
@@ -96,6 +113,9 @@ export function validateContentsBeforeSave({ generalInfo, contentType, data }) {
     errors.cardFields.cardTitle ||
     errors.cardFields.titlePosition ||
     (errors.card.items.find((it) => it?.content)?.content || '') ||
+    (errors.card.items.find((it) => it?.format)?.format || '') ||
+    (errors.card.items.find((it) => it?.decimalPlaces)?.decimalPlaces || '') ||
+    (errors.card.items.find((it) => it?.percentBase)?.percentBase || '') ||
     errors.chart.chartType ||
     errors.chart.xAxis ||
     errors.chart.yAxis ||
