@@ -80,14 +80,23 @@ export function cloneMenuTree(nodes) {
 
 export function detachNode(nodes, nodeId) {
   for (let i = 0; i < nodes.length; i += 1) {
-    const n = nodes[i];
-    if (n.menu_id === nodeId) {
-      nodes.splice(i, 1);
-      return n;
+    if (nodes[i].menu_id === nodeId) {
+      const removed = nodes[i];
+      const newNodes = nodes.filter((_, idx) => idx !== i);
+      return { tree: newNodes, detached: removed };
     }
-    if (n.children?.length) {
-      const found = detachNode(n.children, nodeId);
-      if (found) return found;
+    if (nodes[i].children?.length) {
+      const result = detachNode(nodes[i].children, nodeId);
+      if (result) {
+        const newChildren = result.tree;
+        const newNode = { ...nodes[i], children: newChildren };
+        const newNodes = [
+          ...nodes.slice(0, i),
+          newNode,
+          ...nodes.slice(i + 1),
+        ];
+        return { tree: newNodes, detached: result.detached };
+      }
     }
   }
   return null;
@@ -108,23 +117,24 @@ export function findParentListForTarget(nodes, targetId) {
 
 export function moveNodeInTree(tree, draggedId, targetId, position) {
   const next = cloneMenuTree(tree);
-  const dragged = detachNode(next, draggedId);
-  if (!dragged) return { tree: next, didMove: false };
+  const result = detachNode(next, draggedId);
+  if (!result) return { tree: next, didMove: false };
 
-  const targetInfo = findParentListForTarget(next, targetId);
+  const { tree: treeWithoutDragged, detached } = result;
+  const targetInfo = findParentListForTarget(treeWithoutDragged, targetId);
   if (!targetInfo) return { tree: next, didMove: false };
 
   if (position === "inside") {
     const t = targetInfo.target;
     if (!t.children) t.children = [];
-    t.children.push(dragged);
-    return { tree: next, didMove: true };
+    t.children.push(detached);
+    return { tree: treeWithoutDragged, didMove: true };
   }
 
   const insertIndex =
     position === "before" ? targetInfo.index : targetInfo.index + 1;
-  targetInfo.list.splice(insertIndex, 0, dragged);
-  return { tree: next, didMove: true };
+  targetInfo.list.splice(insertIndex, 0, detached);
+  return { tree: treeWithoutDragged, didMove: true };
 }
 
 export function collectAllIds(nodes) {

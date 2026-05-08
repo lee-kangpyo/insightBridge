@@ -62,16 +62,18 @@ describe("filterMenuTree", () => {
 });
 
 describe("detachNode", () => {
-  it("존재하는 노드를 제거하고 반환", () => {
+  it("존재하는 노드를 제거하고 반환, 원본 배열은 불변", () => {
     const tree = [
       { menu_id: 1, children: [] },
       { menu_id: 2, children: [] },
       { menu_id: 3, children: [] },
     ];
-    const removed = detachNode(tree, 2);
-    expect(removed.menu_id).toBe(2);
-    expect(tree).toHaveLength(2);
-    expect(tree.map((n) => n.menu_id)).toEqual([1, 3]);
+    const result = detachNode(tree, 2);
+    expect(result).not.toBeNull();
+    expect(result.detached.menu_id).toBe(2);
+    expect(result.tree).toHaveLength(2);
+    expect(result.tree.map((n) => n.menu_id)).toEqual([1, 3]);
+    expect(tree).toHaveLength(3);
   });
 
   it("중첩 노드 제거", () => {
@@ -84,13 +86,14 @@ describe("detachNode", () => {
         ],
       },
     ];
-    const removed = detachNode(tree, 10);
-    expect(removed.menu_id).toBe(10);
-    expect(tree[0].children).toHaveLength(1);
-    expect(tree[0].children[0].menu_id).toBe(11);
+    const result = detachNode(tree, 10);
+    expect(result).not.toBeNull();
+    expect(result.detached.menu_id).toBe(10);
+    expect(result.tree[0].children).toHaveLength(1);
+    expect(result.tree[0].children[0].menu_id).toBe(11);
   });
 
-  it("없는 id면 null 반환, 트리 변화 없음", () => {
+  it("없는 id면 null 반환, 원본 배열 불변", () => {
     const tree = [{ menu_id: 1, children: [] }];
     const removed = detachNode(tree, 999);
     expect(removed).toBeNull();
