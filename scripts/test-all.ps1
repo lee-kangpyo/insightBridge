@@ -25,7 +25,7 @@ function Wait-HttpOk([string]$Url, [int]$TimeoutSec = 60) {
   while ($sw.Elapsed.TotalSeconds -lt $TimeoutSec) {
     try {
       $r = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 3
-      if ($r.StatusCode -ge 200 -and $r.StatusCode -lt 500) { return }
+      if ($r.StatusCode -ge 200 -and $r.StatusCode -lt 400) { return }
     } catch {
       Start-Sleep -Milliseconds 500
     }
