@@ -1,6 +1,7 @@
 import DetailRow from './DetailRow';
 
 const positionLabel = { 'left-top': '좌측 상단', center: '중앙', 'right-top': '우측 상단' };
+const formatLabel = { raw: '원문', number: '숫자', percent: '퍼센트', currency: '통화' };
 
 export default function CardDetail({ data, className, detailClassName, itemClassName }) {
   return (
@@ -19,6 +20,10 @@ export default function CardDetail({ data, className, detailClassName, itemClass
                 />
                 <span className="text-on-surface-variant min-w-[80px]">{item.label || '-'}</span>
                 <span className="text-on-surface font-medium">{item.content || '-'}</span>
+                <span className="ml-auto text-xs text-on-surface-variant">
+                  {formatLabel[item.format] || formatLabel.raw}
+                  {item.format !== 'raw' && item.decimalPlaces !== undefined ? ` · 소수 ${item.decimalPlaces}` : ''}
+                </span>
               </div>
             ))}
           </div>

@@ -119,7 +119,7 @@ function SlotItemRenderer({ itemId }) {
         <CompositeKpiCardPreview
           title={data.title}
           headline={data.headline}
-          rows={data.rows}
+          rows={Array.isArray(data.rows) ? data.rows : []}
           sources={[]}
         />
       </div>

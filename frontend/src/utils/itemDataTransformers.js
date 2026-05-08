@@ -49,6 +49,76 @@ export function getRowValue(row, field) {
   return v;
 }
 
+const VALID_CARD_FORMATS = new Set(['raw', 'number', 'percent', 'currency']);
+const VALID_PERCENT_BASES = new Set(['0to1', '0to100']);
+
+function normalizeCardFormat(value) {
+  const text = String(value || 'raw').trim().toLowerCase();
+  return VALID_CARD_FORMATS.has(text) ? text : 'raw';
+}
+
+function normalizeDecimalPlaces(value) {
+  const n = Number(value);
+  if (!Number.isInteger(n)) return 0;
+  return Math.max(0, Math.min(n, 6));
+}
+
+function toBoolean(value, defaultValue = true) {
+  if (value == null) return defaultValue;
+  if (typeof value === 'string') return !['N', 'NO', 'FALSE', '0'].includes(value.trim().toUpperCase());
+  return Boolean(value);
+}
+
+function toNumber(value) {
+  if (value == null || value === '') return null;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  const n = Number(String(value).replaceAll(',', '').trim());
+  return Number.isFinite(n) ? n : null;
+}
+
+function resolveCardFormatSpec(mappingItem, shapeItem) {
+  const mapping = mappingItem && typeof mappingItem === 'object' ? mappingItem : {};
+  const shape = shapeItem && typeof shapeItem === 'object' ? shapeItem : {};
+  const pick = (key, defaultValue) => {
+    if (mapping[key] != null) return mapping[key];
+    if (shape[key] != null) return shape[key];
+    return defaultValue;
+  };
+  const percentBase = pick('percentBase', '0to100');
+  return {
+    format: normalizeCardFormat(pick('format', 'raw')),
+    decimalPlaces: normalizeDecimalPlaces(pick('decimalPlaces', 0)),
+    thousandSeparator: toBoolean(pick('thousandSeparator', true), true),
+    percentBase: VALID_PERCENT_BASES.has(percentBase) ? percentBase : '0to100',
+    prefix: pick('prefix', '') == null ? '' : String(pick('prefix', '')),
+    suffix: pick('suffix', '') == null ? '' : String(pick('suffix', '')),
+    nullDisplay: pick('nullDisplay', '-') == null ? '-' : String(pick('nullDisplay', '-')),
+  };
+}
+
+export function formatCardValue(value, spec) {
+  if (value == null || value === '') return spec?.nullDisplay ?? '-';
+  const format = normalizeCardFormat(spec?.format);
+  if (format === 'raw') return String(value);
+
+  let number = toNumber(value);
+  if (number == null) return String(value);
+  if (format === 'percent' && spec?.percentBase === '0to1') number *= 100;
+
+  const decimalPlaces = normalizeDecimalPlaces(spec?.decimalPlaces);
+  const numberText = spec?.thousandSeparator === false
+    ? number.toFixed(decimalPlaces)
+    : number.toLocaleString('ko-KR', {
+        minimumFractionDigits: decimalPlaces,
+        maximumFractionDigits: decimalPlaces,
+      });
+  let prefix = spec?.prefix || '';
+  let suffix = spec?.suffix || '';
+  if (format === 'percent' && !suffix) suffix = '%';
+  if (format === 'currency' && !prefix) prefix = '₩';
+  return `${prefix}${numberText}${suffix}`;
+}
+
 function toComparableValue(v) {
   if (v == null) return null;
   if (typeof v === 'number' && Number.isFinite(v)) return v;
@@ -287,9 +357,11 @@ export function buildCardPreviewModel(itemType, item, shapeContent, preview) {
     const targetRow = selectedForValue.row;
     if (!targetRow) return null;
     const v = getRowValue(targetRow, m.value);
+    const shapeItem = Array.isArray(shapeContent?.data?.items) ? shapeContent.data.items[0] : null;
+    const spec = resolveCardFormatSpec(m, shapeItem);
     sources.push(`value.rowSelector = ${selectedForValue.reason}`);
     sources.push(`mapping.value = ${m.value}`);
-    return { title, headline: v, rows: [], sources };
+    return { title, headline: formatCardValue(v, spec), rows: [], sources };
   }
 
   const mappedItems = normalizeMappingItems(m.items);
@@ -308,20 +380,24 @@ export function buildCardPreviewModel(itemType, item, shapeContent, preview) {
     const selectedForItem = selectCardRow(rows, itemSelector);
     const itemRow = selectedForItem.row || defaultRow;
     const v = field && itemRow ? getRowValue(itemRow, field) : null;
+    const shapeItem = Array.isArray(shapeContent?.data?.items) ? shapeContent.data.items[idx] : null;
+    const spec = resolveCardFormatSpec(it, shapeItem);
+    const formattedValue = formatCardValue(v, spec);
 
     if (field) sources.push(`mapping.items[${idx}].field = ${field}`);
     else sources.push(`mapping.items[${idx}]`);
     sources.push(`mapping.items[${idx}].rowSelector = ${selectedForItem.reason}`);
 
     if (!labelTrim && !headlineTaken) {
-      headline = v;
+      headline = formattedValue;
       headlineTaken = true;
       return;
     }
 
     outRows.push({
       label: labelTrim ? label : '',
-      value: v,
+      value: formattedValue,
+      rawValue: v,
       kind: labelTrim ? 'labeled' : 'valueOnly',
     });
   });
