@@ -76,32 +76,27 @@ VALID_CARD_FORMATS = {"raw", "number", "percent", "currency"}
 VALID_PERCENT_BASES = {"0to1", "0to100"}
 
 
-async def _get_table_columns(conn: asyncpg.Connection, table_name: str) -> set[str]:
-    rows = await conn.fetch(
-        """
+async def _get_table_columns(
+    table_name: str,
+    conn: Optional[asyncpg.Connection] = None,
+) -> set[str]:
+    sql = """
         SELECT column_name
         FROM information_schema.columns
         WHERE table_schema = 'public'
           AND table_name = $1
-        """,
-        table_name,
-    )
-    return {str(r["column_name"]) for r in rows}
-
-
-async def _fetch_table_columns(table_name: str) -> set[str]:
-    df = await fetch_df(
         """
-        SELECT column_name
-        FROM information_schema.columns
-        WHERE table_schema = 'public'
-          AND table_name = $1
-        """,
-        (table_name,),
-    )
-    if df.empty:
-        return set()
-    return {str(r.get("column_name")) for r in df.to_dict(orient="records")}
+
+    if conn is not None:
+        rows = await conn.fetch(sql, table_name)
+    else:
+        pool = await get_pool()
+        async with pool.acquire() as conn2:
+            rows = await conn2.fetch(sql, table_name)
+
+    # information_schema.columns.column_name is effectively NOT NULL,
+    # but keep a defensive guard to avoid polluting the set with "None".
+    return {str(r["column_name"]) for r in rows if r.get("column_name") is not None}
 
 
 def _optional_text(value: Any) -> Optional[str]:
@@ -388,7 +383,7 @@ async def create_contents(payload: dict[str, Any]) -> int:
 
             elif tp == "card":
                 items = detail
-                card_columns = await _get_table_columns(conn, "ts_cnts_info_card")
+                card_columns = await _get_table_columns("ts_cnts_info_card", conn)
                 for idx, item in enumerate(items):
                     if not isinstance(item, dict):
                         continue
@@ -580,7 +575,7 @@ async def get_contents_detail(cnts_id: int, tp: ContentsType) -> dict[str, Any]:
         return {"columns": cols}
 
     if tp == "card":
-        table_columns = await _fetch_table_columns("ts_cnts_info_card")
+        table_columns = await _get_table_columns("ts_cnts_info_card")
         select_columns = ["header_nm", "data_key", "pos"]
         if "color_hex" in table_columns:
             select_columns.append("color_hex")
@@ -825,7 +820,7 @@ async def patch_contents(cnts_id: int, payload: dict[str, Any]) -> None:
                     str(d.get("titlePosition")).strip() if d.get("titlePosition") is not None else None,
                     len(items),
                 )
-                card_columns = await _get_table_columns(conn, "ts_cnts_info_card")
+                card_columns = await _get_table_columns("ts_cnts_info_card", conn)
                 for idx2, item in enumerate(items):
                     if not isinstance(item, dict):
                         continue

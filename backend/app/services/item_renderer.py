@@ -1,6 +1,8 @@
 import json
 from typing import Any, Optional
 
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+
 from app.services.contents import get_contents_master, get_contents_detail, execute_sql_preview
 from app.services.screen_items import get_item
 
@@ -80,6 +82,43 @@ def _to_number(value: Any) -> Optional[float]:
         return None
 
 
+def _to_decimal(value: Any) -> Optional[Decimal]:
+    """
+    Frontend(JS)의 toFixed / Intl.NumberFormat('ko-KR')와 일치시키기 위해
+    백엔드는 Decimal(ROUND_HALF_UP) 기반으로 고정한다.
+
+    - 문자열 숫자: 콤마 제거 후 Decimal 파싱
+    - 숫자 타입: Decimal(str(x))로 파싱(부동소수점 이진 오차를 최소화)
+    """
+    if value is None or value == "":
+        return None
+    if isinstance(value, Decimal):
+        return value
+    if isinstance(value, (int, float)):
+        # Decimal(float) 금지(이진 부동소수점이 그대로 들어감)
+        return Decimal(str(value))
+    try:
+        text = str(value).replace(",", "").strip()
+        if text == "":
+            return None
+        return Decimal(text)
+    except (InvalidOperation, ValueError, TypeError):
+        return None
+
+
+def _quantize_decimal_js(value: Decimal, decimals: int) -> Decimal:
+    if decimals <= 0:
+        q = Decimal("1")
+    else:
+        q = Decimal("1").scaleb(-decimals)  # 10^-decimals
+    out = value.quantize(q, rounding=ROUND_HALF_UP)
+
+    # JS (-0).toFixed(...) => "0.00" 처럼 -0 표시를 제거
+    if out.is_zero():
+        return out.copy_abs()
+    return out
+
+
 def _resolve_card_format_spec(mapping_item: Optional[dict], shape_item: Optional[dict]) -> dict:
     mapping_item = mapping_item if isinstance(mapping_item, dict) else {}
     shape_item = shape_item if isinstance(shape_item, dict) else {}
@@ -110,18 +149,19 @@ def _format_card_value(value: Any, spec: dict) -> Any:
     if format_cd == "raw":
         return str(value)
 
-    number = _to_number(value)
+    number = _to_decimal(value)
     if number is None:
         return str(value)
 
     if format_cd == "percent" and spec.get("percentBase") == "0to1":
-        number *= 100
+        number *= Decimal("100")
 
     decimals = _normalize_decimal_places(spec.get("decimalPlaces"))
+    number = _quantize_decimal_js(number, decimals)
     if spec.get("thousandSeparator", True):
-        text = f"{number:,.{decimals}f}"
+        text = format(number, f",.{decimals}f")
     else:
-        text = f"{number:.{decimals}f}"
+        text = format(number, f".{decimals}f")
 
     prefix = str(spec.get("prefix") or "")
     suffix = str(spec.get("suffix") or "")
@@ -327,7 +367,12 @@ def _build_card_model(item_type: str, item: dict, shape_content: dict, preview: 
             "color": color_hex,
         })
 
-    return {"title": title, "headline": headline, "rows": out_rows, "sources": sources}
+    return {
+        "title": title,
+        "headline": headline,
+        "rows": out_rows,
+        "sources": sources,
+    }
 
 
 async def render_item(item_id: int) -> dict:
