@@ -15,6 +15,7 @@ from app.services.menu import (
 from app.services.screen_items import (
     get_screen_with_template,
     get_screen_slots,
+    screen_has_year_placeholder,
 )
 from app.services.admin import get_screen_template_slots
 
@@ -26,6 +27,7 @@ class ViewerMenuResponse(BaseModel):
     title: str
     subtitle: Optional[str] = None
     scr_nm: Optional[str] = None
+    year_dependent: bool = False
 
 
 class ViewerScreenResponse(BaseModel):
@@ -81,11 +83,14 @@ async def get_viewer_menu(
     screen = await get_screen_with_template(screen_id)
     scr_nm = screen.get("scr_nm") if screen else None
 
+    year_dependent = await screen_has_year_placeholder(screen_id)
+
     return ViewerMenuResponse(
         screen_id=screen_id,
         title=menu.get("menu_nm") or "",
         subtitle=menu.get("subtitle"),
         scr_nm=scr_nm,
+        year_dependent=year_dependent,
     )
 
 

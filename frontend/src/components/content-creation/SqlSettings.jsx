@@ -69,6 +69,9 @@ export default function SqlSettings({ value, onChange, visible, errors, showErro
   const [error, setError] = useState('');
   const [candidate, setCandidate] = useState(null);
 
+  const [useBaseYear, setUseBaseYear] = useState(false);
+  const [baseYear, setBaseYear] = useState(String(new Date().getFullYear()));
+
   const [previewRows, setPreviewRows] = useState([]);
   const [previewTruncated, setPreviewTruncated] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -87,11 +90,15 @@ export default function SqlSettings({ value, onChange, visible, errors, showErro
       return;
     }
 
+    const resolvedSql = useBaseYear
+      ? s.replace(/\{\{base_year\}\}/g, baseYear)
+      : s;
+
     const seq = ++previewRequestId.current;
     setPreviewLoading(true);
     setPreviewApiError('');
     try {
-      const res = await previewAdminContentsSql(s);
+      const res = await previewAdminContentsSql(resolvedSql);
       if (seq !== previewRequestId.current) return;
       setPreviewRows(Array.isArray(res?.rows) ? res.rows : []);
       setPreviewTruncated(!!res?.truncated);
@@ -105,7 +112,7 @@ export default function SqlSettings({ value, onChange, visible, errors, showErro
         setPreviewLoading(false);
       }
     }
-  }, []);
+  }, [useBaseYear, baseYear]);
 
   useEffect(() => {
     if (candidate?.sql) {
@@ -148,6 +155,7 @@ export default function SqlSettings({ value, onChange, visible, errors, showErro
 
     await queryAdminStream(
       q,
+      { base_year_enabled: useBaseYear },
       (cand) => {
         setCandidate(cand);
         if (Array.isArray(cand?.data) && cand.data.length > 0) {
@@ -192,6 +200,27 @@ export default function SqlSettings({ value, onChange, visible, errors, showErro
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="flex flex-col gap-6">
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-sm text-on-surface-variant cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={useBaseYear}
+                onChange={(e) => setUseBaseYear(e.target.checked)}
+                className="accent-primary w-4 h-4"
+              />
+              기준연도 사용
+            </label>
+            {useBaseYear && (
+              <input
+                type="number"
+                value={baseYear}
+                onChange={(e) => setBaseYear(e.target.value)}
+                className="w-24 px-3 py-1.5 text-sm bg-surface-container-lowest border border-outline rounded-lg
+                           text-on-surface tabular-nums
+                           focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+              />
+            )}
+          </div>
           <div className="flex flex-col gap-2">
             <label className="ds-label flex items-center justify-between">
               <span>자연어 프롬프트 (요청사항)</span>

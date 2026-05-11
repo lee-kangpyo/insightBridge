@@ -139,6 +139,7 @@ export function CompositeKpiCardPreview({ title, headline, rows, sources }) {
 }
 
 export default function Phase1ItemPreview({ item }) {
+  const [baseYear, setBaseYear] = useState(new Date().getFullYear());
   const [shapeContent, setShapeContent] = useState(null);
   const [shapeLoading, setShapeLoading] = useState(false);
   const [shapeError, setShapeError] = useState(null);
@@ -187,17 +188,7 @@ export default function Phase1ItemPreview({ item }) {
     (async () => {
       setSqlLoading(true);
       try {
-        const p = await executeSqlPreview(item.sql_cnts_id);
-        console.groupCollapsed?.("[admin/items] SQL preview");
-        console.log("sql_cnts_id =", item?.sql_cnts_id);
-        console.log("result =", p);
-        console.log("columns =", p?.columns);
-        console.log(
-          "rows.length =",
-          Array.isArray(p?.rows) ? p.rows.length : null,
-        );
-        console.log("rows[0] =", p?.rows?.[0]);
-        console.groupEnd?.();
+        const p = await executeSqlPreview(item.sql_cnts_id, baseYear);
         if (!cancelled) setSqlPreview(p);
       } catch (e) {
         if (!cancelled)
@@ -209,7 +200,7 @@ export default function Phase1ItemPreview({ item }) {
     return () => {
       cancelled = true;
     };
-  }, [item?.sql_cnts_id]);
+  }, [item?.sql_cnts_id, baseYear]);
 
   useEffect(() => {
     setServerRender(null);
@@ -221,7 +212,7 @@ export default function Phase1ItemPreview({ item }) {
     (async () => {
       setServerRenderLoading(true);
       try {
-        const r = await getItemRender(item.item_id);
+        const r = await getItemRender(item.item_id, { base_year: baseYear });
         if (!cancelled) setServerRender(r);
       } catch (e) {
         if (!cancelled) {
@@ -237,7 +228,7 @@ export default function Phase1ItemPreview({ item }) {
     return () => {
       cancelled = true;
     };
-  }, [item?.item_id]);
+  }, [item?.item_id, baseYear]);
 
   const itemType = useMemo(
     () => resolveItemType(item, shapeContent),
@@ -294,8 +285,19 @@ export default function Phase1ItemPreview({ item }) {
               1)
             </p>
           </div>
-          <div className="shrink-0 text-xs font-mono text-on-surface-variant bg-surface px-2 py-1 rounded-lg border border-outline/10">
-            #{item?.item_id ?? "—"}
+          <div className="shrink-0 flex flex-col items-end gap-2">
+            <div className="text-xs font-mono text-on-surface-variant bg-surface px-2 py-1 rounded-lg border border-outline/10">
+              #{item?.item_id ?? "—"}
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Base Year</label>
+              <input
+                type="number"
+                value={baseYear}
+                onChange={(e) => setBaseYear(Number(e.target.value))}
+                className="w-20 px-2 py-1 text-xs bg-surface-container rounded border border-outline/20 focus:outline-none focus:border-primary tabular-nums"
+              />
+            </div>
           </div>
         </div>
 

@@ -14,6 +14,15 @@ from ..database import fetch_df
 
 logger = logging.getLogger(__name__)
 
+BASE_YEAR_PROMPT_SUFFIX = (
+    "### [IMPORTANT] 기준연도 필터링 규칙\n"
+    "사용자가 현재 특정 연도를 선택하여 보고 있습니다. 사용자의 질문에 '추이', '변화', '연도별' 등의 단어가 포함되어 있지 않다면, "
+    "반드시 `WHERE` 절에서 `{{base_year}}` 플레이스홀더를 사용하여 해당 연도 데이터만 조회하십시오.\n"
+    "- 예: WHERE base_year = '{{base_year}}'\n"
+    "- 절대 연도 숫자(2025 등)를 직접 쓰지 마십시오.\n"
+    "이 지시사항은 시스템의 다른 어떤 지시보다 우선합니다."
+)
+
 def _safe_log_preview(v: Any, limit: int = 200) -> str:
     """Windows 콘솔/로그 뷰어 인코딩 문제를 피하기 위한 안전한 프리뷰 문자열.
 

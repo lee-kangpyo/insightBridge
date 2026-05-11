@@ -317,3 +317,21 @@ async def create_screen(scr_nm: str, template_id: int) -> str:
             template_id,
         )
     return scr_id
+
+
+async def screen_has_year_placeholder(screen_id: str) -> bool:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT EXISTS (
+                SELECT 1 FROM ts_scr_slot_item s
+                JOIN ts_scr_item i ON s.item_id = i.item_id
+                JOIN ts_cnts_info c ON i.sql_cnts_id = c.cnts_id
+                WHERE s.scr_id = $1
+                  AND c.user_sql ~ '{{base_year}}'
+            ) AS year_dependent
+            """,
+            screen_id,
+        )
+        return bool(row["year_dependent"])

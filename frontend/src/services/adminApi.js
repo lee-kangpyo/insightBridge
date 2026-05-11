@@ -167,8 +167,10 @@ export const getSqlContents = async () => {
   return response.data.contents || [];
 };
 
-export const executeSqlPreview = async (cntsId) => {
-  const response = await api.get(`/api/admin/contents/${cntsId}/preview`);
+export const executeSqlPreview = async (cntsId, baseYear) => {
+  const params = {};
+  if (baseYear != null) params.base_year = baseYear;
+  const response = await api.get(`/api/admin/contents/${cntsId}/preview`, { params });
   return response.data;
 };
 
@@ -288,7 +290,11 @@ export const patchScreen = async (scrId, payload) => {
 
 // --- Viewer API ---
 
-export const getItemRender = async (itemId) => {
-  const response = await api.get(`/api/items/${itemId}/render`);
+export const getItemRender = async (itemId, ctx) => {
+  const params = {};
+  if (ctx && ctx.base_year != null) {
+    params['ctx[base_year]'] = ctx.base_year;
+  }
+  const response = await api.get(`/api/items/${itemId}/render`, { params });
   return response.data;
 };
