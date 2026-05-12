@@ -3,7 +3,7 @@ import { getItemRender } from '../services/adminApi';
 import ChartRenderer from './ChartRenderer';
 import { CompositeKpiCardPreview } from './admin/items/Phase1ItemPreview';
 
-function SlotItemRenderer({ itemId }) {
+function SlotItemRenderer({ itemId, baseYear }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -21,7 +21,8 @@ function SlotItemRenderer({ itemId }) {
       setLoading(true);
       setError(null);
       try {
-        const result = await getItemRender(itemId);
+        const ctx = baseYear != null ? { base_year: baseYear } : undefined;
+        const result = await getItemRender(itemId, ctx);
         if (!cancelled) setData(result);
       } catch (e) {
         if (!cancelled) {
@@ -35,7 +36,7 @@ function SlotItemRenderer({ itemId }) {
     return () => {
       cancelled = true;
     };
-  }, [itemId]);
+  }, [itemId, baseYear]);
 
   if (!itemId) {
     return (

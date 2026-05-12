@@ -18,6 +18,7 @@ import {
 } from "../../utils/mapThemeItemsToCampusCharts";
 import ThemeBarRatioFill from "../common/ThemeBarRatioFill";
 import { formatBarRatioNumPercent } from "../../utils/parseBarRatioDisplayTextPercent";
+import { BASE_YEAR_OPTIONS } from "../../constants/baseYear";
 
 const BAR_FILL = {
   primary: "#002c5a",
@@ -45,7 +46,6 @@ const DEFAULT_BASE_YEAR = 2025;
 
 export default function CampusDashboard() {
   const { schlNm, ready: universityReady, statusChips } = useUniversityContext();
-  const BASE_YEAR_OPTIONS = [2025, 2024, 2023];
   const [selectedBaseYear, setSelectedBaseYear] = useState(DEFAULT_BASE_YEAR);
 
   const [kpiCards, setKpiCards] = useState([]);

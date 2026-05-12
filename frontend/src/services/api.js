@@ -188,11 +188,12 @@ export const queryStream = async (question, onCandidate, onDone, onError) => {
   }
 };
 
-export const queryAdminStream = async (question, onCandidate, onDone, onError) => {
+export const queryAdminStream = async (question, options = {}, onCandidate, onDone, onError) => {
+  const body = { question, ...options };
   try {
     const response = await requestWithAuth('/api/query/admin', {
       method: 'POST',
-      body: JSON.stringify({ question }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {

@@ -375,7 +375,7 @@ def _build_card_model(item_type: str, item: dict, shape_content: dict, preview: 
     }
 
 
-async def render_item(item_id: int) -> dict:
+async def render_item(item_id: int, ctx: dict | None = None) -> dict:
     """
     아이템을 조회하고, shape 콘텐츠와 SQL을 실행하여 렌더링 결과를 반환합니다.
     남겨진 정보는 렌더링에 필요한 최소 정볧만 포함합니다.
@@ -403,7 +403,7 @@ async def render_item(item_id: int) -> dict:
     sql_cnts_id = item.get("sql_cnts_id")
     if sql_cnts_id:
         try:
-            preview = await execute_sql_preview(sql_cnts_id)
+            preview = await execute_sql_preview(sql_cnts_id, ctx=ctx)
         except Exception:
             preview = {"columns": [], "rows": []}
 

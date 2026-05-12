@@ -20,6 +20,7 @@ import {
 import { useOverviewTextBlockLines } from "../hooks/useOverviewTextBlockLines";
 import { useOverviewSummaryJudgmentLabel } from "../hooks/useOverviewPdfReportLabel";
 import { useUniversityContext } from "../hooks/useUniversityContext";
+import { BASE_YEAR_OPTIONS } from "../constants/baseYear";
 
 export default function MainPage() {
   const {
@@ -27,7 +28,6 @@ export default function MainPage() {
     ready: universityReady,
     statusChips,
   } = useUniversityContext();
-  const BASE_YEAR_OPTIONS = [2025, 2024, 2023];
   const [selectedBaseYear, setSelectedBaseYear] = useState(2025);
 
   // ✅ API 기반 KPI (기본: 빈값으로 시작해서 "깨지지 않게" 방어)

@@ -221,6 +221,7 @@ export function SqlTab({ selectedSql, onSelectSql, onPreviewDataChange }) {
   const [pageSize] = useState(20);
   const [total, setTotal] = useState(0);
   const [showPagination, setShowPagination] = useState(false);
+  const [baseYear, setBaseYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
     setPage(1);
@@ -265,7 +266,7 @@ export function SqlTab({ selectedSql, onSelectSql, onPreviewDataChange }) {
     setPreviewLoading(true);
     setPreviewError(null);
     try {
-      const data = await executeSqlPreview(selectedSql.cnts_id);
+      const data = await executeSqlPreview(selectedSql.cnts_id, baseYear);
       setPreviewData(data);
       onPreviewDataChange?.(data);
     } catch (err) {
@@ -361,7 +362,16 @@ export function SqlTab({ selectedSql, onSelectSql, onPreviewDataChange }) {
           <div className="text-on-surface-variant text-sm">SQL을 선택해주세요.</div>
         )}
 
-        <div className="mt-4">
+        <div className="mt-4 space-y-3">
+          <div>
+            <label className="block text-xs text-on-surface-variant mb-1">미리보기 기준연도</label>
+            <input
+              type="number"
+              value={baseYear}
+              onChange={(e) => setBaseYear(e.target.value)}
+              className="w-full px-3 py-2 text-sm bg-surface-container rounded-lg border border-outline focus:outline-none focus:border-primary tabular-nums"
+            />
+          </div>
           <button
             type="button"
             onClick={handlePreview}

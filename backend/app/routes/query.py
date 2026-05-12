@@ -46,7 +46,10 @@ async def query_admin(request: QueryRequest, _current_user: dict = Depends(requi
 
     async def event_stream():
         try:
-            sql, message, chart_config = await generate_sql(request.question)
+            sql, message, chart_config = await generate_sql(
+                request.question,
+                base_year_enabled=request.base_year_enabled,
+            )
             if message and not sql:
                 payload = {"error": message}
                 yield f"event: error\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
