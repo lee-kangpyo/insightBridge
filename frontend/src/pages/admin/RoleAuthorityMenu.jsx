@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import PageHeader from '../../components/common/PageHeader';
+import AdminSearchBar from '../../components/common/AdminSearchBar';
+import { ADMIN_PAGE_CONTAINER_CLASS } from '../../constants/adminLayout';
 import {
   getAdminGroups,
   getAdminMenuTree,
@@ -176,7 +178,7 @@ function RoleAuthorityMenu() {
     JSON.stringify([...initialAssignedMenuIds].sort());
 
   return (
-    <div className="px-10 pb-12 max-w-[1920px] mx-auto flex flex-col gap-8">
+    <div className={ADMIN_PAGE_CONTAINER_CLASS}>
       <PageHeader
         title="권한별 메뉴 관리"
         description="권한 그룹별로 접근 가능한 메뉴를 배정하고 관리합니다."
@@ -213,24 +215,19 @@ function RoleAuthorityMenu() {
         </div>
       ) : null}
 
-      <div className="flex gap-6 items-start">
-        <div className="w-72 shrink-0 bg-surface-container-lowest rounded-lg p-6 flex flex-col gap-4">
+      <div className="flex gap-6 items-stretch">
+        <div className="w-72 shrink-0 bg-surface-container-lowest rounded-lg p-6 flex flex-col gap-4 shadow-[0_8px_32px_rgba(24,28,30,0.04)] min-h-[600px]">
           <div>
             <h3 className="font-headline font-semibold text-lg text-primary mb-3">권한 그룹</h3>
-            <div className="relative mb-3">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
-                search
-              </span>
-              <input
-                className="w-full bg-surface-container-low text-sm text-on-surface py-2 pl-9 pr-3 rounded-md border-b-2 border-transparent focus:bg-surface-container-lowest focus:border-secondary focus:outline-none transition-all placeholder:text-on-surface-variant/70"
-                placeholder="검색..."
-                type="text"
-                value={roleSearchTerm}
-                onChange={(e) => setRoleSearchTerm(e.target.value)}
-              />
-            </div>
+            <AdminSearchBar
+              className="mb-3"
+              value={roleSearchTerm}
+              onChange={(e) => setRoleSearchTerm(e.target.value)}
+              placeholder="검색..."
+              showSubmitButton={false}
+            />
           </div>
-          <div className="overflow-y-auto no-scrollbar max-h-[500px] flex flex-col gap-1">
+          <div className="overflow-y-auto no-scrollbar flex-1 flex flex-col gap-1">
             {filteredRoles.map((role, index) => (
               <div
                 key={role.grp_id}
@@ -352,18 +349,13 @@ function RoleAuthorityMenu() {
               <h3 className="font-headline font-semibold text-lg text-primary">전체 시스템 메뉴</h3>
               <span className="text-sm text-on-surface-variant">총 {filteredAvailableMenus.length}건</span>
             </div>
-            <div className="relative mb-3">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
-                search
-              </span>
-              <input
-                className="w-full bg-surface-container-low text-sm text-on-surface py-2 pl-9 pr-3 rounded-md border-b-2 border-transparent focus:bg-surface-container-lowest focus:border-secondary focus:outline-none transition-all placeholder:text-on-surface-variant/70"
-                placeholder="검색..."
-                type="text"
-                value={menuSearchTerm}
-                onChange={(e) => setMenuSearchTerm(e.target.value)}
-              />
-            </div>
+            <AdminSearchBar
+              className="mb-3"
+              value={menuSearchTerm}
+              onChange={(e) => setMenuSearchTerm(e.target.value)}
+              placeholder="검색..."
+              showSubmitButton={false}
+            />
             <div className="overflow-y-auto no-scrollbar flex-1">
               {selectedRoleId ? (
                 <table className="w-full">

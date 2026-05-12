@@ -19,6 +19,7 @@ import { useThemeHeaderContext } from "../../hooks/useThemeHeaderContext";
 import { useThemePanelSummary } from "../../hooks/useThemePanelSummary";
 import { useUniversityContext } from "../../hooks/useUniversityContext";
 import InsightsPanel from "../main/InsightsPanel";
+import { BASE_YEAR_OPTIONS } from "../../constants/baseYear";
 
 const INSIGHT_BLOCK_CODE = "SAMPLE_INSIGHT";
 const INSIGHT_LINE_ROLE = "INSIGHT";
@@ -26,7 +27,6 @@ const DEFAULT_BASE_YEAR = 2025;
 
 export default function AdmissionDashboard() {
   const { schlNm, ready: universityReady, statusChips } = useUniversityContext();
-  const BASE_YEAR_OPTIONS = [2025, 2024, 2023];
   const [selectedBaseYear, setSelectedBaseYear] = useState(DEFAULT_BASE_YEAR);
 
   const [kpiCards, setKpiCards] = useState([]);

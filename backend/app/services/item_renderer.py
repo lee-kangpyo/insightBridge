@@ -1,0 +1,511 @@
+import json
+from typing import Any, Optional
+
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+
+from app.services.contents import get_contents_master, get_contents_detail, execute_sql_preview
+from app.services.screen_items import get_item
+
+
+def _normalize_mapping_items(mapping_items: Any) -> list[dict]:
+    if not mapping_items:
+        return []
+    if isinstance(mapping_items, list):
+        return [item for item in mapping_items if item]
+    if isinstance(mapping_items, dict):
+        return [v for v in mapping_items.values() if v]
+    return []
+
+
+def _normalize_mapping_columns(mapping_columns: Any) -> list[dict]:
+    if not mapping_columns:
+        return []
+    if isinstance(mapping_columns, list):
+        return [col for col in mapping_columns if col]
+    if isinstance(mapping_columns, dict):
+        return [{"dataKey": k, **(v or {})} for k, v in mapping_columns.items() if v]
+    return []
+
+
+def _normalize_mapping_series(series: Any) -> list[dict]:
+    if not series:
+        return []
+    if isinstance(series, list):
+        return [s for s in series if s]
+    if isinstance(series, dict):
+        return [{"name": k, **(v or {})} for k, v in series.items() if v]
+    return []
+
+
+def _get_row_value(row: dict, field: str) -> Any:
+    if not row or field is None:
+        return None
+    v = row.get(field)
+    if v is None:
+        return None
+    return v
+
+
+VALID_CARD_FORMATS = {"raw", "number", "percent", "currency"}
+VALID_PERCENT_BASES = {"0to1", "0to100"}
+
+
+def _normalize_card_format(value: Any) -> str:
+    text = str(value or "raw").strip().lower()
+    return text if text in VALID_CARD_FORMATS else "raw"
+
+
+def _normalize_decimal_places(value: Any) -> int:
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return 0
+    return max(0, min(n, 6))
+
+
+def _truthy(value: Any, default: bool = True) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return value.strip().upper() not in ("N", "NO", "FALSE", "0")
+    return bool(value)
+
+
+def _to_number(value: Any) -> Optional[float]:
+    if value is None or value == "":
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        return float(str(value).replace(",", "").strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def _to_decimal(value: Any) -> Optional[Decimal]:
+    """
+    Frontend(JS)의 toFixed / Intl.NumberFormat('ko-KR')와 일치시키기 위해
+    백엔드는 Decimal(ROUND_HALF_UP) 기반으로 고정한다.
+
+    - 문자열 숫자: 콤마 제거 후 Decimal 파싱
+    - 숫자 타입: Decimal(str(x))로 파싱(부동소수점 이진 오차를 최소화)
+    """
+    if value is None or value == "":
+        return None
+    if isinstance(value, Decimal):
+        return value
+    if isinstance(value, (int, float)):
+        # Decimal(float) 금지(이진 부동소수점이 그대로 들어감)
+        return Decimal(str(value))
+    try:
+        text = str(value).replace(",", "").strip()
+        if text == "":
+            return None
+        return Decimal(text)
+    except (InvalidOperation, ValueError, TypeError):
+        return None
+
+
+def _quantize_decimal_js(value: Decimal, decimals: int) -> Decimal:
+    if decimals <= 0:
+        q = Decimal("1")
+    else:
+        q = Decimal("1").scaleb(-decimals)  # 10^-decimals
+    out = value.quantize(q, rounding=ROUND_HALF_UP)
+
+    # JS (-0).toFixed(...) => "0.00" 처럼 -0 표시를 제거
+    if out.is_zero():
+        return out.copy_abs()
+    return out
+
+
+def _resolve_card_format_spec(mapping_item: Optional[dict], shape_item: Optional[dict]) -> dict:
+    mapping_item = mapping_item if isinstance(mapping_item, dict) else {}
+    shape_item = shape_item if isinstance(shape_item, dict) else {}
+
+    def pick(key: str, default: Any) -> Any:
+        if mapping_item.get(key) is not None:
+            return mapping_item.get(key)
+        if shape_item.get(key) is not None:
+            return shape_item.get(key)
+        return default
+
+    return {
+        "format": _normalize_card_format(pick("format", "raw")),
+        "decimalPlaces": _normalize_decimal_places(pick("decimalPlaces", 0)),
+        "thousandSeparator": _truthy(pick("thousandSeparator", True), True),
+        "percentBase": pick("percentBase", "0to100") if pick("percentBase", "0to100") in VALID_PERCENT_BASES else "0to100",
+        "prefix": "" if pick("prefix", "") is None else str(pick("prefix", "")),
+        "suffix": "" if pick("suffix", "") is None else str(pick("suffix", "")),
+        "nullDisplay": "-" if pick("nullDisplay", "-") is None else str(pick("nullDisplay", "-")),
+    }
+
+
+def _format_card_value(value: Any, spec: dict) -> Any:
+    if value is None or value == "":
+        return spec.get("nullDisplay", "-")
+
+    format_cd = _normalize_card_format(spec.get("format"))
+    if format_cd == "raw":
+        return str(value)
+
+    number = _to_decimal(value)
+    if number is None:
+        return str(value)
+
+    if format_cd == "percent" and spec.get("percentBase") == "0to1":
+        number *= Decimal("100")
+
+    decimals = _normalize_decimal_places(spec.get("decimalPlaces"))
+    number = _quantize_decimal_js(number, decimals)
+    if spec.get("thousandSeparator", True):
+        text = format(number, f",.{decimals}f")
+    else:
+        text = format(number, f".{decimals}f")
+
+    prefix = str(spec.get("prefix") or "")
+    suffix = str(spec.get("suffix") or "")
+    if format_cd == "percent" and not suffix:
+        suffix = "%"
+    if format_cd == "currency" and not prefix:
+        prefix = "₩"
+    return f"{prefix}{text}{suffix}"
+
+
+def _resolve_item_type(item: dict, shape_content: dict) -> Optional[str]:
+    t = item.get("mapping_json", {}).get("type") if item.get("mapping_json") else None
+    if t in ("chart", "grid", "card"):
+        return t
+    ct = shape_content.get("contentType") if shape_content else None
+    if ct in ("chart", "grid", "card"):
+        return ct
+    return None
+
+
+def _build_grid_model(item_type: str, item: dict, shape_content: dict, preview: dict) -> dict:
+    if item_type != "grid":
+        return {"columns": [], "rows": []}
+
+    mj = item.get("mapping_json") if item else None
+    m = mj.get("mapping", {}) if mj and isinstance(mj, dict) else {}
+    if not m or not isinstance(m, dict):
+        return {"columns": [], "rows": []}
+
+    mapped_columns = _normalize_mapping_columns(m.get("columns"))
+    usable_mappings = [
+        {
+            "dataKey": c.get("dataKey") if isinstance(c.get("dataKey"), str) else None,
+            "field": c.get("field") if isinstance(c.get("field"), str) else None,
+        }
+        for c in mapped_columns
+    ]
+    usable_mappings = [m for m in usable_mappings if m["dataKey"] and m["field"]]
+
+    if not usable_mappings:
+        return {"columns": [], "rows": []}
+
+    shape_cols = shape_content.get("data", {}).get("columns", []) if shape_content else []
+    shape_by_key = {}
+    for c in shape_cols:
+        data_key = c.get("dataKey") or c.get("field")
+        if not data_key:
+            continue
+        header = c.get("displayName") or c.get("header") or c.get("title") or data_key
+        shape_by_key[str(data_key)] = {"header": str(header), "dataKey": str(data_key)}
+
+    columns = []
+    for mapping in usable_mappings:
+        data_key = mapping["dataKey"]
+        meta = shape_by_key.get(data_key)
+        columns.append({"dataKey": data_key, "header": meta.get("header", data_key) if meta else data_key})
+
+    sql_rows = preview.get("rows", []) if preview else []
+    rows = []
+    for row in sql_rows:
+        out = {}
+        for mapping in usable_mappings:
+            out[mapping["dataKey"]] = _get_row_value(row, mapping["field"])
+        rows.append(out)
+
+    return {"columns": columns, "rows": rows}
+
+
+def _build_chart_model(item_type: str, item: dict, shape_content: dict, preview: dict) -> dict:
+    if item_type != "chart":
+        return {"chartType": None, "data": [], "chartConfig": None}
+
+    mj = item.get("mapping_json") if item else None
+    chart_type = mj.get("chartType") if mj and isinstance(mj, dict) else None
+    if not isinstance(chart_type, str) or not chart_type.strip():
+        return {"chartType": None, "data": [], "chartConfig": None}
+
+    mapping = mj.get("mapping", {}) if mj and isinstance(mj, dict) else {}
+    if not mapping or not isinstance(mapping, dict):
+        return {"chartType": chart_type, "data": [], "chartConfig": None}
+
+    category_field = mapping.get("categoryField")
+    series_list = _normalize_mapping_series(mapping.get("series"))
+
+    if not isinstance(category_field, str) or not category_field.strip():
+        return {"chartType": chart_type, "data": [], "chartConfig": None}
+
+    sql_rows = preview.get("rows", []) if preview else []
+    if not sql_rows:
+        return {"chartType": chart_type, "data": [], "chartConfig": None}
+
+    title = shape_content.get("data", {}).get("chartTitle") if shape_content else None
+    if not title:
+        title = item.get("item_nm", "") if item else ""
+
+    long = []
+    for row in sql_rows:
+        category = _get_row_value(row, category_field)
+        if category is None:
+            continue
+
+        if not series_list:
+            continue
+
+        for s in series_list:
+            series_name = str(s.get("name") or s.get("label") or "").strip() or ""
+            field = s.get("field")
+            if not isinstance(field, str) or not field.strip():
+                continue
+            v = _get_row_value(row, field)
+            try:
+                if v is not None and isinstance(v, str):
+                    v = v.replace(',', '')
+                num_value = float(v) if v is not None else None
+            except (ValueError, TypeError):
+                num_value = None
+            long.append({
+                "category": str(category),
+                "series": series_name or field,
+                "value": num_value,
+            })
+
+    data = long
+    if not data:
+        return {"chartType": chart_type, "data": [], "chartConfig": None}
+
+    chart_config = {
+        "type": chart_type,
+        "title": title,
+        "x": "category",
+        "y": "value",
+        "group": "series",
+    }
+
+    return {"chartType": chart_type, "data": data, "chartConfig": chart_config}
+
+
+def _build_card_model(item_type: str, item: dict, shape_content: dict, preview: dict) -> Optional[dict]:
+    rows = preview.get("rows", []) if preview else []
+    row0 = rows[0] if rows else None
+
+    if item_type != "card":
+        return None
+
+    mj = item.get("mapping_json") if item else None
+    m = mj.get("mapping", {}) if mj and isinstance(mj, dict) else {}
+    if not m or not isinstance(m, dict):
+        return None
+    if not row0:
+        return None
+
+    title = shape_content.get("data", {}).get("cardTitle") if shape_content else None
+    if not title:
+        title = item.get("item_nm", "카드") if item else "카드"
+    sources = []
+
+    if m.get("value") and isinstance(m.get("value"), str):
+        v = _get_row_value(row0, m.get("value"))
+        shape_items_for_value = shape_content.get("data", {}).get("items", []) if shape_content else []
+        shape_item_for_value = shape_items_for_value[0] if shape_items_for_value else {}
+        spec = _resolve_card_format_spec(m, shape_item_for_value)
+        sources.append(f"mapping.value = {m.get('value')}")
+        return {"title": title, "headline": _format_card_value(v, spec), "rows": [], "sources": sources}
+
+    mapped_items = _normalize_mapping_items(m.get("items"))
+    if not mapped_items:
+        return None
+
+    headline = None
+    headline_taken = False
+    out_rows = []
+
+    shape_items = shape_content.get("data", {}).get("items", []) if shape_content else []
+
+    def _normalize_where(where_raw) -> list[dict]:
+        if not isinstance(where_raw, list):
+            return []
+        out = []
+        for cond in where_raw:
+            if not isinstance(cond, dict):
+                continue
+            field = cond.get("field")
+            if not isinstance(field, str):
+                continue
+            field = field.strip()
+            if not field:
+                continue
+            value = cond.get("value")
+            out.append({"field": field, "value": "" if value is None else str(value)})
+        return out
+
+    def _matches_where(row: dict, where: list[dict]) -> bool:
+        if not isinstance(row, dict) or not where:
+            return False
+        for cond in where:
+            field = cond.get("field")
+            if not field:
+                return False
+            expected = cond.get("value", "")
+            actual = _get_row_value(row, field)
+            if "" if actual is None else str(actual) != str(expected):
+                return False
+        return True
+
+    def _select_row_for_item(all_rows: list, selector: dict | None) -> tuple[Optional[dict], str]:
+        if not isinstance(all_rows, list) or len(all_rows) == 0:
+            return None, "empty"
+        if not isinstance(selector, dict):
+            return all_rows[0], "default:first"
+        mode = selector.get("mode")
+        mode = mode.strip() if isinstance(mode, str) else ""
+        if not mode or mode == "first":
+            return all_rows[0], "selector:first"
+        if mode == "where":
+            where = _normalize_where(selector.get("where"))
+            if not where:
+                return all_rows[0], "selector:where:fallback(no-conditions)"
+            for r in all_rows:
+                if _matches_where(r, where):
+                    expr = "&".join([f"{c['field']}={c['value']}" for c in where])
+                    return r, f"selector:where:{expr}"
+            expr = "&".join([f"{c['field']}={c['value']}" for c in where])
+            return all_rows[0], f"selector:where:fallback(not-found:{expr})"
+        return all_rows[0], f"selector:fallback(unknown-mode:{mode})"
+
+    for idx, it in enumerate(mapped_items[:12]):
+        field = it.get("field") if isinstance(it.get("field"), str) else None
+        selector = it.get("rowSelector") if isinstance(it.get("rowSelector"), dict) else None
+        chosen_row, chosen_reason = _select_row_for_item(rows, selector)
+        label_raw = it.get("label") or (shape_items[idx].get("label") if idx < len(shape_items) and shape_items[idx] else "")
+        label = str(label_raw) if isinstance(label_raw, str) else str(label_raw or "")
+        label_trim = label.strip()
+        color_hex = None
+        if idx < len(shape_items) and shape_items[idx] and isinstance(shape_items[idx], dict):
+            color_hex = shape_items[idx].get("color")
+        v = _get_row_value(chosen_row, field) if field and chosen_row else None
+        shape_item = shape_items[idx] if idx < len(shape_items) and isinstance(shape_items[idx], dict) else {}
+        spec = _resolve_card_format_spec(it, shape_item)
+        formatted_v = _format_card_value(v, spec)
+
+        if field:
+            sources.append(f"mapping.items[{idx}].field = {field}")
+        else:
+            sources.append(f"mapping.items[{idx}]")
+        sources.append(f"mapping.items[{idx}].row = {chosen_reason}")
+
+        if not label_trim and not headline_taken:
+            headline = formatted_v
+            headline_taken = True
+            continue
+
+        out_rows.append({
+            "label": label if label_trim else "",
+            "value": formatted_v,
+            "rawValue": v,
+            "kind": "labeled" if label_trim else "valueOnly",
+            "color": color_hex,
+        })
+
+    return {
+        "title": title,
+        "headline": headline,
+        "rows": out_rows,
+        "sources": sources,
+    }
+
+
+async def render_item(item_id: int, ctx: dict | None = None) -> dict:
+    """
+    아이템을 조회하고, shape 콘텐츠와 SQL을 실행하여 렌더링 결과를 반환합니다.
+    남겨진 정보는 렌더링에 필요한 최소 정볧만 포함합니다.
+    """
+    item = await get_item(item_id)
+    if item is None:
+        raise LookupError("item_not_found")
+
+    # shape 콘텐츠 조회
+    shape_content = None
+    shape_cnts_id = item.get("shape_cnts_id")
+    if shape_cnts_id:
+        try:
+            master = await get_contents_master(shape_cnts_id)
+            detail = await get_contents_detail(shape_cnts_id, master.cnts_tp)
+            shape_content = {
+                "contentType": master.cnts_tp,
+                "data": detail,
+            }
+        except Exception:
+            shape_content = None
+
+    # SQL 실행
+    preview = None
+    sql_cnts_id = item.get("sql_cnts_id")
+    if sql_cnts_id:
+        try:
+            preview = await execute_sql_preview(sql_cnts_id, ctx=ctx)
+        except Exception:
+            preview = {"columns": [], "rows": []}
+
+    # 타입 결정
+    item_type = _resolve_item_type(item, shape_content or {})
+
+    if not item_type:
+        return {
+            "item_id": item_id,
+            "item_nm": item.get("item_nm", ""),
+            "type": None,
+        }
+
+    # 타입별 변환
+    if item_type == "chart":
+        model = _build_chart_model(item_type, item, shape_content or {}, preview or {})
+        return {
+            "item_id": item_id,
+            "item_nm": item.get("item_nm", ""),
+            "type": "chart",
+            "chartConfig": model.get("chartConfig"),
+            "data": model.get("data", []),
+        }
+
+    if item_type == "grid":
+        model = _build_grid_model(item_type, item, shape_content or {}, preview or {})
+        return {
+            "item_id": item_id,
+            "item_nm": item.get("item_nm", ""),
+            "type": "grid",
+            "columns": model.get("columns", []),
+            "rows": model.get("rows", []),
+        }
+
+    if item_type == "card":
+        model = _build_card_model(item_type, item, shape_content or {}, preview or {})
+        return {
+            "item_id": item_id,
+            "item_nm": item.get("item_nm", ""),
+            "type": "card",
+            "title": model.get("title") if model else item.get("item_nm", "카드"),
+            "headline": model.get("headline") if model else None,
+            "rows": model.get("rows", []) if model else [],
+            "sources": model.get("sources", []) if model else [],
+        }
+
+    return {
+        "item_id": item_id,
+        "item_nm": item.get("item_nm", ""),
+        "type": None,
+    }

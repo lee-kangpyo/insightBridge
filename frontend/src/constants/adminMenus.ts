@@ -27,14 +27,8 @@ export const ADMIN_MENUS: MenuItem[] = [
     path: '/admin/role-users',
   },
   {
-    menu_id: 901,
-    menu_nm: '테스트',
-    children: [
-      {
-        menu_id: 911,
-        menu_nm: '역할별 메뉴관리',
-        path: '/admin/role-menu',
-      },
-    ],
+    menu_id: 950,
+    menu_nm: '차트 갤러리',
+    path: '/admin/chart-gallery',
   },
 ];

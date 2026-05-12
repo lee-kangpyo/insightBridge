@@ -1,512 +1,30 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import PageHeader from "../../components/common/PageHeader";
 import {
   getAdminMenuTree,
   createAdminMenu,
+  createAdminMenuForScreen,
   patchAdminMenu,
   deleteAdminMenu,
+  getAdminScreensList,
+  moveAdminMenu,
 } from "../../services/adminApi";
+import ScreenPreviewModal from "../../components/admin/ScreenPreviewModal";
+import AddScreenMenuDialog from "../../components/admin/AddScreenMenuDialog";
 
-function menuIcon(node) {
-  if (node.children && node.children.length > 0) return "folder";
-  return "description";
-}
-
-function filterMenuTree(nodes, term) {
-  if (!term || !term.trim()) return nodes;
-  const q = term.trim().toLowerCase();
-  const walk = (list) => {
-    const out = [];
-    for (const n of list) {
-      const nm = (n.menu_nm || "").toLowerCase();
-      const cd = (n.menu_cd || "").toLowerCase();
-      const selfMatch = nm.includes(q) || cd.includes(q);
-      const kids = n.children ? walk(n.children) : [];
-      if (selfMatch || kids.length) {
-        out.push({ ...n, children: kids });
-      }
-    }
-    return out;
-  };
-  return walk(nodes);
-}
-
-function findNodeById(nodes, id) {
-  for (const n of nodes) {
-    if (n.menu_id === id) return n;
-    if (n.children?.length) {
-      const f = findNodeById(n.children, id);
-      if (f) return f;
-    }
-  }
-  return null;
-}
-
-function MenuTreeNode({ node, level = 0, selectedId, onSelect, searchTerm }) {
-  const [expanded, setExpanded] = useState(level === 0);
-  const hasChildren = node.children && node.children.length > 0;
-  const mid = node.menu_id;
-  const isSelected = selectedId === mid;
-  const isDeleted = node.del_fg === "Y";
-  const isDisabled = String(node.use_yn ?? "Y").toUpperCase() === "N";
-  const isHighlighted =
-    searchTerm &&
-    (node.menu_nm || "").toLowerCase().includes(searchTerm.toLowerCase());
-  const icon = menuIcon(node);
-
-  return (
-    <div className="select-none">
-      <div
-        className={`flex items-center gap-2 py-2 px-2 rounded-md cursor-pointer transition-colors ${
-          isSelected
-            ? "bg-primary-container/10 text-error"
-            : isDeleted
-              ? "opacity-40"
-              : isDisabled
-                ? "opacity-70"
-                : isHighlighted
-                  ? "bg-yellow-100 text-primary font-semibold"
-                  : "hover:bg-surface-container text-on-surface"
-        }`}
-        style={{ paddingLeft: level > 0 ? `${level * 12 + 8}px` : "8px" }}
-        onClick={() => onSelect(node)}
-      >
-        {hasChildren ? (
-          <span
-            className="material-symbols-outlined text-[18px] text-on-surface-variant cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              setExpanded(!expanded);
-            }}
-          >
-            {expanded ? "arrow_drop_down" : "arrow_right"}
-          </span>
-        ) : (
-          <span className="w-4" />
-        )}
-        <span className="material-symbols-outlined text-[18px] text-on-surface-variant">
-          {icon}
-        </span>
-        <span
-          className={`font-medium text-sm ${isSelected ? "text-error font-semibold" : ""}`}
-        >
-          {node.menu_nm}
-        </span>
-        {isDeleted ? (
-          <span className="text-[10px] uppercase text-outline ml-1">del</span>
-        ) : isDisabled ? (
-          <span className="text-[10px] uppercase text-outline ml-1">off</span>
-        ) : null}
-      </div>
-      {hasChildren && expanded && (
-        <div className="flex flex-col ml-6 pl-2 border-l border-outline-variant/30 gap-1">
-          {node.children.map((child) => (
-            <MenuTreeNode
-              key={child.menu_id}
-              node={child}
-              level={level + 1}
-              selectedId={selectedId}
-              onSelect={onSelect}
-              searchTerm={searchTerm}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function MenuTree({
-  roots,
-  selectedId,
-  onSelect,
-  searchTerm,
-  onSearchChange,
-  onExpandAll,
-  onAddRoot,
-  loading,
-}) {
-  return (
-    <aside className="w-full lg:w-[350px] shrink-0 bg-surface-container-lowest rounded-lg p-6 flex flex-col gap-5 relative group h-full min-h-0">
-      <div className="absolute inset-0 rounded-lg shadow-[0_8px_32px_rgba(24,28,30,0.04)] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-      <div className="flex justify-between items-center mb-2">
-        <h2 className="font-headline font-semibold text-lg text-primary">
-          시스템 계층 구조
-        </h2>
-        <button
-          type="button"
-          className="text-secondary hover:bg-secondary-fixed/50 p-1.5 rounded-full transition-colors"
-          title="전체 펼치기"
-          onClick={onExpandAll}
-        >
-          <span className="material-symbols-outlined text-[20px]">
-            unfold_more
-          </span>
-        </button>
-      </div>
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
-            search
-          </span>
-          <input
-            className="w-full bg-surface-container-low text-sm text-on-surface py-2 pl-9 pr-3 rounded-md border-b-2 border-transparent focus:bg-surface-container-lowest focus:border-secondary focus:outline-none transition-all placeholder:text-on-surface-variant/70"
-            placeholder="메뉴 항목 검색..."
-            type="text"
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
-        </div>
-        <button
-          type="button"
-          className="bg-secondary text-on-secondary px-4 py-2 rounded-md text-sm font-medium hover:bg-primary-container transition-colors"
-          onClick={() => onSearchChange(searchTerm)}
-        >
-          검색
-        </button>
-      </div>
-      <div className="overflow-y-auto no-scrollbar flex-1 min-h-0 -mx-2 px-2 flex flex-col gap-1 text-sm mt-2">
-        {loading ? (
-          <p className="text-on-surface-variant text-sm py-4">불러오는 중…</p>
-        ) : roots.length === 0 ? (
-          <p className="text-on-surface-variant text-sm py-4">
-            표시할 메뉴가 없습니다.
-          </p>
-        ) : (
-          roots.map((node) => (
-            <MenuTreeNode
-              key={node.menu_id}
-              node={node}
-              selectedId={selectedId}
-              onSelect={onSelect}
-              searchTerm={searchTerm}
-            />
-          ))
-        )}
-      </div>
-      <button
-        type="button"
-        className="mt-auto pt-4 flex items-center justify-center gap-2 text-sm font-medium text-secondary hover:text-primary transition-colors border-t border-outline-variant/15"
-        onClick={onAddRoot}
-      >
-        <span className="material-symbols-outlined text-[18px]">
-          add_circle
-        </span>
-        최상위 메뉴 추가
-      </button>
-    </aside>
-  );
-}
-
-function MenuDetailForm({
-  node,
-  formData,
-  onChange,
-  onSave,
-  onDelete,
-  saving,
-}) {
-  if (!node) {
-    return (
-      <div className="flex-1 bg-surface-container-lowest rounded-lg flex flex-col relative overflow-hidden shadow-[0_8px_32px_rgba(24,28,30,0.02)] min-h-0">
-        <div className="h-1.5 w-full absolute top-0 left-0 bg-gradient-to-r from-primary to-primary-container" />
-        <div className="p-8 flex items-center justify-center h-full">
-          <p className="text-on-surface-variant">왼쪽에서 메뉴를 선택하세요</p>
-        </div>
-      </div>
-    );
-  }
-
-  const isDeleted = node.del_fg === "Y";
-  const savedEnabled = String(node.use_yn ?? "Y").toUpperCase() !== "N";
-  const isEnabled = Boolean(formData.useYn);
-  const isUseYnDirty = savedEnabled !== isEnabled;
-
-  return (
-    <div className="flex-1 bg-surface-container-lowest rounded-lg flex flex-col relative overflow-hidden shadow-[0_8px_32px_rgba(24,28,30,0.02)] min-h-0">
-      <div className="h-1.5 w-full absolute top-0 left-0 bg-gradient-to-r from-primary to-primary-container" />
-      <div className="p-8 flex flex-col gap-6 flex-1 min-h-0 overflow-y-auto">
-        <div className="flex justify-between items-start mb-2">
-          <div>
-            <span className="font-label text-xs tracking-wider text-error uppercase mb-1 block">
-              선택 메뉴 상세
-            </span>
-            <h2 className="font-headline font-bold text-2xl text-primary flex items-center gap-3">
-              <span className="text-error font-medium text-lg">
-                {formData.menuName || node.menu_nm}
-              </span>
-            </h2>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-          <div className="bg-surface-container-low rounded-lg p-4 flex flex-col gap-1">
-            <span className="text-[11px] uppercase tracking-wider text-on-surface-variant font-medium">
-              Menu ID
-            </span>
-            <span className="text-xl font-semibold text-primary">
-              {node.menu_id}
-            </span>
-          </div>
-          <div className="bg-surface-container-low rounded-lg p-4 flex flex-col gap-1">
-            <span className="text-[11px] uppercase tracking-wider text-on-surface-variant font-medium">
-              Parent ID
-            </span>
-            <span className="text-xl font-semibold text-secondary">
-              {node.parent_menu_id == null || node.parent_menu_id === ""
-                ? "—"
-                : String(node.parent_menu_id)}
-            </span>
-          </div>
-          <div className="bg-surface-container-low rounded-lg p-4 flex flex-col gap-1">
-            <span className="text-[11px] uppercase tracking-wider text-on-surface-variant font-medium">
-              Menu Level
-            </span>
-            <span className="text-xl font-semibold text-secondary">
-              {node.menu_level != null ? node.menu_level : "—"}
-            </span>
-          </div>
-          <div className="bg-surface-container-low rounded-lg p-4 flex flex-col gap-1">
-            <span className="text-[11px] uppercase tracking-wider text-on-surface-variant font-medium">
-              Sort Order
-            </span>
-            <span className="text-xl font-semibold text-secondary">
-              {node.sort_order != null ? node.sort_order : "—"}
-            </span>
-          </div>
-        </div>
-        <div className="border border-outline-variant/50 rounded-xl p-6 flex flex-col gap-8 bg-surface-container-lowest shadow-sm">
-          <div className="flex justify-between items-center border-b border-outline-variant/30 pb-4">
-            <h3 className="text-xl font-headline font-semibold text-primary">
-              Node Configuration
-            </h3>
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
-                isDeleted
-                  ? "bg-surface-container text-outline"
-                  : "bg-tertiary-fixed text-on-tertiary-fixed"
-              }`}
-            >
-              <span className="material-symbols-outlined text-[14px]">
-                {isDeleted ? "block" : "check_circle"}
-              </span>
-              {isDeleted ? "DELETED" : "ACTIVE"}
-            </span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-on-surface-variant">
-                메뉴코드 (menu_cd)
-              </label>
-              <input
-                className="border-0 border-b border-outline focus:border-primary focus:ring-0 px-0 py-2 bg-transparent text-on-surface font-mono text-sm"
-                type="text"
-                value={formData.menuCd}
-                onChange={(e) =>
-                  onChange({ ...formData, menuCd: e.target.value })
-                }
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-on-surface-variant">
-                메뉴명 (menu_nm)
-              </label>
-              <input
-                className="border-0 border-b border-outline focus:border-primary focus:ring-0 px-0 py-2 bg-transparent text-on-surface font-medium"
-                type="text"
-                value={formData.menuName}
-                onChange={(e) =>
-                  onChange({ ...formData, menuName: e.target.value })
-                }
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-on-surface-variant">
-                상위 메뉴 ID (parent_menu_id)
-              </label>
-              <input
-                className="border-0 border-b border-outline focus:border-primary focus:ring-0 px-0 py-2 bg-transparent text-on-surface font-mono text-sm"
-                type="text"
-                placeholder="비우면 최상위"
-                value={formData.parentMenuId}
-                onChange={(e) =>
-                  onChange({ ...formData, parentMenuId: e.target.value })
-                }
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-on-surface-variant">
-                정렬 (sort_order)
-              </label>
-              <input
-                className="border-0 border-b border-outline focus:border-primary focus:ring-0 px-0 py-2 bg-transparent text-on-surface font-mono text-sm"
-                type="number"
-                value={formData.sortOrder}
-                onChange={(e) =>
-                  onChange({ ...formData, sortOrder: e.target.value })
-                }
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-on-surface-variant">
-                레벨 (menu_level)
-              </label>
-              <input
-                className="border-0 border-b border-outline focus:border-primary focus:ring-0 px-0 py-2 bg-transparent text-on-surface font-mono text-sm"
-                type="number"
-                value={formData.menuLevel}
-                onChange={(e) =>
-                  onChange({ ...formData, menuLevel: e.target.value })
-                }
-              />
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-on-surface-variant">
-              URL / 라우트 (menu_path)
-            </label>
-            <input
-              className="border-0 border-b border-outline focus:border-primary focus:ring-0 px-0 py-2 bg-transparent text-on-surface font-mono text-sm"
-              type="text"
-              value={formData.menuUrl}
-              onChange={(e) =>
-                onChange({ ...formData, menuUrl: e.target.value })
-              }
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-on-surface-variant">
-              화면 / 컴포넌트 (screen_id)
-            </label>
-            <input
-              className="border-0 border-b border-outline focus:border-primary focus:ring-0 px-0 py-2 bg-transparent text-on-surface font-mono text-sm"
-              type="text"
-              value={formData.component}
-              onChange={(e) =>
-                onChange({ ...formData, component: e.target.value })
-              }
-            />
-          </div>
-          <div className="bg-surface-container-low rounded-lg p-5 flex flex-wrap gap-x-12 gap-y-6 items-center">
-            <div className="flex items-center gap-4">
-              <div>
-                <div className="text-sm font-medium text-on-surface">
-                  사용여부 (use_yn)
-                </div>
-                <div className="text-xs text-on-surface-variant">
-                  Y=사용, N=미사용 (목록에는 모두 표시)
-                </div>
-              </div>
-              <button
-                type="button"
-                className={`w-12 h-6 rounded-full relative transition-colors focus:outline-none ${
-                  formData.useYn ? "bg-primary" : "bg-outline"
-                }`}
-                onClick={() =>
-                  onChange({ ...formData, useYn: !formData.useYn })
-                }
-              >
-                <span
-                  className={`absolute top-1 w-4 h-4 bg-on-primary rounded-full transition-transform ${
-                    formData.useYn ? "right-1" : "left-1"
-                  }`}
-                />
-              </button>
-            </div>
-            <div className="flex items-center gap-3">
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
-                  isEnabled
-                    ? "bg-tertiary-fixed text-on-tertiary-fixed"
-                    : "bg-surface-container text-outline"
-                }`}
-              >
-                <span className="material-symbols-outlined text-[14px]">
-                  {isEnabled ? "toggle_on" : "toggle_off"}
-                </span>
-                {isEnabled ? "ENABLED" : "DISABLED"}
-              </span>
-              {isUseYnDirty && (
-                <span className="text-xs text-on-surface-variant">
-                  (미저장)
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-on-surface-variant">
-              비고
-            </label>
-            <p className="text-xs text-on-surface-variant">
-              `disp_yn`, `auth_check` 등은 현재 `ts_menu_info` 스키마에 없어
-              저장되지 않습니다. 문서 `docs/admin-menu-management.md` 참고.
-            </p>
-          </div>
-          <div className="flex justify-end gap-3 pt-4 border-t border-outline-variant/30 mt-2">
-            <button
-              type="button"
-              className="px-6 py-2.5 rounded-md border border-error/50 text-error font-medium hover:bg-error/5 transition-colors text-sm"
-              onClick={onDelete}
-              disabled={saving}
-            >
-              삭제
-            </button>
-            <button
-              type="button"
-              className="px-6 py-2.5 rounded-md bg-primary text-on-primary font-medium hover:bg-primary-container transition-colors text-sm flex items-center gap-2 shadow-sm disabled:opacity-50"
-              onClick={onSave}
-              disabled={saving}
-            >
-              <span className="material-symbols-outlined text-[18px]">
-                save
-              </span>
-              {saving ? "저장 중…" : "저장"}
-            </button>
-          </div>
-        </div>
-        <div className="mt-auto flex flex-col text-sm text-on-surface-variant border border-outline-variant/50 bg-surface-container-lowest rounded-md p-4 gap-1">
-          <div>
-            등록일시(reg_dt): {node.reg_dt != null ? String(node.reg_dt) : "—"}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function emptyForm() {
-  return {
-    menuCd: "",
-    menuName: "",
-    menuUrl: "",
-    component: "",
-    menuLevel: "",
-    sortOrder: "",
-    parentMenuId: "",
-    useYn: true,
-  };
-}
-
-function nodeToForm(node) {
-  return {
-    menuCd: node.menu_cd ?? "",
-    menuName: node.menu_nm ?? "",
-    menuUrl: node.menu_path ?? "",
-    component: node.screen_id ?? "",
-    menuLevel: node.menu_level != null ? String(node.menu_level) : "",
-    sortOrder: node.sort_order != null ? String(node.sort_order) : "",
-    parentMenuId:
-      node.parent_menu_id == null ||
-      node.parent_menu_id === "" ||
-      node.parent_menu_id === "0"
-        ? ""
-        : String(node.parent_menu_id),
-    useYn: String(node.use_yn ?? "Y").toUpperCase() !== "N",
-  };
-}
+import Toast from "./menu-management/components/Toast";
+import AddRootMenuDialog from "./menu-management/components/AddRootMenuDialog";
+import MenuTreePanel from "./menu-management/components/MenuTreePanel";
+import MenuDetailForm from "./menu-management/components/MenuDetailForm";
+import useMenuDragDrop from "./menu-management/hooks/useMenuDragDrop";
+import {
+  filterMenuTree,
+  findNodeById,
+  findParentChain,
+  collectAllIds,
+} from "./menu-management/utils/menuTree";
+import { emptyForm, nodeToForm, parseOptionalInt } from "./menu-management/utils/menuForm";
+import { ADMIN_PAGE_CONTAINER_CLASS } from "../../constants/adminLayout";
 
 export default function MenuManagement() {
   const [menuTree, setMenuTree] = useState([]);
@@ -516,15 +34,41 @@ export default function MenuManagement() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef(null);
+  const [addRootOpen, setAddRootOpen] = useState(false);
+  const [addRootForm, setAddRootForm] = useState({ menuCd: "", menuName: "" });
+  const [addRootErrors, setAddRootErrors] = useState({
+    menuCd: "",
+    menuName: "",
+  });
+  const [addScreenOpen, setAddScreenOpen] = useState(false);
+  const [screens, setScreens] = useState([]);
+  const [addScreenLoading, setAddScreenLoading] = useState(false);
+  const [addScreenError, setAddScreenError] = useState(null);
+  const [expandedIds, setExpandedIds] = useState(new Set());
 
-  const loadTree = useCallback(async () => {
+  const showToast = useCallback((message, type = "success") => {
+    setToast({ message, type });
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => setToast(null), 3000);
+  }, []);
+
+  const loadTree = useCallback(async ({ silent = false } = {}) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (!silent) {
+        setLoading(true);
+        setError(null);
+      }
       const data = await getAdminMenuTree();
       const tree = data.menu_tree || [];
       setMenuTree(tree);
+      setExpandedIds((prev) => {
+        if (prev.size === 0 && tree.length > 0) {
+          return new Set(tree.map((n) => n.menu_id));
+        }
+        return prev;
+      });
       setSelectedNode((prev) => {
         if (!prev) return null;
         return findNodeById(tree, prev.menu_id) ?? null;
@@ -535,17 +79,19 @@ export default function MenuManagement() {
         err.response?.data?.detail ||
         err.message ||
         "메뉴를 불러오지 못했습니다.";
-      setError(typeof msg === "string" ? msg : JSON.stringify(msg));
-      setMenuTree([]);
-      setSelectedNode(null);
+      if (!silent) {
+        setError(typeof msg === "string" ? msg : JSON.stringify(msg));
+        setMenuTree([]);
+        setSelectedNode(null);
+      }
       return [];
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadTree();
+    loadTree({ silent: false });
   }, [loadTree]);
 
   useEffect(() => {
@@ -553,6 +99,91 @@ export default function MenuManagement() {
       setFormData(nodeToForm(selectedNode));
     }
   }, [selectedNode]);
+
+  const toggleExpand = useCallback((menuId) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(menuId)) {
+        next.delete(menuId);
+      } else {
+        next.add(menuId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleMoveAttempt = useCallback(
+    async ({ draggedId, targetId, position, optimisticTree, hintExpandId }) => {
+      const prevTree = menuTree;
+      const prevExpanded = expandedIds;
+      const prevSelectedId = selectedNode?.menu_id ?? null;
+
+      setMenuTree(optimisticTree);
+      setSelectedNode((prev) => {
+        if (!prev) return prev;
+        return findNodeById(optimisticTree, prev.menu_id) ?? null;
+      });
+      if (hintExpandId != null) {
+        setExpandedIds((prev) => {
+          const next = new Set(prev);
+          next.add(hintExpandId);
+          return next;
+        });
+      }
+
+      try {
+        await moveAdminMenu(draggedId, targetId, position);
+        const tree = await loadTree({ silent: true });
+        const chain = findParentChain(tree, draggedId);
+        if (chain) {
+          setExpandedIds((prev) => {
+            const next = new Set(prev);
+            for (const id of chain) next.add(id);
+            return next;
+          });
+        }
+      } catch (err) {
+        setMenuTree(prevTree);
+        setExpandedIds(prevExpanded);
+        if (prevSelectedId != null) {
+          setSelectedNode(findNodeById(prevTree, prevSelectedId));
+        } else {
+          setSelectedNode(null);
+        }
+        const status = err?.response?.status;
+        const detail = err?.response?.data?.detail;
+        const rawMsg = err?.message;
+        let msg = "메뉴 이동에 실패했습니다.";
+        if (typeof detail === "string" && detail.trim()) {
+          msg = detail;
+        } else if (status === 401) {
+          msg = "로그인이 만료되었습니다. 다시 로그인해주세요.";
+        } else if (status === 403) {
+          msg = "권한이 없어 메뉴를 이동할 수 없습니다.";
+        } else if (status === 404) {
+          msg = "이동 대상 메뉴를 찾을 수 없습니다. 새로고침 후 다시 시도해주세요.";
+        } else if (status === 409) {
+          msg = "순환 참조가 발생할 수 있어 이동이 차단되었습니다.";
+        } else if (status === 502 || status === 503 || status === 504) {
+          msg = "서버 연결에 실패했습니다(백엔드/프록시). 잠시 후 다시 시도해주세요.";
+        } else if (
+          typeof rawMsg === "string" &&
+          (rawMsg.includes("Network Error") || rawMsg.includes("ECONN"))
+        ) {
+          msg = "네트워크 오류로 메뉴 이동에 실패했습니다. 서버 상태를 확인해주세요.";
+        } else if (typeof rawMsg === "string" && rawMsg.trim()) {
+          msg = rawMsg;
+        }
+        showToast(msg, "error");
+      }
+    },
+    [menuTree, expandedIds, selectedNode, loadTree, showToast],
+  );
+
+  const {
+    dragProps,
+    scrollRef,
+  } = useMenuDragDrop({ menuTree, loading, onMoveAttempt: handleMoveAttempt });
 
   const displayRoots = useMemo(
     () => filterMenuTree(menuTree, searchTerm),
@@ -563,16 +194,15 @@ export default function MenuManagement() {
     setSelectedNode(node);
   };
 
-  const parseOptionalInt = (v) => {
-    if (v === "" || v == null) return null;
-    const n = Number.parseInt(String(v), 10);
-    return Number.isFinite(n) ? n : null;
-  };
-
   const handleSave = async () => {
     if (!selectedNode) return;
     if (!formData.menuCd?.trim() || !formData.menuName?.trim()) {
-      alert("메뉴코드와 메뉴명은 필수입니다.");
+      showToast("메뉴코드와 메뉴명은 필수입니다.", "error");
+      return;
+    }
+    const lvl = parseOptionalInt(formData.menuLevel);
+    if (lvl !== null && (lvl < 1 || lvl > 4)) {
+      showToast("메뉴 레벨은 1~4 사이여야 합니다.", "error");
       return;
     }
     try {
@@ -581,6 +211,7 @@ export default function MenuManagement() {
       await patchAdminMenu(selectedNode.menu_id, {
         menu_cd: formData.menuCd.trim(),
         menu_nm: formData.menuName.trim(),
+        subtitle: formData.subtitle.trim() || null,
         menu_path: formData.menuUrl.trim() || null,
         screen_id: formData.component.trim() || null,
         menu_level: parseOptionalInt(formData.menuLevel),
@@ -591,8 +222,7 @@ export default function MenuManagement() {
             : formData.parentMenuId.trim(),
         use_yn: formData.useYn ? "Y" : "N",
       });
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
+      showToast("저장되었습니다.", "success");
       await loadTree();
     } catch (err) {
       const msg = err.response?.data?.detail || err.message || "저장 실패";
@@ -616,9 +246,8 @@ export default function MenuManagement() {
       await deleteAdminMenu(selectedNode.menu_id);
       setSelectedNode(null);
       setFormData(emptyForm());
+      showToast("삭제되었습니다.", "success");
       await loadTree();
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
     } catch (err) {
       const msg = err.response?.data?.detail || err.message || "삭제 실패";
       setError(typeof msg === "string" ? msg : JSON.stringify(msg));
@@ -627,45 +256,134 @@ export default function MenuManagement() {
     }
   };
 
-  const handleAddRoot = async () => {
-    const menu_cd = window.prompt("새 메뉴 코드(menu_cd)", "");
-    if (menu_cd === null) return;
-    const menu_nm = window.prompt("새 메뉴명(menu_nm)", "");
-    if (menu_nm === null) return;
-    if (!menu_cd.trim() || !menu_nm.trim()) {
-      alert("메뉴코드와 메뉴명은 필수입니다.");
+  const openAddRoot = () => {
+    if (saving) return;
+    setAddRootForm({ menuCd: "", menuName: "" });
+    setAddRootErrors({ menuCd: "", menuName: "" });
+    setAddRootOpen(true);
+  };
+
+  const closeAddRoot = () => {
+    if (saving) return;
+    setAddRootOpen(false);
+  };
+
+  const validateAddRoot = () => {
+    const next = { menuCd: "", menuName: "" };
+    if (!addRootForm.menuCd?.trim()) next.menuCd = "메뉴코드를 입력해주세요.";
+    if (!addRootForm.menuName?.trim()) next.menuName = "메뉴명을 입력해주세요.";
+    setAddRootErrors(next);
+    return !next.menuCd && !next.menuName;
+  };
+
+  const handleSubmitAddRoot = async () => {
+    if (!validateAddRoot()) {
+      showToast("필수 입력값을 확인해주세요.", "error");
       return;
     }
     try {
       setSaving(true);
       setError(null);
+      const menu_cd = addRootForm.menuCd.trim();
+      const menu_nm = addRootForm.menuName.trim();
       const { menu_id } = await createAdminMenu({
-        menu_cd: menu_cd.trim(),
-        menu_nm: menu_nm.trim(),
+        menu_cd,
+        menu_nm,
         parent_menu_id: null,
       });
       const tree = await loadTree();
+      setExpandedIds((prev) => {
+        const next = new Set(prev);
+        next.add(menu_id);
+        return next;
+      });
       const created = findNodeById(tree, menu_id);
       if (created) {
         setSelectedNode(created);
         setFormData(nodeToForm(created));
       }
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
+      setAddRootOpen(false);
+      showToast(`추가되었습니다: ${menu_nm}`, "success");
     } catch (err) {
       const msg = err.response?.data?.detail || err.message || "추가 실패";
       setError(typeof msg === "string" ? msg : JSON.stringify(msg));
+      showToast(
+        typeof msg === "string" ? msg : "추가에 실패했습니다.",
+        "error",
+      );
     } finally {
       setSaving(false);
     }
   };
 
-  const handleExpandAll = () => {
-    /* 트리 펼침 상태는 노드 로컬 state — 전역 펼침은 후속 작업 */
+  const handleExpandAll = useCallback(() => {
+    setExpandedIds(collectAllIds(menuTree));
+  }, [menuTree]);
+
+  const openAddScreen = async () => {
+    if (saving) return;
+    setAddScreenOpen(true);
+    setAddScreenLoading(true);
+    setAddScreenError(null);
+    try {
+      const data = await getAdminScreensList();
+      setScreens(data);
+    } catch (err) {
+      const msg = err.response?.data?.detail || err.message || "화면 목록을 불러오지 못했습니다.";
+      setAddScreenError(typeof msg === "string" ? msg : JSON.stringify(msg));
+      setScreens([]);
+    } finally {
+      setAddScreenLoading(false);
+    }
+  };
+
+  const closeAddScreen = () => {
+    if (saving) return;
+    setAddScreenOpen(false);
+    setAddScreenError(null);
+  };
+
+  const handleSubmitAddScreen = async (scrId) => {
+    if (!scrId) return;
+    const screen = screens.find((s) => s.scr_id === scrId);
+    if (!screen) return;
+    try {
+      setSaving(true);
+      setError(null);
+      const menu_cd = `SCR_${scrId.replace(/-/g, "_")}`;
+      const menu_nm = screen.scr_nm || scrId;
+      const { menu_id } = await createAdminMenuForScreen({
+        menu_cd,
+        menu_nm,
+        screen_id: scrId,
+      });
+      const tree = await loadTree();
+      setExpandedIds((prev) => {
+        const next = new Set(prev);
+        next.add(menu_id);
+        return next;
+      });
+      const created = findNodeById(tree, menu_id);
+      if (created) {
+        setSelectedNode(created);
+        setFormData(nodeToForm(created));
+      }
+      setAddScreenOpen(false);
+      showToast(`슬롯 화면 메뉴가 추가되었습니다: ${menu_nm}`, "success");
+    } catch (err) {
+      const msg = err.response?.data?.detail || err.message || "추가 실패";
+      setAddScreenError(typeof msg === "string" ? msg : JSON.stringify(msg));
+      showToast(
+        typeof msg === "string" ? msg : "추가에 실패했습니다.",
+        "error",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <div className="px-10 pb-12 max-w-[1600px] mx-auto flex flex-col gap-8 h-full min-h-0">
+    <div className={ADMIN_PAGE_CONTAINER_CLASS}>
       <PageHeader
         title="메뉴 관리"
         description="시스템 탐색 계층 구조를 구성하고, 라우팅 경로를 정의하며, 교육기관 플랫폼 전체의 컴포넌트 가시성을 관리합니다."
@@ -675,18 +393,25 @@ export default function MenuManagement() {
           {error}
         </div>
       )}
-      <div className="flex flex-col lg:flex-row gap-8 items-stretch flex-1 min-h-0">
-        <MenuTree
+      <div className="flex flex-col lg:flex-row gap-6 min-h-[600px]">
+        <MenuTreePanel
           roots={displayRoots}
           selectedId={selectedNode?.menu_id}
           onSelect={handleNodeSelect}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           onExpandAll={handleExpandAll}
-          onAddRoot={handleAddRoot}
+          onAddRoot={openAddRoot}
+          onAddScreen={openAddScreen}
           loading={loading}
+          expandedIds={expandedIds}
+          onToggleExpand={toggleExpand}
+          menuTree={menuTree}
+          scrollRef={scrollRef}
+          {...dragProps}
         />
         <MenuDetailForm
+          key={selectedNode?.menu_id ?? "none"}
           node={selectedNode}
           formData={formData}
           onChange={setFormData}
@@ -695,14 +420,32 @@ export default function MenuManagement() {
           saving={saving}
         />
       </div>
-      {showSuccess && (
-        <div className="fixed bottom-6 right-6 bg-tertiary-fixed text-on-tertiary-fixed px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 animate-[expandIn_0.3s_ease-out]">
-          <span className="material-symbols-outlined text-[20px]">
-            check_circle
-          </span>
-          <span className="font-medium">처리되었습니다.</span>
-        </div>
-      )}
+      <Toast toast={toast} onClose={() => setToast(null)} />
+      <AddRootMenuDialog
+        open={addRootOpen}
+        value={addRootForm}
+        errors={addRootErrors}
+        saving={saving}
+        onChange={(next) => {
+          setAddRootForm(next);
+          setAddRootErrors((prev) => ({
+            menuCd: prev.menuCd && next.menuCd.trim() ? "" : prev.menuCd,
+            menuName:
+              prev.menuName && next.menuName.trim() ? "" : prev.menuName,
+          }));
+        }}
+        onClose={closeAddRoot}
+        onSubmit={handleSubmitAddRoot}
+      />
+      <AddScreenMenuDialog
+        open={addScreenOpen}
+        screens={screens}
+        loading={addScreenLoading}
+        saving={saving}
+        error={addScreenError}
+        onClose={closeAddScreen}
+        onSubmit={handleSubmitAddScreen}
+      />
     </div>
   );
 }

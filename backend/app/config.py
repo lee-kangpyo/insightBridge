@@ -24,11 +24,16 @@ class Settings(BaseSettings):
     auth_cookie_max_age: int = 3600
 
     database_url: str
+    # SQL 미리보기 전용(선택). 미설정 시 database_url로 별도 풀을 만들며 default_transaction_read_only=on 적용.
+    # 운영에서는 슈퍼유저가 아닌 읽기 전용 역할의 DSN 사용을 권장합니다.
+    database_url_readonly: str | None = None
     openai_api_key: str
     openai_base_url: str = "https://api.openai.com/v1"
     openai_model: str = "gpt-4"
     llm_provider: str = "openai"
     llm_temperature: float = 0.0
+    llm_request_timeout_seconds: float = 90.0
+    llm_max_retries: int = 5
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
     smtp_host: str

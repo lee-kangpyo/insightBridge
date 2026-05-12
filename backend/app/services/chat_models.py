@@ -24,9 +24,13 @@ def create_chat_model():
     else:
         logger.debug("ChatModel: provider=%s", provider)
 
+    # langchain_openai.ChatOpenAI는 openai-python 클라이언트를 감싸며,
+    # OpenAI 호환 벤더를 쓸 때는 openai_api_base/openai_api_key 필드로 명시하는 게 가장 확실하다.
     return ChatOpenAI(
         model=settings.openai_model,
-        api_key=settings.openai_api_key,
-        base_url=settings.openai_base_url,
+        openai_api_key=settings.openai_api_key,
+        openai_api_base=settings.openai_base_url,
         temperature=settings.llm_temperature,
+        request_timeout=settings.llm_request_timeout_seconds,
+        max_retries=settings.llm_max_retries,
     )

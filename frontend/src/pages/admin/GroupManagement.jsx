@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import PageHeader from '../../components/common/PageHeader';
+import { ADMIN_PAGE_CONTAINER_CLASS } from '../../constants/adminLayout';
 import AdminTable from '../../components/common/AdminTable';
 import {
   getAdminGroups,
@@ -49,16 +50,16 @@ function mapGroupFromApi(row) {
 
 function GroupListTable({ groups, selectedGroup, isCreating, onSelect, onNew }) {
   return (
-    <div className="flex flex-col bg-surface-container-low rounded-lg p-6 min-w-[350px] h-full">
+    <div className="flex flex-col bg-surface-container-lowest rounded-lg p-6 h-full min-h-0 shadow-[0_8px_32px_rgba(24,28,30,0.04)]">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-headline font-bold text-primary">권한 그룹 목록</h2>
+        <h2 className="text-lg font-headline font-semibold text-primary">권한 그룹 목록</h2>
         <div className="flex items-center gap-2">
           <span className="text-xs font-label text-outline uppercase tracking-wider bg-surface-container px-2 py-1 rounded-full">
             Total {groups.length}
           </span>
           <button
             type="button"
-            className="px-3 py-1.5 rounded-lg bg-secondary-container text-on-secondary-container text-xs font-medium hover:bg-secondary-fixed transition-colors"
+            className="px-4 py-2 rounded-lg bg-secondary-container text-on-secondary-container text-sm font-medium hover:bg-secondary-fixed transition-colors"
             onClick={onNew}
           >
             새 그룹
@@ -82,7 +83,7 @@ function GroupListTable({ groups, selectedGroup, isCreating, onSelect, onNew }) 
 function GroupDetailForm({ group, isCreating, formData, onChange, onSave, onDelete }) {
   if (!group && !isCreating) {
     return (
-      <div className="flex-1 bg-surface-container-lowest rounded-lg flex flex-col relative overflow-hidden shadow-[0_8px_32px_rgba(24,28,30,0.02)]">
+      <div className="flex-1 bg-surface-container-lowest rounded-lg flex flex-col relative overflow-hidden shadow-[0_8px_32px_rgba(24,28,30,0.04)]">
         <div className="h-1.5 w-full absolute top-0 left-0 bg-gradient-to-r from-primary to-primary-container" />
         <div className="p-8 flex items-center justify-center h-full">
           <p className="text-on-surface-variant">왼쪽에서 권한 그룹을 선택하거나 &quot;새 그룹&quot;을 누르세요</p>
@@ -96,7 +97,7 @@ function GroupDetailForm({ group, isCreating, formData, onChange, onSave, onDele
   const isDeleted = !isCreating && String(formData?.del_fg ?? 'N').toUpperCase() === 'Y';
 
   return (
-    <div className="flex-1 bg-surface-container-lowest rounded-lg flex flex-col relative overflow-hidden shadow-[0_8px_32px_rgba(24,28,30,0.02)]">
+    <div className="flex-1 bg-surface-container-lowest rounded-lg flex flex-col relative overflow-hidden shadow-[0_8px_32px_rgba(24,28,30,0.04)]">
       <div className="h-1.5 w-full absolute top-0 left-0 bg-gradient-to-r from-primary to-primary-container" />
       <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-primary-fixed/20 to-transparent rounded-bl-full pointer-events-none opacity-50" />
       <div className="flex items-center text-xs font-label text-outline mb-4 space-x-2 p-8 pb-0">
@@ -107,9 +108,9 @@ function GroupDetailForm({ group, isCreating, formData, onChange, onSave, onDele
         <span className="text-secondary font-medium">권한그룹관리</span>
       </div>
       <div className="p-8 flex flex-col gap-6 flex-1 overflow-y-auto custom-scrollbar">
-        <div className="flex justify-between items-end border-b border-outline-variant/10 pb-6">
+        <div className="flex justify-between items-end border-b border-outline-variant/10 pb-4">
           <div>
-            <h2 className="text-2xl font-headline font-bold text-primary mb-1">
+            <h2 className="text-xl font-headline font-bold text-primary mb-1">
               {isCreating ? '새 권한 그룹' : '권한 그룹 상세'}
             </h2>
             <p className="text-sm text-outline-variant">
@@ -158,9 +159,9 @@ function GroupDetailForm({ group, isCreating, formData, onChange, onSave, onDele
           </p>
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-on-surface-variant">그룹명</label>
+              <label className="block text-xs font-medium text-on-surface-variant uppercase tracking-wider">그룹명</label>
               <input
-                className="w-full px-4 py-3 rounded-lg bg-surface-container-low text-base text-on-surface border-b-2 border-transparent focus:bg-surface-container-lowest focus:border-secondary focus:outline-none transition-all"
+                className="w-full px-4 py-2.5 rounded-lg bg-surface-container-low text-sm text-on-surface border-b-2 border-transparent focus:bg-surface-container-lowest focus:border-secondary focus:outline-none transition-all"
                 type="text"
                 value={formData.grp_nm}
                 disabled={isDeleted}
@@ -168,7 +169,7 @@ function GroupDetailForm({ group, isCreating, formData, onChange, onSave, onDele
               />
             </div>
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-on-surface-variant">그룹코드</label>
+              <label className="block text-xs font-medium text-on-surface-variant uppercase tracking-wider">그룹코드</label>
               <input
                 className="w-full px-4 py-3 rounded-lg bg-surface-container-low text-base text-on-surface font-mono border-b-2 border-transparent focus:bg-surface-container-lowest focus:border-secondary focus:outline-none transition-all"
                 type="text"
@@ -179,9 +180,9 @@ function GroupDetailForm({ group, isCreating, formData, onChange, onSave, onDele
             </div>
           </div>
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-on-surface-variant">설명 (description)</label>
+            <label className="block text-xs font-medium text-on-surface-variant uppercase tracking-wider">설명 (description)</label>
             <textarea
-              className="w-full px-4 py-3 rounded-lg bg-surface-container-low text-base text-on-surface resize-none border-b-2 border-transparent focus:bg-surface-container-lowest focus:border-secondary focus:outline-none transition-all"
+              className="w-full px-4 py-2.5 rounded-lg bg-surface-container-low text-sm text-on-surface resize-none border-b-2 border-transparent focus:bg-surface-container-lowest focus:border-secondary focus:outline-none transition-all"
               rows={3}
               value={formData.description ?? ''}
               disabled={isDeleted}
@@ -271,6 +272,25 @@ export default function GroupManagement() {
   useEffect(() => {
     loadGroups();
   }, [loadGroups]);
+
+  if (loading && !groups.length) {
+    return (
+      <div className={ADMIN_PAGE_CONTAINER_CLASS}>
+        <PageHeader
+          title="권한 그룹 관리"
+          description="시스템 권한 그룹을 생성하고, 권한 범위를 설정하며, 사용자별 접근 권한을 관리합니다."
+        />
+        {loadError && (
+          <div className="rounded-lg border border-error/40 bg-error-container/30 text-on-error-container px-4 py-3 text-sm">
+            {loadError}
+          </div>
+        )}
+        <div className="flex items-center justify-center h-64">
+          <span className="text-on-surface-variant text-sm">불러오는 중…</span>
+        </div>
+      </div>
+    );
+  }
 
   const handleSelectGroup = (group) => {
     setIsCreating(false);
@@ -362,7 +382,7 @@ export default function GroupManagement() {
   };
 
   return (
-    <div className="px-10 pb-12 max-w-[1600px] mx-auto flex flex-col gap-8">
+    <div className={ADMIN_PAGE_CONTAINER_CLASS}>
       <PageHeader
         title="권한 그룹 관리"
         description="시스템 권한 그룹을 생성하고, 권한 범위를 설정하며, 사용자별 접근 권한을 관리합니다."
@@ -372,11 +392,8 @@ export default function GroupManagement() {
           {loadError}
         </div>
       )}
-      {loading && !groups.length ? (
-        <p className="text-on-surface-variant text-sm">불러오는 중…</p>
-      ) : null}
       <div className="flex flex-col lg:flex-row gap-6 w-full flex-1 min-h-0">
-        <div className="w-full lg:w-1/3 flex flex-col">
+        <div className="w-full lg:w-[350px] shrink-0 flex flex-col min-h-0">
           <GroupListTable
             groups={groups}
             selectedGroup={selectedGroup}
@@ -385,7 +402,7 @@ export default function GroupManagement() {
             onNew={handleNewGroup}
           />
         </div>
-        <div className="w-full lg:w-2/3 flex flex-col">
+        <div className="w-full lg:flex-1 flex flex-col min-h-0">
           <GroupDetailForm
             group={selectedGroup}
             isCreating={isCreating}

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import PageHeader from '../../components/common/PageHeader';
+import { ADMIN_PAGE_CONTAINER_CLASS } from '../../constants/adminLayout';
 import { getRoleUserMappings, replaceUserGroups, replaceGroupUsers } from '../../services/api';
 
 function RoleUserManagement() {
@@ -132,7 +133,7 @@ function RoleUserManagement() {
 
   if (loading) {
     return (
-      <div className="px-10 pb-12 max-w-[1920px] mx-auto flex flex-col gap-8">
+      <div className={ADMIN_PAGE_CONTAINER_CLASS}>
         <div className="flex items-center justify-center h-64">
           <span className="text-on-surface-variant">데이터를 불러오는 중...</span>
         </div>
@@ -141,7 +142,7 @@ function RoleUserManagement() {
   }
 
   return (
-    <div className="px-10 pb-12 max-w-[1920px] mx-auto flex flex-col gap-8">
+    <div className={ADMIN_PAGE_CONTAINER_CLASS}>
       <PageHeader
         title="권한 그룹별 사용자 관리"
         description="권한 그룹에 사용자를 배정하고 관리합니다."
@@ -188,14 +189,14 @@ function RoleUserManagement() {
         }
       />
 
-      <div className="flex gap-6 items-start">
-        <div className="w-72 shrink-0 bg-surface-container-lowest rounded-lg p-6 flex flex-col gap-4">
+      <div className="flex gap-6 items-stretch">
+        <div className="w-72 shrink-0 bg-surface-container-lowest rounded-lg p-6 flex flex-col gap-4 shadow-[0_8px_32px_rgba(24,28,30,0.04)] min-h-[600px]">
           <div>
             <h3 className="font-headline font-semibold text-lg text-primary mb-3">
               {viewMode === 'USER' ? '사용자 목록' : '권한 그룹'}
             </h3>
           </div>
-          <div className="overflow-y-auto no-scrollbar max-h-[500px] flex flex-col gap-1">
+          <div className="overflow-y-auto no-scrollbar flex-1 flex flex-col gap-1">
             {leftPanelData.map((item, index) => {
               const id = viewMode === 'USER' ? item.user_cd : item.grp_id;
               const displayName = viewMode === 'USER' ? item.user_nm : item.grp_nm;

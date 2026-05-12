@@ -65,7 +65,7 @@ export default function SmallKpiCard({
 
   return (
     <div
-      className="bg-surface-container-lowest p-5 rounded-lg border border-transparent hover:border-outline-variant/15 transition-all"
+      className="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/40 shadow-md hover:shadow-lg hover:border-outline-variant/60 transition-all"
       style={cardStyle}
     >
       <div className="flex justify-between items-start mb-2">

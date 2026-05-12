@@ -124,3 +124,114 @@ class TestMenuServiceEndpoint:
             data = response.json()
             assert "menu_tree" in data
             assert isinstance(data["menu_tree"], list)
+
+
+class TestGetNavMenus:
+    @pytest.mark.asyncio
+    async def test_get_nav_menus_endpoint_requires_auth(self):
+        from fastapi.testclient import TestClient
+        from app.main import app
+
+        client = TestClient(app)
+        response = client.get("/api/menus/nav")
+        assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_get_nav_menus_returns_menu_tree(self, mock_settings):
+        from fastapi.testclient import TestClient
+        from app.main import app
+        from app.services.auth import create_access_token
+        import pandas as pd
+
+        token = create_access_token(data={"sub": "123", "univ_nm": "Test University", "roles": []})
+
+        with patch("app.services.menu.fetch_df", new_callable=AsyncMock) as mock_fetch:
+            mock_fetch.return_value = pd.DataFrame(
+                [
+                    {
+                        "menu_id": 1,
+                        "menu_cd": "DASH",
+                        "menu_nm": "Dashboard",
+                        "parent_menu_id": None,
+                        "menu_level": 1,
+                        "menu_path": "/dashboard",
+                        "screen_id": "SC001",
+                        "sort_order": 1,
+                        "use_yn": "Y",
+                        "del_fg": "N",
+                    },
+                    {
+                        "menu_id": 2,
+                        "menu_cd": "ANLY",
+                        "menu_nm": "Analytics",
+                        "parent_menu_id": 1,
+                        "menu_level": 2,
+                        "menu_path": "/dashboard/analytics",
+                        "screen_id": "SC002",
+                        "sort_order": 1,
+                        "use_yn": "Y",
+                        "del_fg": "N",
+                    },
+                ]
+            )
+
+            client = TestClient(app)
+            response = client.get(
+                "/api/menus/nav", headers={"Authorization": f"Bearer {token}"}
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert "menu_tree" in data
+            assert isinstance(data["menu_tree"], list)
+            assert len(data["menu_tree"]) == 1
+
+    @pytest.mark.asyncio
+    async def test_get_nav_menus_sys_adm_same_assigned_menu_policy(self, mock_settings):
+        """SYS_ADM도 /menus/nav는 그룹 할당 메뉴만; 전체 메뉴는 /admin/menus/tree 등 관리 API."""
+        from fastapi.testclient import TestClient
+        from app.main import app
+        from app.services.auth import create_access_token
+        import pandas as pd
+
+        token = create_access_token(data={"sub": "999", "univ_nm": "Admin University", "roles": ["SYS_ADM"]})
+
+        with patch("app.services.menu.fetch_df", new_callable=AsyncMock) as mock_fetch:
+            mock_fetch.return_value = pd.DataFrame(
+                [
+                    {
+                        "menu_id": 1,
+                        "menu_cd": "DASH",
+                        "menu_nm": "Dashboard",
+                        "parent_menu_id": None,
+                        "menu_level": 1,
+                        "menu_path": "/dashboard",
+                        "screen_id": "SC001",
+                        "sort_order": 1,
+                        "use_yn": "Y",
+                        "del_fg": "N",
+                    },
+                    {
+                        "menu_id": 9,
+                        "menu_cd": "SYS",
+                        "menu_nm": "System Admin",
+                        "parent_menu_id": None,
+                        "menu_level": 1,
+                        "menu_path": "/system",
+                        "screen_id": "SC009",
+                        "sort_order": 99,
+                        "use_yn": "Y",
+                        "del_fg": "N",
+                    },
+                ]
+            )
+
+            client = TestClient(app)
+            response = client.get(
+                "/api/menus/nav", headers={"Authorization": f"Bearer {token}"}
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert "menu_tree" in data
+            assert len(data["menu_tree"]) == 2

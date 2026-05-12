@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from app.dependencies import require_auth
-from app.services.menu import get_user_menus
+from app.services.menu import get_user_menus, get_nav_menus_service
 from app.services.admin import get_all_menus
 
 router = APIRouter()
@@ -16,3 +16,9 @@ async def get_current_user_menus(current_user: dict = Depends(require_auth)):
 async def get_menus(_: dict = Depends(require_auth)):
     menus = await get_all_menus()
     return menus
+
+
+@router.get("/menus/nav")
+async def get_nav_menus(current_user: dict = Depends(require_auth)):
+    user_cd = int(current_user["user_cd"])
+    return await get_nav_menus_service(user_cd)

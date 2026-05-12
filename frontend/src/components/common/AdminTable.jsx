@@ -1,20 +1,16 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
+import AdminSearchBar from './AdminSearchBar';
 
 export default function AdminTable({
   columns,
   data,
   onSelect,
-  searchTerm,
   searchPlaceholder = '검색...',
   selectedId,
   showRowNumber = true,
 }) {
-  const [localSearch, setLocalSearch] = useState(searchTerm || '');
+  const [localSearch, setLocalSearch] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
-
-  useEffect(() => {
-    setLocalSearch(searchTerm || '');
-  }, [searchTerm]);
 
   const filteredData = useMemo(() => {
     if (!localSearch.trim()) return data;
@@ -52,16 +48,12 @@ export default function AdminTable({
 
   return (
     <div className="flex flex-col bg-surface-container-lowest rounded-lg shadow-[0_8px_32px_rgba(24,28,30,0.04)] overflow-hidden">
-      <div className="relative mb-4 p-4 pb-0">
-        <span className="material-symbols-outlined absolute left-7 top-1/2 -translate-y-1/2 text-outline-variant text-lg">
-          search
-        </span>
-        <input
-          className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-surface-container-low text-sm text-on-surface border-b-2 border-transparent focus:bg-surface-container-lowest focus:border-secondary focus:outline-none transition-all placeholder:text-on-surface-variant/70"
-          placeholder={searchPlaceholder}
-          type="text"
+      <div className="mb-4 p-4 pb-0">
+        <AdminSearchBar
           value={localSearch}
           onChange={(e) => setLocalSearch(e.target.value)}
+          placeholder={searchPlaceholder}
+          showSubmitButton={false}
         />
       </div>
       <div className="flex-1 overflow-auto custom-scrollbar bg-surface-container-lowest">

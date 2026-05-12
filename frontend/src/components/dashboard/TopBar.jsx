@@ -1,20 +1,24 @@
-import { useRef } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import MaterialIcon from '../MaterialIcon';
+import { useNavMenuStore } from '../../stores/navMenuStore';
 
-const CATEGORIES = [
-  "종합현황",
-  "입학/선발",
-  "학생/진로",
-  "교육/교원",
-  "연구/산학/창업",
-  "재정/등록금/학생지원",
-  "캠퍼스/복지/안전",
-  "거버넌스/인증",
-  "컴플라이언스"
-];
-
-export default function TopBar({ onMenuClick, activeTab, setActiveTab }) {
+export default function TopBar({ onMenuClick }) {
   const scrollRef = useRef(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { navMenus, loading, fetchNavMenus } = useNavMenuStore();
+
+  useEffect(() => {
+    if (navMenus.length === 0) {
+      fetchNavMenus();
+    }
+  }, [navMenus.length, fetchNavMenus]);
+
+  const level1Menus = useMemo(
+    () => navMenus.filter((menu) => menu.parent_menu_id === null),
+    [navMenus]
+  );
 
   const scroll = (direction) => {
     if (scrollRef.current) {
@@ -26,9 +30,19 @@ export default function TopBar({ onMenuClick, activeTab, setActiveTab }) {
     }
   };
 
+  const handleTabClick = (menu) => {
+    if (menu.menu_path) {
+      navigate(menu.menu_path);
+    }
+  };
+
+  const activeMenu = useMemo(
+    () => level1Menus.find((menu) => menu.menu_path && location.pathname.startsWith(menu.menu_path)),
+    [level1Menus, location.pathname]
+  );
+
   return (
     <header className="z-30 flex h-16 w-full items-center justify-between gap-4 bg-white px-4 shadow-sm border-b border-outline-variant/10 dark:bg-slate-900 md:px-8">
-      {/* Logo Section */}
       <div className="flex shrink-0 items-center gap-3">
         <button
           type="button"
@@ -48,7 +62,6 @@ export default function TopBar({ onMenuClick, activeTab, setActiveTab }) {
         </div>
       </div>
 
-      {/* Middle section: Scrollable Tabs */}
       <div className="relative flex flex-1 items-center min-w-0 max-w-4xl h-full border-x border-outline-variant/10 px-2 group">
         <button
           onClick={() => scroll('left')}
@@ -58,23 +71,31 @@ export default function TopBar({ onMenuClick, activeTab, setActiveTab }) {
           <MaterialIcon name="chevron_left" className="text-slate-600 text-[20px]" />
         </button>
 
-        <nav 
+        <nav
           ref={scrollRef}
           className="flex flex-1 items-center gap-1 overflow-x-hidden scroll-smooth px-2 h-full"
         >
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveTab(cat)}
-              className={`whitespace-nowrap px-4 h-full text-xs font-bold transition-all border-b-2 ${
-                activeTab === cat
-                  ? 'text-primary border-primary bg-primary/5'
-                  : 'text-slate-400 border-transparent hover:text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+          {loading ? (
+            <div className="flex items-center justify-center w-full">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            </div>
+          ) : level1Menus.length === 0 ? (
+            <span className="text-xs text-slate-400 px-4">메뉴가 없습니다</span>
+          ) : (
+            level1Menus.map((menu) => (
+              <button
+                key={menu.menu_id}
+                onClick={() => handleTabClick(menu)}
+                className={`whitespace-nowrap px-4 h-full text-xs font-bold transition-all border-b-2 ${
+                  activeMenu?.menu_id === menu.menu_id
+                    ? 'text-primary border-primary bg-primary/5'
+                    : 'text-slate-400 border-transparent hover:text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {menu.menu_nm}
+              </button>
+            ))
+          )}
         </nav>
 
         <button
@@ -86,7 +107,6 @@ export default function TopBar({ onMenuClick, activeTab, setActiveTab }) {
         </button>
       </div>
 
-      {/* Profile Section */}
       <div className="flex shrink-0 items-center gap-3 md:gap-4">
         <div className="hidden items-center gap-1 lg:flex">
           <button

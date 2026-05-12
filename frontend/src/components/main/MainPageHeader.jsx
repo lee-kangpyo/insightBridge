@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
+import { useNavMenuStore } from '../../stores/navMenuStore';
 
 function profileInitials(user) {
   if (!user) return '?';
@@ -14,25 +16,21 @@ function profileInitials(user) {
   return '?';
 }
 
-const BASE_NAV_TABS = [
-  { label: '입시/충원', path: '/admission' },
-  { label: '학생/진로', path: '/student-career' },
-  { label: '교육/교원', path: '/education-faculty' },
-  { label: '연구/산학/창업', path: '/research' },
-  { label: '재정/등록금/학생지원', path: '/finance' },
-  { label: '캠퍼스/복지/안전', path: '/campus' },
-  { label: '거버넌스', path: '/governance' },
-];
+function buildNavTabs(level1Menus) {
+  return level1Menus.map(menu => ({
+    label: menu.menu_nm,
+    path: menu.screen_id ? `/view/menu/${menu.menu_id}` : (menu.menu_path || null)
+  }));
+}
 
-const isSysAdm = (user) => user?.roles?.includes('SYS_ADM');
-
-const buildNavTabs = (user) => {
-  const tabs = [...BASE_NAV_TABS];
-  if (isSysAdm(user)) {
-    tabs.push({ label: '시스템 관리', path: '/admin' });
+/** `/admin`과 동일: `menu_path` 접두사로 active. 단 `/`는 모든 경로 접두사이므로 홈에서만 active */
+function isNavTabActive(pathname, tabPath) {
+  if (!tabPath) return false;
+  if (tabPath === '/') {
+    return pathname === '/' || pathname === '';
   }
-  return tabs;
-};
+  return pathname.startsWith(tabPath);
+}
 
 export default function MainPageHeader() {
   const location = useLocation();
@@ -40,15 +38,35 @@ export default function MainPageHeader() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const [avatarFailed, setAvatarFailed] = useState(false);
+  const { navMenus, fetchNavMenus } = useNavMenuStore();
   const avatarUrl = user?.avatar_url || user?.photo_url;
+
+  useEffect(() => {
+    if (navMenus.length === 0) {
+      fetchNavMenus();
+    }
+  }, [navMenus.length, fetchNavMenus]);
 
   useEffect(() => {
     setAvatarFailed(false);
   }, [avatarUrl, user?.email]);
 
+  const level1Menus = useMemo(
+    () => navMenus.filter(menu => menu.parent_menu_id === null && (menu.menu_path || menu.screen_id)),
+    [navMenus]
+  );
+
+  const navTabs = useMemo(() => buildNavTabs(level1Menus), [level1Menus]);
+
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleTabClick = (tab) => {
+    if (tab.path) {
+      navigate(tab.path);
+    }
   };
 
   return (
@@ -62,25 +80,25 @@ export default function MainPageHeader() {
             className="hidden md:flex flex-wrap gap-1.5 items-center max-w-[min(100%,68rem)]"
             aria-label="주요 화면"
           >
-            {buildNavTabs(user).map((tab) => {
-              const isActive = tab.path === '/admin'
-                ? location.pathname.startsWith('/admin')
-                : location.pathname === tab.path;
+            {navTabs.map((tab) => {
+              const isActive = isNavTabActive(location.pathname, tab.path);
               return (
-                <Link
-                  key={tab.path}
-                  to={tab.path}
+                <button
+                  key={`${tab.label}-${tab.path}`}
+                  onClick={() => handleTabClick(tab)}
+                  disabled={!tab.path}
                   className={[
                     'font-label text-[11px] sm:text-xs font-semibold tracking-tight whitespace-nowrap',
                     'rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 border transition-all duration-200',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low',
+                    !tab.path ? 'cursor-default opacity-60' : '',
                     isActive
                       ? 'bg-primary text-on-primary border-primary shadow-md shadow-primary/15 font-bold'
                       : 'bg-surface-container-highest/80 text-on-surface-variant border-outline-variant/25 hover:bg-surface-container-high hover:text-primary hover:border-secondary/35 hover:shadow-sm',
                   ].join(' ')}
                 >
                   {tab.label}
-                </Link>
+                </button>
               );
             })}
           </nav>

@@ -210,6 +210,11 @@ class TestPatchMenu:
 
         pool_mock = MagicMock()
         conn_mock = AsyncMock()
+        # asyncpg's conn.transaction() is an async context manager.
+        tx_cm = AsyncMock()
+        tx_cm.__aenter__.return_value = None
+        tx_cm.__aexit__.return_value = None
+        conn_mock.transaction = MagicMock(return_value=tx_cm)
         pool_mock.acquire.return_value.__aenter__.return_value = conn_mock
 
         with patch("app.services.admin.get_pool", return_value=pool_mock):

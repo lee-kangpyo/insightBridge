@@ -1,17 +1,42 @@
 import ReactECharts from 'echarts-for-react';
+import {
+  CHART_COLORS,
+  AXIS_LABEL_COLOR,
+  AXIS_LINE_COLOR,
+  GRID_LINE_COLOR,
+  TOOLTIP_STYLE,
+} from '../constants/chartTheme';
+
+function uniqueInOrder(values) {
+  const seen = new Set();
+  const out = [];
+  for (const v of values) {
+    if (seen.has(v)) continue;
+    seen.add(v);
+    out.push(v);
+  }
+  return out;
+}
 
 function pivotData(data, xKey, yKey, groupKey) {
   if (!data || data.length === 0) return { xValues: [], groups: [], series: {} };
 
-  const xValues = [...new Set(data.map(r => String(r[xKey])))].sort();
-  const groups = groupKey ? [...new Set(data.map(r => String(r[groupKey])))].sort() : [null];
+  // SQL ORDER BY 순서를 유지하기 위해, "처음 등장한 순서"를 그대로 사용합니다. (sort 금지)
+  const xValues = uniqueInOrder(data.map(r => String(r[xKey])));
+  const groups = groupKey ? uniqueInOrder(data.map(r => String(r[groupKey]))) : [null];
+
+  const valueMap = new Map();
+  for (const r of data) {
+    const xv = String(r[xKey]);
+    const g = groupKey ? String(r[groupKey]) : null;
+    const raw = r?.[yKey];
+    const value = raw === undefined || raw === null ? null : Number(raw);
+    valueMap.set(`${g}||${xv}`, Number.isNaN(value) ? null : value);
+  }
 
   const series = {};
   for (const g of groups) {
-    series[g] = xValues.map(xv => {
-      const match = data.find(r => String(r[xKey]) === xv && (g === null ? true : String(r[groupKey]) === g));
-      return match !== undefined ? Number(match[yKey]) : null;
-    });
+    series[g] = xValues.map((xv) => valueMap.get(`${g}||${xv}`) ?? null);
   }
 
   return { xValues, groups, series };
@@ -62,29 +87,75 @@ function resolveChartConfig(data, chartConfig) {
 }
 
 const COMMON_THEME = {
-  tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+  color: CHART_COLORS,
+  backgroundColor: 'transparent',
+  tooltip: {
+    trigger: 'axis',
+    axisPointer: { type: 'cross', crossStyle: { color: '#94a3b8', opacity: 0.5 }, lineStyle: { color: AXIS_LINE_COLOR, type: 'dashed' } },
+    ...TOOLTIP_STYLE,
+  },
   animation: true,
-  animationDuration: 300,
+  animationDuration: 700,
+  animationEasing: 'cubicOut',
 };
+
+const AXIS_X = (xValues) => ({
+  type: 'category',
+  data: xValues,
+  axisLabel: { rotate: xValues.length > 8 ? 30 : 0, color: AXIS_LABEL_COLOR, fontSize: 10 },
+  axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
+  axisTick: { lineStyle: { color: AXIS_LINE_COLOR } },
+  boundaryGap: true,
+});
+
+const AXIS_Y = {
+  type: 'value',
+  axisLabel: { color: AXIS_LABEL_COLOR, fontSize: 10 },
+  axisLine: { show: false },
+  splitLine: { lineStyle: { color: GRID_LINE_COLOR, type: 'dashed' } },
+};
+
+const LEGEND_BASE = {
+  icon: 'roundRect',
+  textStyle: { color: AXIS_LABEL_COLOR, fontSize: 11 },
+  itemWidth: 12,
+  itemHeight: 8,
+  bottom: 0,
+};
+
+function gradColor(hex) {
+  return {
+    type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+    colorStops: [{ offset: 0, color: `${hex}cc` }, { offset: 1, color: `${hex}22` }],
+  };
+}
+
+function resolveSeriesColor(seriesName, seriesColorMap, idx) {
+  const byName = seriesColorMap && seriesName != null ? seriesColorMap[String(seriesName)] : null;
+  if (byName) return byName;
+  return CHART_COLORS[idx % CHART_COLORS.length];
+}
 
 function buildBarOption(data, config) {
   const { xValues, groups, series } = config.groupKey
     ? pivotData(data, config.x, config.y, config.groupKey)
     : { xValues: data.map(r => r[config.x]), groups: [null], series: { [null]: data.map(r => Number(r[config.y])) } };
 
-  const seriesData = groups.map(g => ({
-    name: g,
-    type: 'bar',
-    data: series[g],
-  }));
+  const seriesColorMap = config?.seriesColors && typeof config.seriesColors === 'object' ? config.seriesColors : null;
 
   return {
     ...COMMON_THEME,
-    title: { text: config.title || '', left: 'center' },
-    legend: { data: groups.filter(g => g !== null), bottom: 0 },
-    xAxis: { type: 'category', data: xValues, axisLabel: { rotate: xValues.length > 8 ? 30 : 0 } },
-    yAxis: { type: 'value' },
-    series: seriesData,
+    title: config.title ? { text: config.title, left: 'center', textStyle: { fontSize: 13, fontWeight: 700, color: '#0f172a' } } : undefined,
+    legend: { ...LEGEND_BASE, data: groups.filter(g => g !== null) },
+    xAxis: AXIS_X(xValues),
+    yAxis: AXIS_Y,
+    series: groups.map((g, i) => ({
+      name: g,
+      type: 'bar',
+      data: series[g],
+      barMaxWidth: 36,
+      itemStyle: { borderRadius: [5, 5, 0, 0], color: gradColor(resolveSeriesColor(g, seriesColorMap, i)) },
+    })),
   };
 }
 
@@ -93,20 +164,23 @@ function buildLineOption(data, config) {
     ? pivotData(data, config.x, config.y, config.groupKey)
     : { xValues: data.map(r => r[config.x]), groups: [null], series: { [null]: data.map(r => Number(r[config.y])) } };
 
-  const seriesData = groups.map(g => ({
-    name: g,
-    type: 'line',
-    data: series[g],
-    smooth: true,
-  }));
+  const seriesColorMap = config?.seriesColors && typeof config.seriesColors === 'object' ? config.seriesColors : null;
 
   return {
     ...COMMON_THEME,
-    title: { text: config.title || '', left: 'center' },
-    legend: { data: groups.filter(g => g !== null), bottom: 0 },
-    xAxis: { type: 'category', data: xValues, axisLabel: { rotate: xValues.length > 8 ? 30 : 0 } },
-    yAxis: { type: 'value' },
-    series: seriesData,
+    title: config.title ? { text: config.title, left: 'center', textStyle: { fontSize: 13, fontWeight: 700, color: '#0f172a' } } : undefined,
+    legend: { ...LEGEND_BASE, data: groups.filter(g => g !== null) },
+    xAxis: { ...AXIS_X(xValues), boundaryGap: false },
+    yAxis: AXIS_Y,
+    series: groups.map((g, i) => ({
+      name: g,
+      type: 'line',
+      data: series[g],
+      smooth: true,
+      lineStyle: { width: 2.5, color: resolveSeriesColor(g, seriesColorMap, i) },
+      itemStyle: { color: resolveSeriesColor(g, seriesColorMap, i), borderWidth: 2, borderColor: '#fff' },
+      symbolSize: 5,
+    })),
   };
 }
 
@@ -114,14 +188,16 @@ function buildPieOption(data, config) {
   const yKey = config.y;
   return {
     ...COMMON_THEME,
-    title: { text: config.title || '', left: 'center' },
-    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-    legend: { orient: 'vertical', left: 'left' },
+    title: config.title ? { text: config.title, left: 'center', textStyle: { fontSize: 13, fontWeight: 700, color: '#0f172a' } } : undefined,
+    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)', ...TOOLTIP_STYLE },
+    legend: { ...LEGEND_BASE, orient: 'vertical', left: 'left', bottom: 'auto', top: 'middle' },
     series: [{
       type: 'pie',
-      radius: '60%',
+      radius: ['0%', '60%'],
       data: data.map(row => ({ name: row[config.x], value: Number(row[yKey]) })),
-      emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.5)' } },
+      label: { fontSize: 11, color: AXIS_LABEL_COLOR },
+      itemStyle: { borderWidth: 2, borderColor: 'rgba(255,255,255,0.85)' },
+      emphasis: { itemStyle: { shadowBlur: 16, shadowColor: 'rgba(96,165,250,0.3)' } },
     }],
   };
 }
@@ -131,21 +207,27 @@ function buildAreaOption(data, config) {
     ? pivotData(data, config.x, config.y, config.groupKey)
     : { xValues: data.map(r => r[config.x]), groups: [null], series: { [null]: data.map(r => Number(r[config.y])) } };
 
-  const seriesData = groups.map(g => ({
-    name: g,
-    type: 'line',
-    data: series[g],
-    smooth: true,
-    areaStyle: {},
-  }));
+  const seriesColorMap = config?.seriesColors && typeof config.seriesColors === 'object' ? config.seriesColors : null;
 
   return {
     ...COMMON_THEME,
-    title: { text: config.title || '', left: 'center' },
-    legend: { data: groups.filter(g => g !== null), bottom: 0 },
-    xAxis: { type: 'category', data: xValues, axisLabel: { rotate: xValues.length > 8 ? 30 : 0 } },
-    yAxis: { type: 'value' },
-    series: seriesData,
+    title: config.title ? { text: config.title, left: 'center', textStyle: { fontSize: 13, fontWeight: 700, color: '#0f172a' } } : undefined,
+    legend: { ...LEGEND_BASE, data: groups.filter(g => g !== null) },
+    xAxis: { ...AXIS_X(xValues), boundaryGap: false },
+    yAxis: AXIS_Y,
+    series: groups.map((g, i) => ({
+      name: g,
+      type: 'line',
+      data: series[g],
+      smooth: true,
+      lineStyle: { width: 2.5, color: resolveSeriesColor(g, seriesColorMap, i) },
+      itemStyle: { color: resolveSeriesColor(g, seriesColorMap, i) },
+      areaStyle: {
+        color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [{ offset: 0, color: `${resolveSeriesColor(g, seriesColorMap, i)}44` }, { offset: 1, color: `${resolveSeriesColor(g, seriesColorMap, i)}06` }] },
+      },
+      symbolSize: 5,
+    })),
   };
 }
 
@@ -154,20 +236,25 @@ function buildStackedBarOption(data, config) {
     ? pivotData(data, config.x, config.y, config.groupKey)
     : { xValues: data.map(r => r[config.x]), groups: [null], series: { [null]: data.map(r => Number(r[config.y])) } };
 
-  const seriesData = groups.map(g => ({
-    name: g,
-    type: 'bar',
-    stack: 'total',
-    data: series[g],
-  }));
+  const seriesColorMap = config?.seriesColors && typeof config.seriesColors === 'object' ? config.seriesColors : null;
 
   return {
     ...COMMON_THEME,
-    title: { text: config.title || '', left: 'center' },
-    legend: { data: groups.filter(g => g !== null), bottom: 0 },
-    xAxis: { type: 'category', data: xValues, axisLabel: { rotate: xValues.length > 8 ? 30 : 0 } },
-    yAxis: { type: 'value' },
-    series: seriesData,
+    title: config.title ? { text: config.title, left: 'center', textStyle: { fontSize: 13, fontWeight: 700, color: '#0f172a' } } : undefined,
+    legend: { ...LEGEND_BASE, data: groups.filter(g => g !== null) },
+    xAxis: AXIS_X(xValues),
+    yAxis: AXIS_Y,
+    series: groups.map((g, i) => ({
+      name: g,
+      type: 'bar',
+      stack: 'total',
+      data: series[g],
+      barMaxWidth: 40,
+      itemStyle: {
+        color: resolveSeriesColor(g, seriesColorMap, i),
+        borderRadius: i === groups.length - 1 ? [5, 5, 0, 0] : [0, 0, 0, 0],
+      },
+    })),
   };
 }
 
@@ -199,14 +286,16 @@ function buildDonutOption(data, config) {
   const yKey = config.y;
   return {
     ...COMMON_THEME,
-    title: { text: config.title || '', left: 'center' },
-    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-    legend: { orient: 'vertical', left: 'left' },
+    title: config.title ? { text: config.title, left: 'center', textStyle: { fontSize: 13, fontWeight: 700, color: '#0f172a' } } : undefined,
+    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)', ...TOOLTIP_STYLE },
+    legend: { ...LEGEND_BASE, orient: 'vertical', left: 'left', bottom: 'auto', top: 'middle' },
     series: [{
       type: 'pie',
-      radius: ['40%', '70%'],
+      radius: ['42%', '68%'],
       data: data.map(row => ({ name: row[config.x], value: Number(row[yKey]) })),
-      emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.5)' } },
+      label: { fontSize: 11, color: AXIS_LABEL_COLOR },
+      itemStyle: { borderWidth: 3, borderColor: 'rgba(255,255,255,0.95)' },
+      emphasis: { itemStyle: { shadowBlur: 20, shadowColor: 'rgba(96,165,250,0.35)' } },
     }],
   };
 }
@@ -236,10 +325,11 @@ function buildHeatmapOption(data, config) {
   const groupKey = config.groupKey;
   const yKey = config.y;
 
-  const xValues = [...new Set(data.map(r => String(r[xKey])))].sort();
+  // SQL ORDER BY 순서를 유지하기 위해 sort 하지 않습니다.
+  const xValues = uniqueInOrder(data.map(r => String(r[xKey])));
   const yValues = groupKey
-    ? [...new Set(data.map(r => String(r[groupKey])))].sort()
-    : [...new Set(data.filter(r => r[yKey] !== undefined && r[yKey] !== null).map(r => String(r[yKey])))].sort();
+    ? uniqueInOrder(data.map(r => String(r[groupKey])))
+    : uniqueInOrder(data.filter(r => r[yKey] !== undefined && r[yKey] !== null).map(r => String(r[yKey])));
 
   const dataPoints = data.map(r => [
     xValues.indexOf(String(r[xKey])),

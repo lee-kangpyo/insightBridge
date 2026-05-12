@@ -1,11 +1,17 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Any, Optional
 
 
 class QueryRequest(BaseModel):
     question: str
+    base_year_enabled: bool = False
+
+
+class QueryOnceRequest(BaseModel):
+    question: str
+    limit: int = 20
 
 
 class ChartConfig(BaseModel):
@@ -470,3 +476,37 @@ class AdminGroupItem(BaseModel):
     use_yn: Optional[str] = None
     del_fg: str
     description: Optional[str] = None
+
+
+class ScreenTemplateItem(BaseModel):
+    template_id: int
+    name: str
+    slots: Optional[Any] = None
+    is_default: Optional[str] = None
+    reference_count: Optional[int] = None
+
+
+class ScreenTemplateSlotItem(BaseModel):
+    slot_id: str
+    template_id: int
+    item_id: Optional[str] = None
+    x_pos: Optional[int] = None
+    y_pos: Optional[int] = None
+    width: Optional[int] = None
+    height: Optional[int] = None
+    scr_nm: Optional[str] = None
+
+
+class ScreenTemplateCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1)
+    slots: list[dict[str, Any]]
+
+
+class ScreenTemplateCreateResponse(BaseModel):
+    template_id: int
+    name: str
+    slots: Optional[Any] = None
+
+
+class ScreenTemplateDeleteResponse(BaseModel):
+    ok: bool = True

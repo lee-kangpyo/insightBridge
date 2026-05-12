@@ -3,6 +3,31 @@ import pandas as pd
 from app.database import fetch_df
 
 
+class MenuError(Exception):
+    """Base exception for menu service errors."""
+    pass
+
+
+class MenuNotFoundError(MenuError):
+    """Raised when menu is not found."""
+    pass
+
+
+class MenuDeletedError(MenuError):
+    """Raised when menu is deleted."""
+    pass
+
+
+class MenuInactiveError(MenuError):
+    """Raised when menu is inactive."""
+    pass
+
+
+class MenuAccessDeniedError(MenuError):
+    """Raised when user has no permission to access menu."""
+    pass
+
+
 def _menu_id_int(menu_id) -> int | None:
     if menu_id is None:
         return None
@@ -70,6 +95,28 @@ def _sanitize_menu_record(record: dict) -> dict:
     return result
 
 
+async def get_nav_menus_service(user_cd: int) -> dict:
+    query = """
+        SELECT DISTINCT m.menu_id, m.menu_cd, m.menu_nm, m.parent_menu_id,
+                        m.menu_level, m.menu_path, m.screen_id, m.sort_order, m.use_yn, m.del_fg
+        FROM ts_grp_user gu
+        JOIN ts_grp_menu gm ON gu.grp_id = gm.grp_id
+        JOIN ts_menu_info m ON gm.menu_id = m.menu_id
+        WHERE gu.user_cd = $1 AND m.del_fg = 'N' AND m.use_yn = 'Y'
+        ORDER BY m.sort_order NULLS LAST, m.menu_id
+    """
+    df = await fetch_df(query, (user_cd,))
+
+    if df.empty:
+        flat_menus = []
+    else:
+        flat_menus = [
+            _sanitize_menu_record(row) for row in df.to_dict(orient="records")
+        ]
+
+    return {"menu_tree": treeify(flat_menus)}
+
+
 async def get_user_menus(user_cd: int) -> dict:
     query = """
         SELECT DISTINCT m.menu_id, m.menu_nm, m.parent_menu_id, m.sort_order
@@ -89,3 +136,69 @@ async def get_user_menus(user_cd: int) -> dict:
         ]
 
     return {"menu_tree": treeify(flat_menus)}
+
+
+async def verify_menu_access(menu_id: int, user_cd: int) -> dict:
+    """
+    Unified menu guard: checks menu status (active, not deleted)
+    and user permission via grp_menu mapping.
+    Returns the menu record if all checks pass.
+    Raises MenuNotFoundError if menu not found.
+    Raises MenuDeletedError if menu is deleted.
+    Raises MenuInactiveError if menu is inactive.
+    Raises MenuAccessDeniedError if user has no permission.
+    """
+    query_menu = """
+        SELECT menu_id, menu_cd, menu_nm, parent_menu_id, menu_level,
+               menu_path, screen_id, sort_order, use_yn, del_fg, subtitle, reg_dt
+        FROM ts_menu_info
+        WHERE menu_id = $1
+    """
+    df = await fetch_df(query_menu, (menu_id,))
+    if df.empty:
+        raise MenuNotFoundError()
+
+    menu = _sanitize_menu_record(df.to_dict(orient="records")[0])
+
+    if menu.get("del_fg") == "Y":
+        raise MenuDeletedError()
+
+    if menu.get("use_yn") != "Y":
+        raise MenuInactiveError()
+
+    query_perm = """
+        SELECT 1
+        FROM ts_grp_user gu
+        JOIN ts_grp_menu gm ON gu.grp_id = gm.grp_id
+        WHERE gu.user_cd = $1 AND gm.menu_id = $2
+        LIMIT 1
+    """
+    df_perm = await fetch_df(query_perm, (user_cd, menu_id))
+    if df_perm.empty:
+        raise MenuAccessDeniedError()
+
+    return menu
+
+
+async def verify_screen_access(screen_id: str, user_cd: int) -> dict:
+    """
+    Reverse-lookup screen access check: verify user has permission
+    to view the screen through any menu linked to it.
+    Raises MenuAccessDeniedError if no accessible menu found.
+    """
+    query_perm = """
+        SELECT 1
+        FROM ts_menu_info m
+        JOIN ts_grp_menu gm ON m.menu_id = gm.menu_id
+        JOIN ts_grp_user gu ON gm.grp_id = gu.grp_id
+        WHERE m.screen_id = $1
+          AND m.del_fg = 'N'
+          AND m.use_yn = 'Y'
+          AND gu.user_cd = $2
+        LIMIT 1
+    """
+    df_perm = await fetch_df(query_perm, (screen_id, user_cd))
+    if df_perm.empty:
+        raise MenuAccessDeniedError()
+
+    return {"screen_id": screen_id, "has_access": True}

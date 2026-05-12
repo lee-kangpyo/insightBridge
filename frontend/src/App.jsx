@@ -1,9 +1,8 @@
 import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RequireSysAdmRoute from "./components/RequireSysAdmRoute";
-import DashboardLayout from "./layouts/DashboardLayout";
 import MainLayout from "./layouts/MainLayout";
-import DashboardPage from "./pages/DashboardPage";
+
 import MainPage from "./pages/MainPage";
 import AdmissionPage from "./pages/AdmissionPage";
 import StudentCareerPage from "./pages/StudentCareerPage";
@@ -19,12 +18,18 @@ import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import PublicRoute from "./components/PublicRoute";
 import RoleMenuMatrix from "./pages/admin/RoleMenuMatrix";
-import UserRoleManager from "./pages/admin/UserRoleManager";
 import MenuManagement from "./pages/admin/MenuManagement";
+import { ContentsList, ContentsCreate } from "./pages/admin/ContentsManagement";
 import GroupManagement from "./pages/admin/GroupManagement";
 import RoleAuthorityMenu from "./pages/admin/RoleAuthorityMenu";
 import RoleUserManagement from "./pages/admin/RoleUserManagement";
 import UserManagement from "./pages/admin/UserManagement";
+import ChartGallery from "./pages/admin/ChartGallery";
+import ScreenManagementPage from "./pages/admin/ScreenManagementPage";
+import TemplateSelectPage from "./pages/admin/TemplateSelectPage";
+import SlotLayoutPage from "./pages/admin/SlotLayoutPage";
+import ScreenViewer from "./pages/ScreenViewer";
+import ItemsManagement from "./pages/admin/ItemsManagement";
 
 function App() {
   return (
@@ -127,28 +132,14 @@ function App() {
           </ProtectedRoute>
         }
       />
-      {!import.meta.env.PROD && (
-        <Route
-          path="/dashboard/legacy"
-          element={
-            <ProtectedRoute>
-              <DashboardLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<DashboardPage />} />
-        </Route>
-      )}
-      {!import.meta.env.PROD && (
-        <Route
-          path="/insights"
-          element={
-            <ProtectedRoute>
-              <QueryPage />
-            </ProtectedRoute>
-          }
-        />
-      )}
+      <Route
+        path="/insights"
+        element={
+          <ProtectedRoute>
+            <QueryPage />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/admin"
         element={
@@ -157,14 +148,41 @@ function App() {
           </RequireSysAdmRoute>
         }
       >
-        <Route index element={<MenuManagement />} />
         <Route path="role-menu" element={<RoleMenuMatrix />} />
         <Route path="users" element={<UserManagement />} />
         <Route path="menus" element={<MenuManagement />} />
+        <Route path="contents" element={<ContentsList />} />
+        <Route path="contents/create" element={<ContentsCreate />} />
         <Route path="groups" element={<GroupManagement />} />
         <Route path="role-authority-menu" element={<RoleAuthorityMenu />} />
         <Route path="role-users" element={<RoleUserManagement />} />
+        <Route path="chart-gallery" element={<ChartGallery />} />
+        <Route path="screen-config" element={<ScreenManagementPage />} />
+        <Route path="screen-config/new" element={<TemplateSelectPage />} />
+        <Route path="screen-config/edit/:scrId" element={<SlotLayoutPage />} />
+        <Route path="screen-config/:templateId" element={<SlotLayoutPage />} />
+        <Route path="items" element={<ItemsManagement />} />
       </Route>
+      <Route
+        path="/view/menu/:menuId"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <ScreenViewer />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/view/screen/:scrId"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <ScreenViewer />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
