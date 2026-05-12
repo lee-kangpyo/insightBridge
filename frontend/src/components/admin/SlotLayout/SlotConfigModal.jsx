@@ -170,7 +170,7 @@ export default function SlotConfigModal({ slot, assignment, items, onSave, onCan
             <div className="flex items-center justify-center flex-1">
               {selectedItem ? (
                 <div className="w-full h-full p-4">
-                  <SlotItemRenderer itemId={selectedItem.item_id} baseYear={selectedBaseYear} />
+                  <SlotItemRenderer itemId={selectedItem.item_id} baseYear={selectedItem.year_dependent ? selectedBaseYear : undefined} />
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center text-on-surface-variant">
