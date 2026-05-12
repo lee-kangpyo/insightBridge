@@ -67,6 +67,16 @@ export default {
         "login-headline": ["Noto Sans KR", "Manrope", "sans-serif"],
         "login-body": ["Noto Sans KR", "Inter", "sans-serif"],
       },
+      keyframes: {
+        "chart-tile-in": {
+          "0%": { opacity: "0", transform: "translateY(16px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+      },
+      animation: {
+        "chart-tile-in":
+          "chart-tile-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both",
+      },
     },
   },
   plugins: [],

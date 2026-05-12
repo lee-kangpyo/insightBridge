@@ -6,14 +6,6 @@ import { ChartDetail, GridDetail, CardDetail, SqlDetail } from '../../content-de
 // (주의) 카드 equals 미리보기는 selectCardRow(단일 행 선택) 대신
 // sqlRows를 직접 필터링해서 "일치하는 모든 행"을 보여주도록 합니다.
 
-const CARD_ROW_SELECTOR_MODES = [
-  { value: 'first', label: '첫 행' },
-  { value: 'last', label: '마지막 행' },
-  { value: 'max', label: '최대값 행' },
-  { value: 'min', label: '최소값 행' },
-  { value: 'equals', label: '값 일치 행' },
-];
-
 export function FormTab({ selectedCnts, onSelectCnts, onContentDetailChange }) {
   const [contents, setContents] = useState([]);
   const [filter, setFilter] = useState('all');
@@ -475,6 +467,7 @@ export function MappingTab({
   const [contentDetail, setContentDetail] = useState(contentDetailProp || null);
   const [draggingColumn, setDraggingColumn] = useState(null);
   const [selectedCardFieldId, setSelectedCardFieldId] = useState(null);
+  const [selectedCardCellByFieldId, setSelectedCardCellByFieldId] = useState({});
 
   useEffect(() => {
     // 부모(ScreenItemFormModal)에서 sqlPreviewData를 기본으로 로드하도록 변경했으므로,
@@ -562,93 +555,7 @@ export function MappingTab({
   const isCardType = contentType === 'card';
   const sqlRows = Array.isArray(sqlPreviewData?.rows) ? sqlPreviewData.rows : [];
   const cardFields = widgetFields.filter((field) => field.id.startsWith('card_item_'));
-  const rowSelector = mappingJson?.mapping?.rowSelector || {};
-  const storedRowSelectorMode =
-    typeof rowSelector?.mode === 'string' && rowSelector.mode.trim() ? rowSelector.mode : 'first';
-  const isWhereMode = storedRowSelectorMode === 'where';
-  // 드롭다운에서는 where를 숨기므로, 화면 선택 값은 equals로 보이게 매핑합니다.
-  const rowSelectorMode = isWhereMode ? 'equals' : storedRowSelectorMode;
-  const rowSelectorField = typeof rowSelector?.field === 'string' ? rowSelector.field : '';
-  const rowSelectorValue = rowSelector?.value == null ? '' : String(rowSelector.value);
-  const rowSelectorWhere = Array.isArray(rowSelector?.where)
-    ? rowSelector.where
-        .map((cond) => ({
-          field: typeof cond?.field === 'string' ? cond.field : '',
-          value: cond?.value == null ? '' : String(cond.value),
-        }))
-    : [];
-
-  // 요약 카드: equals(값 일치) 조건이 실제로 매칭되면 해당 "모든 행"을 미리보기로 보여줍니다.
-  const cardEqualsMatchedRows = useMemo(() => {
-    if (!isCardType) return [];
-    if (storedRowSelectorMode !== 'equals') return [];
-
-    const targetField = rowSelectorField.trim();
-    const targetValue = rowSelectorValue.trim();
-    if (!targetField) return [];
-    if (!targetValue) return [];
-
-    return sqlRows.filter((r) => {
-      const v = r?.[targetField];
-      if (v == null || v === '') return false;
-      return String(v).trim() === targetValue;
-    });
-  }, [isCardType, storedRowSelectorMode, rowSelectorField, rowSelectorValue, sqlRows]);
-
-  const previewSqlRows = useMemo(() => {
-    if (cardEqualsMatchedRows.length > 0) return cardEqualsMatchedRows.slice(0, 15);
-    return sqlRows.slice(0, 15);
-  }, [cardEqualsMatchedRows, sqlRows]);
-
-  const updateCardRowSelector = (patch) => {
-    const next = { ...(mappingJson || {}) };
-    if (!next.mapping || typeof next.mapping !== 'object') {
-      next.mapping = {};
-    }
-    const prevSelector =
-      next.mapping.rowSelector && typeof next.mapping.rowSelector === 'object'
-        ? next.mapping.rowSelector
-        : {};
-    const merged = { ...prevSelector, ...patch };
-    const mode =
-      typeof merged.mode === 'string' && merged.mode.trim() ? merged.mode.trim() : 'first';
-    const field = typeof merged.field === 'string' ? merged.field : '';
-    const value = merged.value;
-
-    const normalized = { mode, field };
-    if (mode === 'equals') {
-      normalized.value = value == null ? '' : String(value);
-    }
-    if (mode === 'where') {
-      const nextWhere = Array.isArray(merged.where)
-        ? merged.where
-            .map((cond) => ({
-              field: typeof cond?.field === 'string' ? cond.field : '',
-              value: cond?.value == null ? '' : String(cond.value),
-            }))
-        : [];
-      normalized.where = nextWhere;
-    }
-
-    next.mapping.rowSelector = normalized;
-    onMappingJsonChange(next);
-  };
-
-  const updateCardRowSelectorWhereItem = (index, patch) => {
-    const base = rowSelectorWhere.length > 0 ? rowSelectorWhere : [{ field: '', value: '' }];
-    const nextWhere = base.map((it, i) => (i === index ? { ...it, ...patch } : it));
-    updateCardRowSelector({ where: nextWhere });
-  };
-
-  const addCardRowSelectorWhereItem = () => {
-    const nextWhere = [...rowSelectorWhere, { field: '', value: '' }];
-    updateCardRowSelector({ where: nextWhere });
-  };
-
-  const removeCardRowSelectorWhereItem = (index) => {
-    const nextWhere = rowSelectorWhere.filter((_, i) => i !== index);
-    updateCardRowSelector({ where: nextWhere });
-  };
+  const previewSqlRows = useMemo(() => sqlRows.slice(0, 15), [sqlRows]);
 
   const handleDragStart = (column) => {
     if (isCardType) return; // 요약 카드(Summary Card)는 클릭 매핑만 허용
@@ -711,13 +618,12 @@ export function MappingTab({
     }
 
     const key = fieldId.substring(10);
+    const nextRowSelector =
+      rowSelectorWhere.length > 0 ? { mode: 'where', where: rowSelectorWhere } : { mode: 'first' };
     nextMapping.mapping.items[key] = {
       ...(nextMapping.mapping.items[key] || {}),
       field: column,
-      rowSelector:
-        rowSelectorWhere.length > 0
-          ? { mode: 'where', where: rowSelectorWhere }
-          : { mode: 'first' },
+      rowSelector: nextRowSelector,
     };
 
     onMappingJsonChange(nextMapping);
@@ -775,131 +681,6 @@ export function MappingTab({
         <h3 className="font-semibold text-on-surface mb-4">맵핑 설정</h3>
         {isCardType && (
           <div className="mb-4 rounded-lg border border-outline/20 bg-surface-container-low p-3 space-y-3">
-            <div className="text-sm font-medium text-on-surface">카드 대표 행 선택</div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs text-on-surface-variant mb-1">선택 방식</label>
-                <select
-                  value={rowSelectorMode}
-                  onChange={(e) => updateCardRowSelector({ mode: e.target.value })}
-                  className="w-full px-2.5 py-2 text-sm bg-surface rounded-lg border border-outline/20 focus:outline-none focus:border-primary"
-                >
-                  {CARD_ROW_SELECTOR_MODES.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {(storedRowSelectorMode === 'max' ||
-                storedRowSelectorMode === 'min' ||
-                storedRowSelectorMode === 'equals') && (
-                <div>
-                  <label className="block text-xs text-on-surface-variant mb-1">기준 컬럼</label>
-                  <select
-                    value={rowSelectorField}
-                    onChange={(e) => updateCardRowSelector({ field: e.target.value })}
-                    className="w-full px-2.5 py-2 text-sm bg-surface rounded-lg border border-outline/20 focus:outline-none focus:border-primary"
-                  >
-                    <option value="">선택</option>
-                    {columns.map((col) => (
-                      <option key={col} value={col}>
-                        {col}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              {storedRowSelectorMode === 'equals' && (
-                <div>
-                  <label className="block text-xs text-on-surface-variant mb-1">일치 값</label>
-                  <input
-                    type="text"
-                    value={rowSelectorValue}
-                    onChange={(e) => updateCardRowSelector({ value: e.target.value })}
-                    placeholder="예: 2025"
-                    className="w-full px-2.5 py-2 text-sm bg-surface rounded-lg border border-outline/20 focus:outline-none focus:border-primary"
-                  />
-                  <div className="mt-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!rowSelectorField) return;
-                        updateCardRowSelector({
-                          mode: 'where',
-                          where: [{ field: rowSelectorField, value: rowSelectorValue }],
-                        });
-                      }}
-                      disabled={!rowSelectorField}
-                      className="w-full px-2.5 py-2 text-xs rounded-lg border border-outline/20 bg-surface hover:bg-surface-container disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      조건 추가 (AND)
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-            {isWhereMode && (
-              <div className="space-y-2">
-                <div className="text-xs text-on-surface-variant">
-                  조건 조합 행(AND): 모든 조건을 만족하는 첫 행을 선택합니다.
-                </div>
-                {(rowSelectorWhere.length > 0 ? rowSelectorWhere : [{ field: '', value: '' }]).map(
-                  (cond, idx) => (
-                    <div key={`${idx}-${cond.field}`} className="grid grid-cols-1 md:grid-cols-12 gap-2">
-                      <div className="md:col-span-5">
-                        <label className="block text-xs text-on-surface-variant mb-1">컬럼</label>
-                        <select
-                          value={cond.field}
-                          onChange={(e) => updateCardRowSelectorWhereItem(idx, { field: e.target.value })}
-                          className="w-full px-2.5 py-2 text-sm bg-surface rounded-lg border border-outline/20 focus:outline-none focus:border-primary"
-                        >
-                          <option value="">선택</option>
-                          {columns.map((col) => (
-                            <option key={col} value={col}>
-                              {col}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="md:col-span-5">
-                        <label className="block text-xs text-on-surface-variant mb-1">값</label>
-                        <input
-                          type="text"
-                          value={cond.value}
-                          onChange={(e) => updateCardRowSelectorWhereItem(idx, { value: e.target.value })}
-                          placeholder="예: 전국평균"
-                          className="w-full px-2.5 py-2 text-sm bg-surface rounded-lg border border-outline/20 focus:outline-none focus:border-primary"
-                        />
-                      </div>
-                      <div className="md:col-span-2 flex items-end">
-                        <button
-                          type="button"
-                          onClick={() => removeCardRowSelectorWhereItem(idx)}
-                          className="w-full px-2.5 py-2 text-sm rounded-lg border border-outline/20 bg-surface hover:bg-surface-container disabled:opacity-50"
-                          disabled={rowSelectorWhere.length <= 1}
-                        >
-                          삭제
-                        </button>
-                      </div>
-                    </div>
-                  )
-                )}
-                <div>
-                  <button
-                    type="button"
-                    onClick={addCardRowSelectorWhereItem}
-                    className="px-3 py-1.5 text-xs rounded-lg border border-outline/20 bg-surface hover:bg-surface-container"
-                  >
-                    조건 추가
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-        {isCardType && (
-          <div className="mb-4 rounded-lg border border-outline/20 bg-surface-container-low p-3 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-medium text-on-surface">클릭 매핑</div>
@@ -911,6 +692,15 @@ export function MappingTab({
                 선택 항목: <span className="font-medium text-on-surface">{selectedCardFieldId || '없음'}</span>
               </div>
             </div>
+            {selectedCardFieldId && selectedCardCellByFieldId?.[selectedCardFieldId] && (
+              <div className="text-xs text-on-surface-variant">
+                선택 셀:{' '}
+                <span className="font-mono text-on-surface">
+                  row={selectedCardCellByFieldId[selectedCardFieldId].rowIndex + 1}, col=
+                  {selectedCardCellByFieldId[selectedCardFieldId].col}
+                </span>
+              </div>
+            )}
 
             {cardFields.length > 0 && (
               <div className="flex flex-wrap gap-2">
@@ -980,7 +770,15 @@ export function MappingTab({
                   <thead>
                     <tr className="border-b border-outline/15 bg-surface-container-low">
                       {columns.map((col) => (
-                        <th key={col} className="px-2 py-2 text-left whitespace-nowrap">
+                        <th
+                          key={col}
+                          className={`px-2 py-2 text-left whitespace-nowrap ${
+                            selectedCardFieldId &&
+                            selectedCardCellByFieldId?.[selectedCardFieldId]?.col === col
+                              ? 'bg-surface-container-high text-on-surface'
+                              : ''
+                          }`}
+                        >
                           {col}
                         </th>
                       ))}
@@ -988,21 +786,39 @@ export function MappingTab({
                   </thead>
                   <tbody>
                     {previewSqlRows.map((row, rowIndex) => (
-                      <tr key={rowIndex} className="border-b border-outline/10">
+                      <tr
+                        key={rowIndex}
+                        className={`border-b border-outline/10 ${
+                          selectedCardFieldId &&
+                          selectedCardCellByFieldId?.[selectedCardFieldId]?.rowIndex === rowIndex
+                            ? 'bg-surface-container-lowest'
+                            : ''
+                        }`}
+                      >
                         {columns.map((col) => {
                           const value = row?.[col];
                           const clickable = !!selectedCardFieldId;
+                          const isSelectedCell =
+                            !!selectedCardFieldId &&
+                            selectedCardCellByFieldId?.[selectedCardFieldId]?.rowIndex === rowIndex &&
+                            selectedCardCellByFieldId?.[selectedCardFieldId]?.col === col;
                           return (
                             <td key={col} className="px-2 py-1.5">
                               <button
                                 type="button"
                                 disabled={!clickable}
-                                onClick={() => handleCardCellMapping(selectedCardFieldId, row, col)}
-                                className={`w-full rounded px-2 py-1 text-left ${
+                                onClick={() => {
+                                  handleCardCellMapping(selectedCardFieldId, row, col);
+                                  setSelectedCardCellByFieldId((prev) => ({
+                                    ...(prev || {}),
+                                    [selectedCardFieldId]: { rowIndex, col },
+                                  }));
+                                }}
+                                className={`w-full rounded px-2 py-1 text-left transition-colors ${
                                   clickable
                                     ? 'hover:bg-surface-container-high/70 cursor-pointer'
                                     : 'cursor-not-allowed opacity-70'
-                                }`}
+                                } ${isSelectedCell ? 'bg-surface-container-high ring-1 ring-primary/50' : ''}`}
                                 title={
                                   clickable
                                     ? `${selectedCardFieldId}에 ${col} 값을 연결`

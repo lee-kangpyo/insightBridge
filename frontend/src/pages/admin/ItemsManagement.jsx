@@ -93,7 +93,7 @@ export default function ItemsManagement() {
         }
       />
 
-      <main className="w-full max-w-[1200px] mx-auto pb-12">
+      <main className="w-full max-w-[1600px] mx-auto pb-12">
         {loadError && (
           <div className="mb-4 p-3 rounded-lg bg-error-container text-error text-sm">{loadError}</div>
         )}
@@ -102,15 +102,15 @@ export default function ItemsManagement() {
           <div className="lg:col-span-6">
             <div className="rounded-xl border border-outline/20 bg-surface-container-lowest overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm table-fixed">
                   <thead>
                     <tr className="border-b border-outline/20 bg-surface-container text-on-surface-variant text-left">
                       <th className="py-3 px-4 font-semibold w-24">ID</th>
-                      <th className="py-3 px-4 font-semibold">이름</th>
-                      <th className="py-3 px-4 font-semibold w-28">형태 ID</th>
-                      <th className="py-3 px-4 font-semibold w-28">SQL ID</th>
-                      <th className="py-3 px-4 font-semibold w-32">맵핑</th>
-                      <th className="py-3 px-4 font-semibold w-40 text-right">작업</th>
+                      <th className="py-3 px-4 font-semibold min-w-[260px]">이름</th>
+                      <th className="py-3 px-4 font-semibold w-24 whitespace-nowrap">형태 ID</th>
+                      <th className="py-3 px-4 font-semibold w-24 whitespace-nowrap">SQL ID</th>
+                      <th className="py-3 px-4 font-semibold w-24 whitespace-nowrap">맵핑</th>
+                      <th className="py-3 px-4 font-semibold w-32 text-right whitespace-nowrap">작업</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -140,14 +140,18 @@ export default function ItemsManagement() {
                           }`}
                         >
                           <td className="py-3 px-4 font-mono text-on-surface-variant">{row.item_id}</td>
-                          <td className="py-3 px-4 font-medium text-on-surface">{row.item_nm}</td>
-                          <td className="py-3 px-4 text-on-surface-variant font-mono text-xs">
+                          <td className="py-3 px-4 font-medium text-on-surface min-w-[260px] break-words">
+                            {row.item_nm}
+                          </td>
+                          <td className="py-3 px-4 text-on-surface-variant font-mono text-xs whitespace-nowrap">
                             {row.shape_cnts_id ?? '—'}
                           </td>
-                          <td className="py-3 px-4 text-on-surface-variant font-mono text-xs">
+                          <td className="py-3 px-4 text-on-surface-variant font-mono text-xs whitespace-nowrap">
                             {row.sql_cnts_id ?? '—'}
                           </td>
-                          <td className="py-3 px-4 text-on-surface-variant">{mappingSummary(row.mapping_json)}</td>
+                          <td className="py-3 px-4 text-on-surface-variant whitespace-nowrap">
+                            {mappingSummary(row.mapping_json)}
+                          </td>
                           <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"

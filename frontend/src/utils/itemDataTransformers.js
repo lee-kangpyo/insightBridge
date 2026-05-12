@@ -346,20 +346,21 @@ export function buildCardPreviewModel(itemType, item, shapeContent, preview) {
   if (!m || typeof m !== 'object') return null;
 
   const title = shapeContent?.data?.cardTitle || item?.item_nm || '카드';
-  const defaultSelected = selectCardRow(rows, m.rowSelector);
-  const defaultRow = defaultSelected.row;
-  const sources = [`rowSelector = ${defaultSelected.reason}`];
+  const singleRow = rows.length === 1 ? rows[0] : null;
+  const sources = [];
 
   if (m.value && typeof m.value === 'string') {
     const valueSelector =
-      m.valueRowSelector && typeof m.valueRowSelector === 'object' ? m.valueRowSelector : m.rowSelector;
-    const selectedForValue = selectCardRow(rows, valueSelector);
-    const targetRow = selectedForValue.row;
+      m.valueRowSelector && typeof m.valueRowSelector === 'object' ? m.valueRowSelector : null;
+    const selectedForValue = valueSelector ? selectCardRow(rows, valueSelector) : null;
+    const targetRow = selectedForValue?.row || singleRow || rows[0] || null;
     if (!targetRow) return null;
     const v = getRowValue(targetRow, m.value);
     const shapeItem = Array.isArray(shapeContent?.data?.items) ? shapeContent.data.items[0] : null;
     const spec = resolveCardFormatSpec(m, shapeItem);
-    sources.push(`value.rowSelector = ${selectedForValue.reason}`);
+    if (selectedForValue?.reason) sources.push(`value.rowSelector = ${selectedForValue.reason}`);
+    else if (singleRow) sources.push('value.row = implicit:single-row');
+    else sources.push('value.row = implicit:first-row');
     sources.push(`mapping.value = ${m.value}`);
     return { title, headline: formatCardValue(v, spec), rows: [], sources };
   }
@@ -376,9 +377,9 @@ export function buildCardPreviewModel(itemType, item, shapeContent, preview) {
     const labelRaw = it?.label || shapeContent?.data?.items?.[idx]?.label || '';
     const label = typeof labelRaw === 'string' ? labelRaw : String(labelRaw || '');
     const labelTrim = label.trim();
-    const itemSelector = it?.rowSelector && typeof it.rowSelector === 'object' ? it.rowSelector : m.rowSelector;
-    const selectedForItem = selectCardRow(rows, itemSelector);
-    const itemRow = selectedForItem.row || defaultRow;
+    const itemSelector = it?.rowSelector && typeof it.rowSelector === 'object' ? it.rowSelector : null;
+    const selectedForItem = itemSelector ? selectCardRow(rows, itemSelector) : null;
+    const itemRow = selectedForItem?.row || singleRow || null;
     const v = field && itemRow ? getRowValue(itemRow, field) : null;
     const shapeItem = Array.isArray(shapeContent?.data?.items) ? shapeContent.data.items[idx] : null;
     const spec = resolveCardFormatSpec(it, shapeItem);
@@ -386,7 +387,9 @@ export function buildCardPreviewModel(itemType, item, shapeContent, preview) {
 
     if (field) sources.push(`mapping.items[${idx}].field = ${field}`);
     else sources.push(`mapping.items[${idx}]`);
-    sources.push(`mapping.items[${idx}].rowSelector = ${selectedForItem.reason}`);
+    if (selectedForItem?.reason) sources.push(`mapping.items[${idx}].rowSelector = ${selectedForItem.reason}`);
+    else if (singleRow) sources.push(`mapping.items[${idx}].row = implicit:single-row`);
+    else sources.push(`mapping.items[${idx}].row = unset`);
 
     if (!labelTrim && !headlineTaken) {
       headline = formattedValue;
