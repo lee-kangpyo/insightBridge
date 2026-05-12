@@ -11,7 +11,7 @@ function slotToGridStyle(slot) {
   };
 }
 
-export default function ScreenRenderer({ slots, className = '', style = {} }) {
+export default function ScreenRenderer({ slots, baseYear, className = '', style = {} }) {
   return (
     <div
       className={`grid gap-4 bg-surface-container-lowest rounded-2xl border border-outline/10 p-6 shadow-lg ${className}`}
@@ -28,7 +28,7 @@ export default function ScreenRenderer({ slots, className = '', style = {} }) {
             className="bg-surface rounded-xl border border-outline/15 overflow-hidden"
             style={slotToGridStyle(slot)}
           >
-            <SlotItemRenderer itemId={slot.item_id} />
+            <SlotItemRenderer itemId={slot.item_id} baseYear={baseYear} />
           </div>
         ) : null
       )}

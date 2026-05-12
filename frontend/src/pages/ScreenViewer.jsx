@@ -7,6 +7,7 @@ import StatusChips from '../components/main/StatusChips';
 import ScreenRenderer from '../components/admin/ScreenRenderer';
 import { useAuthStore } from '../stores/authStore';
 import { useUniversityContext } from '../hooks/useUniversityContext';
+import { DEFAULT_BASE_YEAR, BASE_YEAR_OPTIONS } from '../constants/baseYear';
 
 function mergeSlots(templateSlots, assignedSlots) {
   const assignedMap = new Map();
@@ -51,6 +52,7 @@ export default function ScreenViewer() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [viewInfo, setViewInfo] = useState(null);
+  const [selectedBaseYear, setSelectedBaseYear] = useState(DEFAULT_BASE_YEAR);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -139,6 +141,9 @@ export default function ScreenViewer() {
         <PageTitleSection
           title={title}
           subtitle={subtitle}
+          baseYear={viewInfo?.year_dependent ? selectedBaseYear : null}
+          baseYearOptions={viewInfo?.year_dependent ? BASE_YEAR_OPTIONS : undefined}
+          onBaseYearChange={viewInfo?.year_dependent ? setSelectedBaseYear : undefined}
         />
 
         {menuId && statusChips.length > 0 && (
@@ -147,6 +152,7 @@ export default function ScreenViewer() {
 
         <ScreenRenderer
           slots={slots}
+          baseYear={viewInfo?.year_dependent ? selectedBaseYear : null}
           className="border-white/50 bg-white/35 shadow-2xl shadow-black/5 backdrop-blur-2xl"
           style={{
             gridTemplateRows: 'repeat(6, minmax(120px, 1fr))',

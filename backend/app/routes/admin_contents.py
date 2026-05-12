@@ -180,9 +180,14 @@ async def post_admin_contents_preview_sql(body: PreviewSqlBody, _: dict = Depend
 
 
 @router.get("/admin/contents/{cnts_id}/preview")
-async def get_admin_contents_preview(cnts_id: int, _: dict = Depends(require_sys_adm)):
+async def get_admin_contents_preview(
+    cnts_id: int,
+    base_year: Optional[int] = Query(None),
+    _: dict = Depends(require_sys_adm),
+):
     try:
-        result = await execute_sql_preview(cnts_id)
+        ctx = {"base_year": base_year} if base_year is not None else None
+        result = await execute_sql_preview(cnts_id, ctx=ctx)
         return result
     except LookupError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="컨텐츠를 찾을 수 없습니다.")

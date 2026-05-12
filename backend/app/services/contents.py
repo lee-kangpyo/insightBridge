@@ -7,6 +7,7 @@ import asyncpg
 import pandas as pd
 from app.database import fetch_df, fetch_df_readonly, get_pool
 from app.utils.sql_preview_validation import prepare_admin_sql_preview
+from app.utils.sql_placeholder import substitute_placeholders
 
 ContentsType = Literal["chart", "grid", "card", "sql"]
 
@@ -609,14 +610,18 @@ async def get_contents_detail(cnts_id: int, tp: ContentsType) -> dict[str, Any]:
     return {}
 
 
-async def preview_sql_text(sql: str) -> dict[str, Any]:
+async def preview_sql_text(sql: str, ctx: dict | None = None) -> dict[str, Any]:
     """
     임의 SQL 문자열을 실행해 preview 결과를 반환합니다(관리자 전용 API에서 사용).
     pglast로 단일 SELECT만 허용하고, 읽기 전용 DB 풀(default_transaction_read_only)에서 실행합니다.
     최대 100개의 row만 반환하며, truncated 플래그를 포함합니다.
+    ctx가 제공되면 substitute_placeholders로 플레이스홀더 치환 후 pglast 검증을 수행합니다.
     """
     try:
-        limited_sql = prepare_admin_sql_preview(sql)
+        from datetime import datetime
+        default_ctx = {"base_year": datetime.now().year}
+        resolved_sql = substitute_placeholders(sql, ctx or default_ctx)
+        limited_sql = prepare_admin_sql_preview(resolved_sql)
         df = await fetch_df_readonly(limited_sql, ())
 
         columns = list(df.columns)
@@ -633,10 +638,11 @@ async def preview_sql_text(sql: str) -> dict[str, Any]:
         raise ValueError(f"sql_execution_error: {str(e)}") from e
 
 
-async def execute_sql_preview(cnts_id: int) -> dict[str, Any]:
+async def execute_sql_preview(cnts_id: int, ctx: dict | None = None) -> dict[str, Any]:
     """
     SQL 콘텐츠의 SQL을 실행하여 preview 결과를 반환합니다.
     최대 100개의 row만 반환하며, truncated 플래그를 포함합니다.
+    ctx가 제공되면 preview_sql_text에 전달되어 플레이스홀더 치환에 사용됩니다.
     """
     master = await get_contents_master(cnts_id)
     if master.cnts_tp != "sql":
@@ -646,7 +652,7 @@ async def execute_sql_preview(cnts_id: int) -> dict[str, Any]:
     if not raw_sql:
         raise ValueError("empty_sql")
 
-    return await preview_sql_text(raw_sql)
+    return await preview_sql_text(raw_sql, ctx=ctx)
 
 
 async def soft_delete_contents(cnts_id: int) -> None:

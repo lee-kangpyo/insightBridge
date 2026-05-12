@@ -6,6 +6,7 @@ from typing import Any, Optional
 
 class QueryRequest(BaseModel):
     question: str
+    base_year_enabled: bool = False
 
 
 class QueryOnceRequest(BaseModel):

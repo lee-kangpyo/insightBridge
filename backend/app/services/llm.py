@@ -3,7 +3,8 @@ from typing import Any, AsyncGenerator, Optional, Tuple
 
 from ..config import settings
 from . import schema as schema_service
-from .chain import create_sql_chain, run_sql_chain, run_sql_chain_multi, normalize_sql_for_execution
+from langchain_core.messages import SystemMessage
+from .chain import create_sql_chain, run_sql_chain, run_sql_chain_multi, normalize_sql_for_execution, BASE_YEAR_PROMPT_SUFFIX
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +34,12 @@ async def get_lcel_chain():
     return _lcel_chain
 
 
-async def generate_sql(question: str) -> tuple[Optional[str], Optional[str], Optional[dict]]:
+async def generate_sql(question: str, base_year_enabled: bool = False) -> tuple[Optional[str], Optional[str], Optional[dict]]:
     """Generate SQL from user question using LCEL Chain.
+    
+    Args:
+        question: 사용자 질문
+        base_year_enabled: True면 시스템 프롬프트에 {{base_year}} 사용 지시문 추가
     
     Returns:
         (sql, message, chart_config)
@@ -46,6 +51,22 @@ async def generate_sql(question: str) -> tuple[Optional[str], Optional[str], Opt
 
     try:
         chain_info = await get_lcel_chain()
+
+        if base_year_enabled:
+            original_content = chain_info["prompt"].content
+            chain_info = {
+                **chain_info,
+                "prompt": SystemMessage(
+                    content=f"{BASE_YEAR_PROMPT_SUFFIX}\n\n{original_content}"
+                ),
+            }
+            # 사용자 질문 앞에 강력한 지시사항 추가
+            question = (
+                f"[SYSTEM: 기준연도 필터링 모드 활성화됨. 연도별 추이/비교를 묻는 것이 아니라면 "
+                f"반드시 WHERE 절에 {{{{base_year}}}} 플레이스홀더를 포함하십시오. 연도 숫자를 직접 쓰지 마세요.]\n"
+                f"{question}"
+            )
+
         sql, tool_calls_detected, reason, chart_config = await run_sql_chain(question, chain_info)
         if sql:
             logger.info(
