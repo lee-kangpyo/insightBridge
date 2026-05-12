@@ -5,6 +5,8 @@ from typing import Any, Optional
 from app.database import fetch_df, get_pool
 from app.services.mapping_validator import validate_mapping_json, MappingValidationError
 
+_YEAR_DEPENDENT_CASE = "CASE WHEN c.user_sql ~ '{{[[:space:]]*base_year[[:space:]]*}}' THEN true ELSE false END AS year_dependent"
+
 
 async def create_item(
     item_nm: str,
@@ -86,7 +88,7 @@ async def update_item(
 
 
 async def get_item(item_id: int) -> Optional[dict]:
-    query = """
+    query = f"""
         SELECT
             i.item_id,
             i.item_nm,
@@ -95,7 +97,7 @@ async def get_item(item_id: int) -> Optional[dict]:
             i.mapping_json,
             i.reg_dt,
             i.mod_dt,
-            CASE WHEN c.user_sql ~ '{{[[:space:]]*base_year[[:space:]]*}}' THEN true ELSE false END AS year_dependent
+            {_YEAR_DEPENDENT_CASE}
         FROM ts_scr_item i
         LEFT JOIN ts_cnts_info c ON i.sql_cnts_id = c.cnts_id
         WHERE i.item_id = $1 AND i.del_fg = 'N'
@@ -110,7 +112,7 @@ async def get_item(item_id: int) -> Optional[dict]:
 
 
 async def list_items() -> list[dict]:
-    query = """
+    query = f"""
         SELECT
             i.item_id,
             i.item_nm,
@@ -119,7 +121,7 @@ async def list_items() -> list[dict]:
             i.mapping_json,
             i.reg_dt,
             i.mod_dt,
-            CASE WHEN c.user_sql ~ '{{[[:space:]]*base_year[[:space:]]*}}' THEN true ELSE false END AS year_dependent
+            {_YEAR_DEPENDENT_CASE}
         FROM ts_scr_item i
         LEFT JOIN ts_cnts_info c ON i.sql_cnts_id = c.cnts_id
         WHERE i.del_fg = 'N'

@@ -16,7 +16,13 @@ def _readonly_pool_dsn() -> str:
 async def get_pool() -> asyncpg.Pool:
     global _pool
     if _pool is None:
-        _pool = await asyncpg.create_pool(settings.database_url)
+        _pool = await asyncpg.create_pool(
+            settings.database_url,
+            min_size=1,
+            max_size=10,
+            max_inactive_connection_lifetime=300,  # 5분 유휴 시 자동 회수
+            command_timeout=60,
+        )
     return _pool
 
 
@@ -30,6 +36,10 @@ async def get_pool_readonly() -> asyncpg.Pool:
     if _pool_readonly is None:
         _pool_readonly = await asyncpg.create_pool(
             _readonly_pool_dsn(),
+            min_size=1,
+            max_size=5,
+            max_inactive_connection_lifetime=300,  # 5분 유휴 시 자동 회수
+            command_timeout=60,
             server_settings={"default_transaction_read_only": "on"},
         )
     return _pool_readonly
