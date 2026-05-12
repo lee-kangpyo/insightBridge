@@ -1,15 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { getItemRender } from '../services/adminApi';
 import ChartRenderer from './ChartRenderer';
 import { CompositeKpiCardPreview } from './admin/items/Phase1ItemPreview';
 
-function SlotItemRenderer({ itemId, baseYear }) {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [usedBaseYear, setUsedBaseYear] = useState(null);
-
-  const EmptyState = ({ year }) => (
+function EmptyState({ year }) {
+  return (
     <div className="w-full h-full flex flex-col items-center justify-center text-on-surface-variant p-8 text-center">
       <div className="text-4xl mb-4 opacity-40">📅</div>
       <p className="text-sm">
@@ -18,6 +13,13 @@ function SlotItemRenderer({ itemId, baseYear }) {
       <p className="text-xs mt-1 opacity-70">다른 연도를 선택해 주세요.</p>
     </div>
   );
+}
+
+function SlotItemRenderer({ itemId, baseYear }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [usedBaseYear, setUsedBaseYear] = useState(null);
 
   const hasRows = data?.rows && data.rows.length > 0;
   const hasChartData = data?.type === 'chart' && data?.data && Array.isArray(data.data) && data.data.length > 0;

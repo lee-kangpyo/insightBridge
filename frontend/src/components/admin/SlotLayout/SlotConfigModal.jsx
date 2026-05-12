@@ -34,6 +34,9 @@ export default function SlotConfigModal({ slot, assignment, items, onSave, onCan
   }, [items, searchText, typeFilter]);
 
   const handleSelectItem = (item) => {
+    if (selectedItem?.item_id !== item.item_id) {
+      setSelectedBaseYear(currentYear - 1);
+    }
     setSelectedItem(item);
   };
 
