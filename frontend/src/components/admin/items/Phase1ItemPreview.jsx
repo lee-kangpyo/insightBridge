@@ -7,6 +7,7 @@ import {
   handleApiError,
 } from "../../../services/adminApi";
 import ChartRenderer from "../../ChartRenderer";
+import YearSelector from "../../common/YearSelector";
 import {
   SQL_PREVIEW_MAX_ROWS,
   buildChartPreviewModel,
@@ -14,6 +15,7 @@ import {
   buildCardPreviewModel,
   clampPreviewRows,
 } from "../../../utils/itemDataTransformers";
+import YearDependentBadge from "../../common/YearDependentBadge";
 
 function chipClass(kind) {
   const base =
@@ -138,7 +140,8 @@ export function CompositeKpiCardPreview({ title, headline, rows, sources }) {
 }
 
 export default function Phase1ItemPreview({ item }) {
-  const [baseYear, setBaseYear] = useState(new Date().getFullYear());
+  const currentYear = new Date().getFullYear();
+  const [baseYear, setBaseYear] = useState(currentYear - 1);
   const [shapeContent, setShapeContent] = useState(null);
   const [shapeLoading, setShapeLoading] = useState(false);
   const [shapeError, setShapeError] = useState(null);
@@ -150,6 +153,16 @@ export default function Phase1ItemPreview({ item }) {
   const [serverRender, setServerRender] = useState(null);
   const [serverRenderLoading, setServerRenderLoading] = useState(false);
   const [serverRenderError, setServerRenderError] = useState(null);
+
+  // 아이템 변경 시 연도 의존성에 따라 기본값 자동 설정
+  useEffect(() => {
+    if (item?.year_dependent) {
+      // 연도 의존 아이템인데 현재 선택된 연도가 범위를 벗어나거나 (미래 등) 
+      // 명시적으로 초기화가 필요한 경우에만 리셋 (스펙 준수)
+      setBaseYear(currentYear - 1);
+    }
+    // 일반 아이템일 때는 기존 선택 연도를 굳이 리셋하지 않음 (S2 개선)
+  }, [item?.item_id, item?.year_dependent, currentYear]);
 
   useEffect(() => {
     setShapeContent(null);
@@ -283,15 +296,6 @@ export default function Phase1ItemPreview({ item }) {
             <div className="text-xs font-mono text-on-surface-variant bg-surface px-2 py-1 rounded-lg border border-outline/10">
               #{item?.item_id ?? "—"}
             </div>
-            <div className="flex items-center gap-2">
-              <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Base Year</label>
-              <input
-                type="number"
-                value={baseYear}
-                onChange={(e) => setBaseYear(Number(e.target.value))}
-                className="w-20 px-2 py-1 text-xs bg-surface-container rounded border border-outline/20 focus:outline-none focus:border-primary tabular-nums"
-              />
-            </div>
           </div>
         </div>
 
@@ -319,6 +323,7 @@ export default function Phase1ItemPreview({ item }) {
             <span className="material-symbols-outlined text-[16px]">rule</span>
             맵핑: {item?.mapping_json ? "있음" : "없음"}
           </span>
+          {item?.year_dependent && <YearDependentBadge />}
         </div>
       </header>
 
@@ -326,11 +331,19 @@ export default function Phase1ItemPreview({ item }) {
         {/* 1) 타입별 결과(실 결과) */}
         {itemType === "card" && (
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="material-symbols-outlined text-primary text-[20px]">
-                view_agenda
-              </span>
-              <h4 className="font-semibold text-on-surface">카드 미리보기</h4>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[20px]">
+                  view_agenda
+                </span>
+                <h4 className="font-semibold text-on-surface">카드 미리보기</h4>
+              </div>
+              {item?.year_dependent && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-on-surface-variant/70 uppercase tracking-tighter">Base Year</span>
+                  <YearSelector selectedYear={baseYear} onYearChange={setBaseYear} />
+                </div>
+              )}
             </div>
 
             {!item?.mapping_json ? (
@@ -355,12 +368,19 @@ export default function Phase1ItemPreview({ item }) {
               </div>
             ) : serverRender?.type === "card" ? (
               <div className="max-w-[720px]">
-                <CompositeKpiCardPreview
-                  title={serverRender.title}
-                  headline={serverRender.headline}
-                  rows={Array.isArray(serverRender.rows) ? serverRender.rows : []}
-                  sources={serverRender.sources}
-                />
+                {serverRender.rows?.length === 0 ? (
+                  <div className="rounded-xl border border-outline/15 bg-surface p-6 text-center">
+                    <p className="text-sm text-on-surface-variant">선택하신 {baseYear}년에 표시할 카드 데이터가 없습니다.</p>
+                    <p className="text-xs text-on-surface-variant/60 mt-1">다른 연도를 선택해 주세요.</p>
+                  </div>
+                ) : (
+                  <CompositeKpiCardPreview
+                    title={serverRender.title}
+                    headline={serverRender.headline}
+                    rows={Array.isArray(serverRender.rows) ? serverRender.rows : []}
+                    sources={serverRender.sources}
+                  />
+                )}
               </div>
             ) : !cardPreviewModel ? (
               <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
@@ -382,13 +402,19 @@ export default function Phase1ItemPreview({ item }) {
 
         {itemType === "grid" && (
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="material-symbols-outlined text-primary text-[20px]">
-                table
-              </span>
-              <h4 className="font-semibold text-on-surface">
-                그리드(테이블) 미리보기
-              </h4>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[20px]">
+                  table
+                </span>
+                <h4 className="font-semibold text-on-surface">그리드(테이블) 미리보기</h4>
+              </div>
+              {item?.year_dependent && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-on-surface-variant/70 uppercase tracking-tighter">Base Year</span>
+                  <YearSelector selectedYear={baseYear} onYearChange={setBaseYear} />
+                </div>
+              )}
             </div>
 
             {!item?.mapping_json ? (
@@ -448,8 +474,9 @@ export default function Phase1ItemPreview({ item }) {
                 필요합니다. (원시 테이블 자동 표시는 금지)
               </div>
             ) : gridPreviewModel.rows.length === 0 ? (
-              <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
-                조회 결과가 비어 있습니다.
+              <div className="rounded-xl border border-outline/15 bg-surface p-6 text-center">
+                <p className="text-sm text-on-surface-variant">선택하신 {baseYear}년에 표시할 그리드 데이터가 없습니다.</p>
+                <p className="text-xs text-on-surface-variant/60 mt-1">다른 연도를 선택해 주세요.</p>
               </div>
             ) : (
               <div className="rounded-xl border border-outline/15 bg-surface p-4 overflow-auto">
@@ -487,11 +514,19 @@ export default function Phase1ItemPreview({ item }) {
 
         {itemType === "chart" && (
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="material-symbols-outlined text-primary text-[20px]">
-                bar_chart
-              </span>
-              <h4 className="font-semibold text-on-surface">차트 미리보기</h4>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[20px]">
+                  bar_chart
+                </span>
+                <h4 className="font-semibold text-on-surface">차트 미리보기</h4>
+              </div>
+              {item?.year_dependent && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-on-surface-variant/70 uppercase tracking-tighter">Base Year</span>
+                  <YearSelector selectedYear={baseYear} onYearChange={setBaseYear} />
+                </div>
+              )}
             </div>
 
             {!item?.mapping_json ? (
@@ -516,12 +551,19 @@ export default function Phase1ItemPreview({ item }) {
               </div>
             ) : serverRender?.type === "chart" ? (
               <div className="rounded-xl border border-outline/15 bg-surface p-4">
-                <div className="h-[360px]">
-                  <ChartRenderer
-                    data={serverRender.data}
-                    chartConfig={serverRender.chartConfig}
-                  />
-                </div>
+                {serverRender.data?.length === 0 ? (
+                  <div className="h-[360px] flex flex-col items-center justify-center text-center">
+                    <p className="text-sm text-on-surface-variant">선택하신 {baseYear}년에 표시할 차트 데이터가 없습니다.</p>
+                    <p className="text-xs text-on-surface-variant/60 mt-1">다른 연도를 선택해 주세요.</p>
+                  </div>
+                ) : (
+                  <div className="h-[360px]">
+                    <ChartRenderer
+                      data={serverRender.data}
+                      chartConfig={serverRender.chartConfig}
+                    />
+                  </div>
+                )}
               </div>
             ) : !item?.mapping_json?.chartType ? (
               <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
@@ -558,7 +600,7 @@ export default function Phase1ItemPreview({ item }) {
           </div>
         )}
 
-        {itemType !== "card" && itemType !== "grid" && (
+        {itemType !== "card" && itemType !== "grid" && itemType !== "chart" && (
           <div className="rounded-xl border border-outline/15 bg-surface p-4 text-sm text-on-surface-variant">
             실 결과 미리보기는 현재{" "}
             <span className="font-semibold">card / grid / chart</span>만

@@ -6,6 +6,7 @@ import { deleteItem, getItems, handleApiError } from '../../services/adminApi';
 import Modal from '../../components/common/Modal';
 import ScreenItemFormModal from '../../components/admin/items/ScreenItemFormModal';
 import Phase1ItemPreview from '../../components/admin/items/Phase1ItemPreview';
+import YearDependentBadge from '../../components/common/YearDependentBadge';
 
 function mappingSummary(mapping) {
   if (!mapping || typeof mapping !== 'object') return '—';
@@ -144,7 +145,10 @@ export default function ItemsManagement() {
                             {row.item_nm}
                           </td>
                           <td className="py-3 px-4 text-on-surface-variant font-mono text-xs whitespace-nowrap">
-                            {row.shape_cnts_id ?? '—'}
+                            <div className="flex items-center gap-2">
+                              {row.shape_cnts_id ?? '—'}
+                              {row.year_dependent && <YearDependentBadge compact />}
+                            </div>
                           </td>
                           <td className="py-3 px-4 text-on-surface-variant font-mono text-xs whitespace-nowrap">
                             {row.sql_cnts_id ?? '—'}

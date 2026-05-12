@@ -95,7 +95,7 @@ async def get_item(item_id: int) -> Optional[dict]:
             i.mapping_json,
             i.reg_dt,
             i.mod_dt,
-            CASE WHEN c.user_sql LIKE '%{{base\_year}}%' ESCAPE '\' THEN true ELSE false END AS year_dependent
+            CASE WHEN c.user_sql ~ '{{[[:space:]]*base_year[[:space:]]*}}' THEN true ELSE false END AS year_dependent
         FROM ts_scr_item i
         LEFT JOIN ts_cnts_info c ON i.sql_cnts_id = c.cnts_id
         WHERE i.item_id = $1 AND i.del_fg = 'N'
@@ -119,7 +119,7 @@ async def list_items() -> list[dict]:
             i.mapping_json,
             i.reg_dt,
             i.mod_dt,
-            CASE WHEN c.user_sql LIKE '%{{base\_year}}%' ESCAPE '\' THEN true ELSE false END AS year_dependent
+            CASE WHEN c.user_sql ~ '{{[[:space:]]*base_year[[:space:]]*}}' THEN true ELSE false END AS year_dependent
         FROM ts_scr_item i
         LEFT JOIN ts_cnts_info c ON i.sql_cnts_id = c.cnts_id
         WHERE i.del_fg = 'N'
