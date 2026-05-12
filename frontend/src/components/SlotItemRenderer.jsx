@@ -7,12 +7,28 @@ function SlotItemRenderer({ itemId, baseYear }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [usedBaseYear, setUsedBaseYear] = useState(null);
+
+  const EmptyState = ({ year }) => (
+    <div className="w-full h-full flex flex-col items-center justify-center text-on-surface-variant p-8 text-center">
+      <div className="text-4xl mb-4 opacity-40">📅</div>
+      <p className="text-sm">
+        선택하신 {year}년에 표시할 데이터가 없습니다.
+      </p>
+      <p className="text-xs mt-1 opacity-70">다른 연도를 선택해 주세요.</p>
+    </div>
+  );
+
+  const hasRows = data?.rows && data.rows.length > 0;
+  const hasChartData = data?.type === 'chart' && data?.data && Array.isArray(data.data) && data.data.length > 0;
+  const hasData = data?.type === 'chart' ? hasChartData : hasRows;
 
   useEffect(() => {
     if (!itemId) {
       setData(null);
       setLoading(false);
       setError(null);
+      setUsedBaseYear(null);
       return;
     }
 
@@ -22,6 +38,7 @@ function SlotItemRenderer({ itemId, baseYear }) {
       setError(null);
       try {
         const ctx = baseYear != null ? { base_year: baseYear } : undefined;
+        setUsedBaseYear(baseYear);
         const result = await getItemRender(itemId, ctx);
         if (!cancelled) setData(result);
       } catch (e) {
@@ -61,9 +78,20 @@ function SlotItemRenderer({ itemId, baseYear }) {
   }
 
   if (!data || !data.type) {
+    if (usedBaseYear != null) {
+      return <EmptyState year={usedBaseYear} />;
+    }
     return (
       <div className="w-full h-full flex items-center justify-center text-on-surface-variant text-sm">
         렌더링할 데이터가 없습니다.
+      </div>
+    );
+  }
+
+  if (!hasData) {
+    return usedBaseYear != null ? <EmptyState year={usedBaseYear} /> : (
+      <div className="w-full h-full flex items-center justify-center text-on-surface-variant text-sm">
+        표시할 데이터가 없습니다.
       </div>
     );
   }
