@@ -336,15 +336,68 @@ def _build_card_model(item_type: str, item: dict, shape_content: dict, preview: 
 
     shape_items = shape_content.get("data", {}).get("items", []) if shape_content else []
 
+    def _normalize_where(where_raw) -> list[dict]:
+        if not isinstance(where_raw, list):
+            return []
+        out = []
+        for cond in where_raw:
+            if not isinstance(cond, dict):
+                continue
+            field = cond.get("field")
+            if not isinstance(field, str):
+                continue
+            field = field.strip()
+            if not field:
+                continue
+            value = cond.get("value")
+            out.append({"field": field, "value": "" if value is None else str(value)})
+        return out
+
+    def _matches_where(row: dict, where: list[dict]) -> bool:
+        if not isinstance(row, dict) or not where:
+            return False
+        for cond in where:
+            field = cond.get("field")
+            if not field:
+                return False
+            expected = cond.get("value", "")
+            actual = _get_row_value(row, field)
+            if "" if actual is None else str(actual) != str(expected):
+                return False
+        return True
+
+    def _select_row_for_item(all_rows: list, selector: dict | None) -> tuple[Optional[dict], str]:
+        if not isinstance(all_rows, list) or len(all_rows) == 0:
+            return None, "empty"
+        if not isinstance(selector, dict):
+            return all_rows[0], "default:first"
+        mode = selector.get("mode")
+        mode = mode.strip() if isinstance(mode, str) else ""
+        if not mode or mode == "first":
+            return all_rows[0], "selector:first"
+        if mode == "where":
+            where = _normalize_where(selector.get("where"))
+            if not where:
+                return all_rows[0], "selector:where:fallback(no-conditions)"
+            for r in all_rows:
+                if _matches_where(r, where):
+                    expr = "&".join([f"{c['field']}={c['value']}" for c in where])
+                    return r, f"selector:where:{expr}"
+            expr = "&".join([f"{c['field']}={c['value']}" for c in where])
+            return all_rows[0], f"selector:where:fallback(not-found:{expr})"
+        return all_rows[0], f"selector:fallback(unknown-mode:{mode})"
+
     for idx, it in enumerate(mapped_items[:12]):
         field = it.get("field") if isinstance(it.get("field"), str) else None
+        selector = it.get("rowSelector") if isinstance(it.get("rowSelector"), dict) else None
+        chosen_row, chosen_reason = _select_row_for_item(rows, selector)
         label_raw = it.get("label") or (shape_items[idx].get("label") if idx < len(shape_items) and shape_items[idx] else "")
         label = str(label_raw) if isinstance(label_raw, str) else str(label_raw or "")
         label_trim = label.strip()
         color_hex = None
         if idx < len(shape_items) and shape_items[idx] and isinstance(shape_items[idx], dict):
             color_hex = shape_items[idx].get("color")
-        v = _get_row_value(row0, field) if field else None
+        v = _get_row_value(chosen_row, field) if field and chosen_row else None
         shape_item = shape_items[idx] if idx < len(shape_items) and isinstance(shape_items[idx], dict) else {}
         spec = _resolve_card_format_spec(it, shape_item)
         formatted_v = _format_card_value(v, spec)
@@ -353,6 +406,7 @@ def _build_card_model(item_type: str, item: dict, shape_content: dict, preview: 
             sources.append(f"mapping.items[{idx}].field = {field}")
         else:
             sources.append(f"mapping.items[{idx}]")
+        sources.append(f"mapping.items[{idx}].row = {chosen_reason}")
 
         if not label_trim and not headline_taken:
             headline = formatted_v

@@ -13,7 +13,6 @@ import {
   buildGridPreviewModel,
   buildCardPreviewModel,
   clampPreviewRows,
-  selectCardRow,
 } from "../../../utils/itemDataTransformers";
 
 function chipClass(kind) {
@@ -254,10 +253,7 @@ export default function Phase1ItemPreview({ item }) {
     const cols = sqlPreview?.columns || [];
     const rawRows = Array.isArray(sqlPreview?.rows) ? sqlPreview.rows : [];
     const rows = clampPreviewRows(rawRows);
-    const rowSelector = item?.mapping_json?.mapping?.rowSelector;
-    const selectedCardRow =
-      itemType === "card" ? selectCardRow(rows, rowSelector) : null;
-    const selectedRow = selectedCardRow?.row || rows[0] || null;
+    const selectedRow = rows[0] || null;
     return {
       colCount: cols.length,
       rowCount: rows.length,
@@ -266,11 +262,9 @@ export default function Phase1ItemPreview({ item }) {
       truncated: !!sqlPreview?.truncated,
       cols,
       selectedRow,
-      selectedReason:
-        selectedCardRow?.reason ||
-        (rows.length > 0 ? "default:first" : "empty"),
+      selectedReason: rows.length > 0 ? "sample:first" : "empty",
     };
-  }, [sqlPreview, itemType, item?.mapping_json?.mapping?.rowSelector]);
+  }, [sqlPreview]);
 
   return (
     <section className="rounded-2xl border border-outline/20 bg-surface-container-lowest shadow-sm overflow-hidden">
@@ -685,10 +679,8 @@ export default function Phase1ItemPreview({ item }) {
               </div>
 
               <div className="text-xs text-on-surface-variant">
-                기준 행 선택:{" "}
-                <span className="font-mono text-on-surface">
-                  {sqlMeta.selectedReason}
-                </span>
+                샘플 행:{" "}
+                <span className="font-mono text-on-surface">{sqlMeta.selectedReason}</span>
               </div>
 
               {sqlMeta.selectedRow ? (
